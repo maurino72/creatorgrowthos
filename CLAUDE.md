@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Always Plan Before Coding
+
+**You MUST enter plan mode (using `EnterPlanMode`) before writing ANY code.** This is non-negotiable. No matter how simple the task appears, always plan first:
+
+1. **Enter plan mode** — Explore the codebase, understand the context, and design the approach.
+2. **Get user approval** — Present the plan and wait for explicit approval via `ExitPlanMode`.
+3. **Then implement** — Only write code after the plan is approved.
+
+The only exceptions are trivial single-line fixes (typos, obvious one-character bugs) where the change is unambiguous. When in doubt, plan first.
+
+## CRITICAL: Test-Driven Development (TDD)
+
+**You MUST follow TDD for all implementation work.** The cycle is:
+
+1. **Red** — Write a failing test first that describes the expected behavior.
+2. **Green** — Write the minimum code necessary to make the test pass.
+3. **Refactor** — Clean up the code while keeping all tests green.
+
+Rules:
+- **Never write production code without a failing test first.** If there's no test, write one before touching the implementation.
+- Tests go alongside the code they test (e.g., `Component.test.tsx` next to `Component.tsx`).
+- Run tests after each step to confirm the red/green/refactor cycle.
+- When fixing bugs, first write a test that reproduces the bug, then fix it.
+- The plan (from plan mode) should include what tests will be written and what they will assert.
+
 ## Build & Development Commands
 
 - `npm run dev` — Start dev server (http://localhost:3000) with HMR
