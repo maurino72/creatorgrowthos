@@ -117,6 +117,9 @@ function PostCard({
     id: string;
     body: string;
     status: string;
+    intent?: string | null;
+    content_type?: string | null;
+    topics?: string[] | null;
     scheduled_at?: string | null;
     published_at?: string | null;
     created_at: string;
@@ -156,6 +159,21 @@ function PostCard({
                 </span>
               )}
             </div>
+            {post.intent && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium">
+                  {post.intent}
+                </span>
+                {post.topics?.map((topic) => (
+                  <span
+                    key={topic}
+                    className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                  >
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            )}
             {post.status === "published" && (
               <PostMetrics postId={post.id} />
             )}

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { usePost, useUpdatePost, useDeletePost, usePublishPost } from "@/lib/queries/posts";
+import { usePost, useUpdatePost, useDeletePost, usePublishPost, useClassifyPost, useUpdateClassifications } from "@/lib/queries/posts";
+import { INTENTS, CONTENT_TYPES } from "@/lib/ai/taxonomy";
 import { useConnections } from "@/lib/queries/connections";
 import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
 import { Card, CardContent } from "@/components/ui/card";
@@ -161,6 +162,88 @@ function MetricsSection({ postId }: { postId: string }) {
               <MetricsTimeline events={allMetrics as MetricEvent[]} />
             )}
           </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface PostClassification {
+  intent: string | null;
+  content_type: string | null;
+  topics: string[];
+  ai_assisted: boolean | null;
+}
+
+function ClassificationSection({
+  postId,
+  classification,
+}: {
+  postId: string;
+  classification: PostClassification;
+}) {
+  const classifyPost = useClassifyPost();
+  const hasClassification = classification.intent !== null;
+
+  return (
+    <Card>
+      <CardContent className="pt-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold tracking-tight">Classification</h2>
+            {hasClassification && classification.ai_assisted && (
+              <span className="inline-flex items-center rounded-md bg-foreground/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
+                AI
+              </span>
+            )}
+          </div>
+          {!hasClassification && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() =>
+                classifyPost.mutate(postId, {
+                  onSuccess: () => toast.success("Post classified"),
+                  onError: () => toast.error("Classification failed"),
+                })
+              }
+              disabled={classifyPost.isPending}
+            >
+              Classify
+            </Button>
+          )}
+        </div>
+
+        {!hasClassification ? (
+          <p className="text-sm text-muted-foreground py-2 text-center">
+            Not yet classified. Click Classify to analyze this post with AI.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground w-16">Intent</span>
+              <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
+                {classification.intent}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground w-16">Type</span>
+              <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
+                {classification.content_type}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground w-16">Topics</span>
+              {classification.topics.map((topic) => (
+                <span
+                  key={topic}
+                  className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -409,6 +492,16 @@ export default function EditPostPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ClassificationSection
+        postId={postId}
+        classification={{
+          intent: post.intent ?? null,
+          content_type: post.content_type ?? null,
+          topics: post.topics ?? [],
+          ai_assisted: post.ai_assisted ?? false,
+        }}
+      />
 
       {post.status === "published" && (
         <MetricsSection postId={postId} />

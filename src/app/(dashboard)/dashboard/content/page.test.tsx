@@ -270,4 +270,57 @@ describe("Content list page", () => {
     expect(screen.queryByText(/views/)).not.toBeInTheDocument();
     expect(screen.queryByText(/engagement/)).not.toBeInTheDocument();
   });
+
+  it("shows classification badges on post cards", async () => {
+    vi.mocked(usePosts).mockReturnValue({
+      data: [
+        {
+          id: "post-1",
+          body: "How to build a SaaS product from scratch",
+          status: "draft",
+          intent: "educate",
+          content_type: "thread",
+          topics: ["saas", "startup"],
+          ai_assisted: true,
+          created_at: "2024-06-01T10:00:00Z",
+          post_publications: [{ platform: "twitter", status: "pending" }],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("educate")).toBeInTheDocument();
+    expect(screen.getByText("saas")).toBeInTheDocument();
+    expect(screen.getByText("startup")).toBeInTheDocument();
+  });
+
+  it("does not show classification badges for unclassified posts", async () => {
+    vi.mocked(usePosts).mockReturnValue({
+      data: [
+        {
+          id: "post-1",
+          body: "Unclassified post",
+          status: "draft",
+          intent: null,
+          content_type: null,
+          topics: [],
+          ai_assisted: false,
+          created_at: "2024-06-01T10:00:00Z",
+          post_publications: [{ platform: "twitter", status: "pending" }],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.queryByText("educate")).not.toBeInTheDocument();
+    expect(screen.queryByText("engage")).not.toBeInTheDocument();
+  });
 });

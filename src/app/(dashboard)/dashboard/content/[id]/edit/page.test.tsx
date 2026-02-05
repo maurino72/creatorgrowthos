@@ -19,6 +19,8 @@ vi.mock("@/lib/queries/posts", () => ({
   useUpdatePost: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useDeletePost: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   usePublishPost: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useClassifyPost: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUpdateClassifications: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   postKeys: {
     all: ["posts"],
     detail: (id: string) => ["posts", "detail", id],
@@ -224,5 +226,117 @@ describe("Edit post page — metrics section", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.getByText("Performance over time")).toBeInTheDocument();
+  });
+});
+
+describe("Edit post page — classification section", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows classification with AI badge for AI-classified post", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "How to build a SaaS",
+        status: "draft",
+        intent: "educate",
+        content_type: "single",
+        topics: ["saas", "startup"],
+        ai_assisted: true,
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "pending" }],
+      },
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Classification")).toBeInTheDocument();
+    expect(screen.getByText("educate")).toBeInTheDocument();
+    expect(screen.getByText("single")).toBeInTheDocument();
+    expect(screen.getByText("saas")).toBeInTheDocument();
+    expect(screen.getByText("startup")).toBeInTheDocument();
+    expect(screen.getByText("AI")).toBeInTheDocument();
+  });
+
+  it("shows pending state for unclassified post", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "Some post",
+        status: "draft",
+        intent: null,
+        content_type: null,
+        topics: [],
+        ai_assisted: false,
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "pending" }],
+      },
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Classification")).toBeInTheDocument();
+    expect(screen.getByText(/not yet classified/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /classify/i })).toBeInTheDocument();
+  });
+
+  it("does not show AI badge for manually overridden classification", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "My hot take",
+        status: "draft",
+        intent: "engage",
+        content_type: "single",
+        topics: ["marketing"],
+        ai_assisted: false,
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "pending" }],
+      },
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("engage")).toBeInTheDocument();
+    expect(screen.queryByText("AI")).not.toBeInTheDocument();
+  });
+
+  it("shows classify button for published posts too", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "Published post",
+        status: "published",
+        intent: null,
+        content_type: null,
+        topics: [],
+        ai_assisted: false,
+        published_at: "2024-06-01T12:00:00Z",
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "published" }],
+      },
+      isLoading: false,
+    } as never);
+
+    vi.mocked(useLatestMetrics).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByRole("button", { name: /classify/i })).toBeInTheDocument();
   });
 });

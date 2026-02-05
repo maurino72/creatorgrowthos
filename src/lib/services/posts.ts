@@ -15,6 +15,9 @@ export interface UpdatePostData {
 
 export interface GetPostsOptions {
   status?: string;
+  intent?: string;
+  content_type?: string;
+  topic?: string;
   limit?: number;
   offset?: number;
 }
@@ -58,7 +61,7 @@ export async function getPostsForUser(
   options: GetPostsOptions = {},
 ) {
   const supabase = createAdminClient();
-  const { status, limit = 20, offset = 0 } = options;
+  const { status, intent, content_type, topic, limit = 20, offset = 0 } = options;
 
   let query = supabase
     .from("posts")
@@ -69,6 +72,15 @@ export async function getPostsForUser(
 
   if (status) {
     query = query.eq("status", status);
+  }
+  if (intent) {
+    query = query.eq("intent", intent);
+  }
+  if (content_type) {
+    query = query.eq("content_type", content_type);
+  }
+  if (topic) {
+    query = query.contains("topics", [topic]);
   }
 
   const { data, error } = await query.range(offset, offset + limit - 1);

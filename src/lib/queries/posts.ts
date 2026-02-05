@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { CreatePostInput, UpdatePostInput } from "@/lib/validators/posts";
+import type { ClassificationOverride } from "@/lib/ai/taxonomy";
 
 export const postKeys = {
   all: ["posts"] as const,
@@ -14,9 +15,19 @@ export const postKeys = {
   detail: (id: string) => ["posts", "detail", id] as const,
 };
 
-async function fetchPosts(filters?: { status?: string }) {
+export interface PostFilters {
+  status?: string;
+  intent?: string;
+  content_type?: string;
+  topic?: string;
+}
+
+async function fetchPosts(filters?: PostFilters) {
   const params = new URLSearchParams();
   if (filters?.status) params.set("status", filters.status);
+  if (filters?.intent) params.set("intent", filters.intent);
+  if (filters?.content_type) params.set("content_type", filters.content_type);
+  if (filters?.topic) params.set("topic", filters.topic);
 
   const url = `/api/posts${params.toString() ? `?${params}` : ""}`;
   const response = await fetch(url);
@@ -36,9 +47,10 @@ async function fetchPost(id: string) {
   return data.post;
 }
 
-export function usePosts(filters?: { status?: string }) {
+export function usePosts(filters?: PostFilters) {
+  const hasFilters = filters && Object.values(filters).some(Boolean);
   return useQuery({
-    queryKey: filters?.status ? postKeys.list(filters) : postKeys.all,
+    queryKey: hasFilters ? postKeys.list(filters) : postKeys.all,
     queryFn: () => fetchPosts(filters),
   });
 }
@@ -123,6 +135,46 @@ export function usePublishPost() {
         throw new Error("Failed to publish post");
       }
       return (await response.json()).results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: postKeys.all });
+    },
+  });
+}
+
+export function useClassifyPost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/posts/${id}/classify`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to classify post");
+      }
+      return (await response.json()).classifications;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: postKeys.all });
+    },
+  });
+}
+
+export function useUpdateClassifications() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: ClassificationOverride }) => {
+      const response = await fetch(`/api/posts/${id}/classifications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update classifications");
+      }
+      return (await response.json()).post;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.all });

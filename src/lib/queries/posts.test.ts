@@ -9,6 +9,8 @@ import {
   useUpdatePost,
   useDeletePost,
   usePublishPost,
+  useClassifyPost,
+  useUpdateClassifications,
   postKeys,
 } from "./posts";
 
@@ -226,5 +228,73 @@ describe("usePublishPost", () => {
     expect(fetchSpy).toHaveBeenCalledWith("/api/posts/post-1/publish", {
       method: "POST",
     });
+  });
+});
+
+describe("useClassifyPost", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sends POST request to classify endpoint", async () => {
+    const mockClassifications = {
+      intent: "educate",
+      content_type: "single",
+      topics: ["ai"],
+    };
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ classifications: mockClassifications }),
+          { status: 200 },
+        ),
+      );
+
+    const { result } = renderHook(() => useClassifyPost(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("post-1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(fetchSpy).toHaveBeenCalledWith("/api/posts/post-1/classify", {
+      method: "POST",
+    });
+    expect(result.current.data).toEqual(mockClassifications);
+  });
+});
+
+describe("useUpdateClassifications", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sends PATCH request to classifications endpoint", async () => {
+    const mockPost = { id: "post-1", intent: "promote", ai_assisted: false };
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ post: mockPost }), { status: 200 }),
+      );
+
+    const { result } = renderHook(() => useUpdateClassifications(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({
+      id: "post-1",
+      data: { intent: "promote" },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/posts/post-1/classifications",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: "promote" }),
+      },
+    );
   });
 });
