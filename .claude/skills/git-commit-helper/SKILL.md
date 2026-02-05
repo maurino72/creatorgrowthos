@@ -105,6 +105,7 @@ git diff --staged path/to/file
 - Include technical implementation details in summary
 - Write paragraphs in summary line
 - Use past tense
+- **NEVER include `Co-Authored-By` lines or any AI attribution footers**
 
 ## Multi-file commits
 

@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **You MUST enter plan mode (using `EnterPlanMode`) before writing ANY code.** This is non-negotiable. No matter how simple the task appears, always plan first:
 
-1. **Enter plan mode** — Explore the codebase, understand the context, and design the approach.
-2. **Get user approval** — Present the plan and wait for explicit approval via `ExitPlanMode`.
-3. **Then implement** — Only write code after the plan is approved.
+1. **Ask clarifying questions** — Before planning, use `AskUserQuestion` to resolve any ambiguity. Ask about requirements, expected behavior, edge cases, preferences, and scope. Never assume — always clarify first.
+2. **Enter plan mode** — Once requirements are clear, explore the codebase, understand the context, and design the approach.
+3. **Get user approval** — Present the plan and wait for explicit approval via `ExitPlanMode`.
+4. **Then implement** — Only write code after the plan is approved.
 
 The only exceptions are trivial single-line fixes (typos, obvious one-character bugs) where the change is unambiguous. When in doubt, plan first.
 
@@ -26,6 +27,12 @@ Rules:
 - Run tests after each step to confirm the red/green/refactor cycle.
 - When fixing bugs, first write a test that reproduces the bug, then fix it.
 - The plan (from plan mode) should include what tests will be written and what they will assert.
+
+## Commit Rules
+
+- **NEVER include `Co-Authored-By` lines in commit messages.** No AI attribution footers of any kind.
+- Follow conventional commits format (`type(scope): description`).
+- Use the `/git-commit-helper` skill when committing.
 
 ## Build & Development Commands
 
