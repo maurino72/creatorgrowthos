@@ -32,16 +32,22 @@ describe("TwitterAdapter (interface compliance)", () => {
     expect(typeof result.url).toBe("string");
   });
 
-  it("throws 'Not implemented' for publishPost", async () => {
-    await expect(
-      adapter.publishPost("token", { text: "hello" }),
-    ).rejects.toThrow("Not implemented");
+  it("publishPost calls Twitter API and returns result", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { id: "123", text: "hello" } }), { status: 201 }),
+    );
+
+    const result = await adapter.publishPost("token", { text: "hello" });
+    expect(result.platformPostId).toBe("123");
+    expect(result.platformUrl).toContain("123");
   });
 
-  it("throws 'Not implemented' for deletePost", async () => {
-    await expect(adapter.deletePost("token", "id")).rejects.toThrow(
-      "Not implemented",
+  it("deletePost calls Twitter API without error", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { deleted: true } }), { status: 200 }),
     );
+
+    await expect(adapter.deletePost("token", "id")).resolves.toBeUndefined();
   });
 
   it("throws 'Not implemented' for fetchPostMetrics", async () => {

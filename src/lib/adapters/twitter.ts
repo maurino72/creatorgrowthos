@@ -12,6 +12,7 @@ import type {
 const TWITTER_AUTH_URL = "https://twitter.com/i/oauth2/authorize";
 const TWITTER_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const TWITTER_USER_URL = "https://api.x.com/2/users/me";
+const TWITTER_TWEETS_URL = "https://api.x.com/2/tweets";
 const SCOPES = "tweet.read tweet.write users.read offline.access";
 
 export class TwitterAdapter implements PlatformAdapter {
@@ -137,17 +138,56 @@ export class TwitterAdapter implements PlatformAdapter {
   }
 
   async publishPost(
-    _accessToken: string,
-    _payload: PostPayload,
+    accessToken: string,
+    payload: PostPayload,
   ): Promise<PlatformPostResult> {
-    throw new Error("Not implemented");
+    const body: Record<string, unknown> = { text: payload.text };
+    if (payload.replyToId) {
+      body.reply = { in_reply_to_tweet_id: payload.replyToId };
+    }
+
+    const response = await fetch(TWITTER_TWEETS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail = (error as Record<string, string>).detail ?? (error as Record<string, string>).title ?? response.statusText;
+      throw new Error(`Publish failed: ${detail}`);
+    }
+
+    const json = (await response.json()) as {
+      data: { id: string; text: string };
+    };
+
+    return {
+      platformPostId: json.data.id,
+      platformUrl: `https://twitter.com/i/status/${json.data.id}`,
+      publishedAt: new Date(),
+    };
   }
 
   async deletePost(
-    _accessToken: string,
-    _platformPostId: string,
+    accessToken: string,
+    platformPostId: string,
   ): Promise<void> {
-    throw new Error("Not implemented");
+    const response = await fetch(`${TWITTER_TWEETS_URL}/${platformPostId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail = (error as Record<string, string>).detail ?? (error as Record<string, string>).title ?? response.statusText;
+      throw new Error(`Delete failed: ${detail}`);
+    }
   }
 
   async fetchPostMetrics(

@@ -1,0 +1,176 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { PlatformType } from "@/lib/adapters/types";
+
+export interface CreatePostData {
+  body: string;
+  platforms: PlatformType[];
+  scheduled_at?: string;
+}
+
+export interface UpdatePostData {
+  body?: string;
+  platforms?: PlatformType[];
+  scheduled_at?: string | null;
+}
+
+export interface GetPostsOptions {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function createPost(userId: string, data: CreatePostData) {
+  const supabase = createAdminClient();
+  const status = data.scheduled_at ? "scheduled" : "draft";
+
+  const { data: post, error } = await supabase
+    .from("posts")
+    .insert({
+      user_id: userId,
+      body: data.body,
+      status,
+      scheduled_at: data.scheduled_at ?? null,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  // Create post_publications for each platform
+  const publications = data.platforms.map((platform) => ({
+    post_id: post.id,
+    user_id: userId,
+    platform,
+    status: "pending" as const,
+  }));
+
+  const { error: pubError } = await supabase
+    .from("post_publications")
+    .insert(publications);
+
+  if (pubError) throw new Error(pubError.message);
+
+  return post;
+}
+
+export async function getPostsForUser(
+  userId: string,
+  options: GetPostsOptions = {},
+) {
+  const supabase = createAdminClient();
+  const { status, limit = 20, offset = 0 } = options;
+
+  let query = supabase
+    .from("posts")
+    .select("*, post_publications(*)")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query.range(offset, offset + limit - 1);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getPostById(userId: string, postId: string) {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*, post_publications(*)")
+    .eq("user_id", userId)
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .single();
+
+  if (error && error.code === "PGRST116") return null;
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updatePost(
+  userId: string,
+  postId: string,
+  data: UpdatePostData,
+) {
+  const existing = await getPostById(userId, postId);
+  if (!existing) throw new Error("Post not found");
+  if (existing.status === "published") {
+    throw new Error("Cannot edit a published post");
+  }
+
+  const updates: Record<string, unknown> = {};
+
+  if (data.body !== undefined) {
+    updates.body = data.body;
+  }
+
+  // Handle status transitions based on scheduled_at
+  if (data.scheduled_at === null) {
+    updates.scheduled_at = null;
+    updates.status = "draft";
+  } else if (data.scheduled_at !== undefined) {
+    updates.scheduled_at = data.scheduled_at;
+    updates.status = "scheduled";
+  } else if (existing.status === "failed") {
+    updates.status = "draft";
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: updated, error } = await supabase
+    .from("posts")
+    .update(updates)
+    .eq("id", postId)
+    .eq("user_id", userId)
+    .select("*, post_publications(*)")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  // If platforms changed, update post_publications
+  if (data.platforms) {
+    // Remove existing publications
+    await supabase
+      .from("post_publications")
+      .delete()
+      .eq("post_id", postId);
+
+    // Insert new publications
+    const publications = data.platforms.map((platform) => ({
+      post_id: postId,
+      user_id: userId,
+      platform,
+      status: "pending" as const,
+    }));
+
+    await supabase.from("post_publications").insert(publications);
+  }
+
+  return updated;
+}
+
+export async function deletePost(userId: string, postId: string) {
+  const existing = await getPostById(userId, postId);
+  if (!existing) throw new Error("Post not found");
+
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("posts")
+    .update({
+      status: "deleted",
+      deleted_at: new Date().toISOString(),
+    })
+    .eq("id", postId)
+    .eq("user_id", userId)
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+}
