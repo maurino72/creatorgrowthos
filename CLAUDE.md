@@ -2,16 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## CRITICAL: Always Plan Before Coding
+## Workflow: Plan vs Execute
 
-**You MUST enter plan mode (using `EnterPlanMode`) before writing ANY code.** This is non-negotiable. No matter how simple the task appears, always plan first:
-
-1. **Ask clarifying questions** — Before planning, use `AskUserQuestion` to resolve any ambiguity. Ask about requirements, expected behavior, edge cases, preferences, and scope. Never assume — always clarify first.
-2. **Enter plan mode** — Once requirements are clear, explore the codebase, understand the context, and design the approach.
-3. **Get user approval** — Present the plan and wait for explicit approval via `ExitPlanMode`.
-4. **Then implement** — Only write code after the plan is approved.
-
-The only exceptions are trivial single-line fixes (typos, obvious one-character bugs) where the change is unambiguous. When in doubt, plan first.
+- **When the user provides a detailed plan or PRD** — Skip plan mode. Go straight to implementation: create task tracking, explore the codebase for context, then execute task-by-task following TDD.
+- **When requirements are ambiguous or open-ended** — Ask clarifying questions first, then enter plan mode (`EnterPlanMode`) to design the approach before coding.
+- **Trivial fixes** (typos, one-line bugs) — Just do it directly.
 
 ## CRITICAL: Test-Driven Development (TDD)
 
@@ -53,18 +48,27 @@ This is a **Next.js 16.1.6** project using the **App Router** (`src/app/`), **Re
 - **Fonts**: Geist font family loaded via `next/font/google` with CSS custom properties (`--font-geist-sans`, `--font-geist-mono`)
 - **ESLint**: Extends `next/core-web-vitals` and `next/typescript` configs
 
-## Skills & Agents
+## CRITICAL: Always Use the Right Skill
 
-### Skills (invoke with `/skill-name`)
+**You MUST invoke the matching skill BEFORE writing any code.** This is non-negotiable. Every time you write or modify code, check which skill applies and invoke it first:
 
-- **`/frontend-design`** — Always use when building or modifying UI (pages, components, layouts, or any visual elements). This is a fresh app, so every UI task should go through this skill to ensure high design quality from the start.
-- **`/react-best-practices`** — Use when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns (components, data fetching, bundle optimization).
-- **`/ui-design-system`** — Use for creating design systems, design tokens, component documentation, responsive design calculations, and developer handoff.
-- **`/git-commit-helper`** — Use when committing code to generate descriptive commit messages from git diffs.
-- **`/keybindings-help`** — Use when customizing keyboard shortcuts or modifying keybindings.
+- **Writing UI** (pages, components, layouts, any visual elements) → invoke `/frontend-design` FIRST
+- **Writing React/Next.js logic** (components, data fetching, hooks, optimization) → invoke `/react-best-practices` FIRST
+- **Creating design systems, tokens, or responsive calculations** → invoke `/ui-design-system` FIRST
+- **Committing code** → invoke `/git-commit-helper` FIRST
+
+Skipping the relevant skill is a mistake. When in doubt, invoke it.
+
+### All Skills (invoke with `/skill-name`)
+
+- **`/frontend-design`** — UI pages, components, layouts, visual elements
+- **`/react-best-practices`** — React/Next.js code patterns, performance, data fetching
+- **`/ui-design-system`** — Design systems, tokens, component docs, responsive design
+- **`/git-commit-helper`** — Commit message generation from diffs
+- **`/keybindings-help`** — Keyboard shortcut customization
 
 ### Agents (used automatically via Task tool)
 
-- **nextjs-architecture-expert** — Use proactively for Next.js architecture decisions, App Router patterns, Server Components, and performance optimization.
-- **Explore** — Use for codebase exploration, finding files by pattern, and searching code for keywords.
-- **Plan** — Use for designing implementation strategies and step-by-step plans for complex tasks.
+- **nextjs-architecture-expert** — Next.js architecture decisions, App Router, Server Components, performance
+- **Explore** — Codebase exploration, file search, keyword search
+- **Plan** — Implementation strategies and step-by-step plans
