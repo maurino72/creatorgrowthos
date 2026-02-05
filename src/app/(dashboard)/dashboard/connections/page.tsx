@@ -1,0 +1,305 @@
+"use client";
+
+import { Suspense, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useConnections, useDisconnect } from "@/lib/queries/connections";
+import type { ConnectionData } from "@/lib/queries/connections";
+import type { PlatformType } from "@/lib/adapters/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const PLATFORMS: {
+  id: PlatformType;
+  name: string;
+  comingSoon: boolean;
+  icon: React.ReactNode;
+}[] = [
+  {
+    id: "twitter",
+    name: "Twitter",
+    comingSoon: false,
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    ),
+  },
+  {
+    id: "linkedin",
+    name: "LinkedIn",
+    comingSoon: true,
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+      </svg>
+    ),
+  },
+  {
+    id: "threads",
+    name: "Threads",
+    comingSoon: true,
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.96-.065-1.187.408-2.26 1.33-3.017.88-.724 2.104-1.139 3.546-1.206 1.048-.048 2.016.04 2.907.256-.02-.96-.175-1.71-.467-2.25-.387-.712-1.028-1.073-1.907-1.073h-.068c-.66.024-1.2.222-1.607.59-.39.354-.606.826-.643 1.404l-2.113-.108c.078-1.18.568-2.134 1.416-2.762.79-.585 1.818-.895 2.972-.895h.09c1.565.04 2.746.627 3.508 1.746.56.82.874 1.922.937 3.271.29.13.565.272.826.427 1.105.658 1.946 1.578 2.426 2.66.768 1.731.812 4.623-1.315 6.704-1.786 1.749-4.004 2.547-7.172 2.573zM10.14 15.39c.03.55.277.99.715 1.274.525.34 1.228.5 1.98.464 1.065-.058 1.9-.443 2.481-1.166.422-.525.727-1.22.908-2.07-.558-.12-1.158-.186-1.793-.186h-.173c-1.003.044-1.816.297-2.353.732-.51.41-.785.963-.765 1.603v-.651z" />
+      </svg>
+    ),
+  },
+];
+
+const ERROR_MESSAGES: Record<string, string> = {
+  access_denied: "You denied access to your Twitter account.",
+  invalid_state: "OAuth state mismatch. Please try connecting again.",
+  token_exchange_failed: "Failed to complete authentication. Please try again.",
+  session_expired: "Your session expired. Please log in and try again.",
+};
+
+function ConnectionStatusBadge({ status }: { status: string | null }) {
+  if (status === "active") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20">
+        Active
+      </span>
+    );
+  }
+  if (status === "expired") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-500/10 dark:text-yellow-400 dark:ring-yellow-500/20">
+        Expired
+      </span>
+    );
+  }
+  if (status === "revoked") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20">
+        Revoked
+      </span>
+    );
+  }
+  return null;
+}
+
+function ConnectionCard({
+  platform,
+  connection,
+}: {
+  platform: (typeof PLATFORMS)[number];
+  connection: ConnectionData | undefined;
+}) {
+  const disconnect = useDisconnect();
+
+  if (platform.comingSoon) {
+    return (
+      <Card className="opacity-60">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              {platform.icon}
+            </div>
+            <div>
+              <CardTitle className="text-base">{platform.name}</CardTitle>
+              <span className="text-xs text-muted-foreground">Coming Soon</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" size="sm" disabled>
+            Connect
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const isConnected = !!connection;
+  const isExpired = connection?.status === "expired";
+  const isRevoked = connection?.status === "revoked";
+  const needsReconnect = isExpired || isRevoked;
+
+  if (!isConnected) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              {platform.icon}
+            </div>
+            <div>
+              <CardTitle className="text-base">{platform.name}</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                Not connected
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="default" size="sm">
+            <a href={`/api/connections/${platform.id}`}>Connect</a>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+            {platform.icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base">{platform.name}</CardTitle>
+              <ConnectionStatusBadge status={connection.status} />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              @{connection.platform_username}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2">
+          {needsReconnect ? (
+            <Button asChild variant="default" size="sm">
+              <a href={`/api/connections/${platform.id}`}>Reconnect</a>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (window.confirm(`Disconnect your ${platform.name} account?`)) {
+                  disconnect.mutate(platform.id, {
+                    onSuccess: () =>
+                      toast.success(`${platform.name} disconnected.`),
+                    onError: () =>
+                      toast.error(`Failed to disconnect ${platform.name}.`),
+                  });
+                }
+              }}
+              disabled={disconnect.isPending}
+            >
+              Disconnect
+            </Button>
+          )}
+        </div>
+        {connection.connected_at && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Connected{" "}
+            {new Date(connection.connected_at).toLocaleDateString()}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConnectionSkeleton() {
+  return (
+    <Card data-testid="connection-skeleton">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-8 w-20" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConnectionsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: connections, isLoading } = useConnections();
+  const toastShown = useRef(false);
+
+  useEffect(() => {
+    if (toastShown.current) return;
+
+    const connected = searchParams.get("connected");
+    const error = searchParams.get("error");
+
+    if (connected) {
+      toastShown.current = true;
+      const name = connected.charAt(0).toUpperCase() + connected.slice(1);
+      toast.success(`${name} connected successfully!`);
+      router.replace("/dashboard/connections");
+    } else if (error) {
+      toastShown.current = true;
+      const message =
+        ERROR_MESSAGES[error] ?? "An unknown error occurred. Please try again.";
+      toast.error(message);
+      router.replace("/dashboard/connections");
+    }
+  }, [searchParams, router]);
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {isLoading
+        ? Array.from({ length: 3 }).map((_, i) => (
+            <ConnectionSkeleton key={i} />
+          ))
+        : PLATFORMS.map((platform) => (
+            <ConnectionCard
+              key={platform.id}
+              platform={platform}
+              connection={connections?.find(
+                (c) => c.platform === platform.id,
+              )}
+            />
+          ))}
+    </div>
+  );
+}
+
+export default function ConnectionsPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Connections</h1>
+        <p className="text-sm text-muted-foreground">
+          Connect your social media accounts to publish and track content.
+        </p>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ConnectionSkeleton key={i} />
+            ))}
+          </div>
+        }
+      >
+        <ConnectionsContent />
+      </Suspense>
+    </div>
+  );
+}

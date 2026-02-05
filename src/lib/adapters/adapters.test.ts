@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getAdapterForPlatform } from "./index";
 import { TwitterAdapter } from "./twitter";
+import type { AuthResult } from "./types";
 
 describe("platform adapter registry", () => {
   it("returns a TwitterAdapter for 'twitter'", () => {
@@ -15,31 +16,20 @@ describe("platform adapter registry", () => {
   });
 });
 
-describe("TwitterAdapter", () => {
-  const adapter = new TwitterAdapter();
+describe("TwitterAdapter (interface compliance)", () => {
+  let adapter: TwitterAdapter;
 
-  it("throws 'Not implemented' for getAuthUrl", () => {
-    expect(() => adapter.getAuthUrl("state", "http://localhost")).toThrow(
-      "Not implemented",
-    );
+  beforeEach(() => {
+    vi.stubEnv("TWITTER_CLIENT_ID", "test-id");
+    vi.stubEnv("TWITTER_CLIENT_SECRET", "test-secret");
+    adapter = new TwitterAdapter();
   });
 
-  it("throws 'Not implemented' for exchangeCodeForTokens", async () => {
-    await expect(
-      adapter.exchangeCodeForTokens("code", "http://localhost"),
-    ).rejects.toThrow("Not implemented");
-  });
-
-  it("throws 'Not implemented' for refreshTokens", async () => {
-    await expect(adapter.refreshTokens("token")).rejects.toThrow(
-      "Not implemented",
-    );
-  });
-
-  it("throws 'Not implemented' for getCurrentUser", async () => {
-    await expect(adapter.getCurrentUser("token")).rejects.toThrow(
-      "Not implemented",
-    );
+  it("getAuthUrl returns an AuthResult", () => {
+    const result: AuthResult = adapter.getAuthUrl("state", "http://localhost/callback");
+    expect(result).toHaveProperty("url");
+    expect(result).toHaveProperty("codeVerifier");
+    expect(typeof result.url).toBe("string");
   });
 
   it("throws 'Not implemented' for publishPost", async () => {

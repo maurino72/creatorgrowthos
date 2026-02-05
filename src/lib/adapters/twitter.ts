@@ -1,4 +1,6 @@
+import { generateCodeVerifier } from "@/lib/utils/pkce";
 import type {
+  AuthResult,
   PlatformAdapter,
   TokenPair,
   PlatformUserInfo,
@@ -7,24 +9,131 @@ import type {
   RawMetricSnapshot,
 } from "./types";
 
+const TWITTER_AUTH_URL = "https://twitter.com/i/oauth2/authorize";
+const TWITTER_TOKEN_URL = "https://api.x.com/2/oauth2/token";
+const TWITTER_USER_URL = "https://api.x.com/2/users/me";
+const SCOPES = "tweet.read tweet.write users.read offline.access";
+
 export class TwitterAdapter implements PlatformAdapter {
-  getAuthUrl(_state: string, _redirectUri: string): string {
-    throw new Error("Not implemented");
+  private get clientId(): string {
+    return process.env.TWITTER_CLIENT_ID!;
+  }
+
+  private get clientSecret(): string {
+    return process.env.TWITTER_CLIENT_SECRET!;
+  }
+
+  private get basicAuth(): string {
+    return Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64");
+  }
+
+  getAuthUrl(state: string, redirectUri: string): AuthResult {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallengeSync(codeVerifier);
+
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: this.clientId,
+      redirect_uri: redirectUri,
+      scope: SCOPES,
+      state,
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+    });
+
+    return {
+      url: `${TWITTER_AUTH_URL}?${params.toString()}`,
+      codeVerifier,
+    };
   }
 
   async exchangeCodeForTokens(
-    _code: string,
-    _redirectUri: string,
+    code: string,
+    redirectUri: string,
+    codeVerifier?: string,
   ): Promise<TokenPair> {
-    throw new Error("Not implemented");
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      ...(codeVerifier && { code_verifier: codeVerifier }),
+    });
+
+    const response = await fetch(TWITTER_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${this.basicAuth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(
+        `Token exchange failed: ${(error as Record<string, string>).error ?? response.statusText}`,
+      );
+    }
+
+    return this.parseTokenResponse(await response.json());
   }
 
-  async refreshTokens(_refreshToken: string): Promise<TokenPair> {
-    throw new Error("Not implemented");
+  async refreshTokens(refreshToken: string): Promise<TokenPair> {
+    const body = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
+
+    const response = await fetch(TWITTER_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${this.basicAuth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(
+        `Token refresh failed: ${(error as Record<string, string>).error ?? response.statusText}`,
+      );
+    }
+
+    return this.parseTokenResponse(await response.json());
   }
 
-  async getCurrentUser(_accessToken: string): Promise<PlatformUserInfo> {
-    throw new Error("Not implemented");
+  async getCurrentUser(accessToken: string): Promise<PlatformUserInfo> {
+    const response = await fetch(
+      `${TWITTER_USER_URL}?user.fields=profile_image_url`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch current user: ${response.statusText}`,
+      );
+    }
+
+    const json = (await response.json()) as {
+      data: {
+        id: string;
+        username: string;
+        name: string;
+        profile_image_url?: string;
+      };
+    };
+
+    return {
+      platformUserId: json.data.id,
+      username: json.data.username,
+      displayName: json.data.name,
+      avatarUrl: json.data.profile_image_url,
+    };
   }
 
   async publishPost(
@@ -47,4 +156,33 @@ export class TwitterAdapter implements PlatformAdapter {
   ): Promise<RawMetricSnapshot> {
     throw new Error("Not implemented");
   }
+
+  private parseTokenResponse(json: {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  }): TokenPair {
+    return {
+      accessToken: json.access_token,
+      refreshToken: json.refresh_token,
+      expiresAt: json.expires_in
+        ? new Date(Date.now() + json.expires_in * 1000)
+        : undefined,
+      scopes: json.scope?.split(" "),
+    };
+  }
+}
+
+/**
+ * Synchronous code challenge generation using Node.js crypto.
+ * getAuthUrl is synchronous, so we use createHash directly.
+ */
+function generateCodeChallengeSync(verifier: string): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createHash } = require("crypto");
+  return (createHash("sha256").update(verifier).digest("base64url") as string).replace(
+    /=+$/,
+    "",
+  );
 }

@@ -37,11 +37,17 @@ export interface RawMetricSnapshot {
   observedAt: Date;
 }
 
+export interface AuthResult {
+  url: string;
+  codeVerifier?: string;
+}
+
 export interface PlatformAdapter {
-  getAuthUrl(state: string, redirectUri: string): string;
+  getAuthUrl(state: string, redirectUri: string): AuthResult;
   exchangeCodeForTokens(
     code: string,
     redirectUri: string,
+    codeVerifier?: string,
   ): Promise<TokenPair>;
   refreshTokens(refreshToken: string): Promise<TokenPair>;
   getCurrentUser(accessToken: string): Promise<PlatformUserInfo>;

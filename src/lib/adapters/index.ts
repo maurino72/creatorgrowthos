@@ -13,7 +13,7 @@ export function getAdapterForPlatform(platform: PlatformType): PlatformAdapter {
   return factory();
 }
 
-export type { PlatformAdapter, PlatformType } from "./types";
+export type { PlatformAdapter, PlatformType, AuthResult } from "./types";
 export type {
   TokenPair,
   PlatformUserInfo,
