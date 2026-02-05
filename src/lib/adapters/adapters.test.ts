@@ -50,9 +50,26 @@ describe("TwitterAdapter (interface compliance)", () => {
     await expect(adapter.deletePost("token", "id")).resolves.toBeUndefined();
   });
 
-  it("throws 'Not implemented' for fetchPostMetrics", async () => {
-    await expect(adapter.fetchPostMetrics("token", "id")).rejects.toThrow(
-      "Not implemented",
+  it("fetchPostMetrics calls Twitter API and returns a RawMetricSnapshot", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            id: "id",
+            public_metrics: {
+              impression_count: 100,
+              like_count: 5,
+              reply_count: 1,
+              retweet_count: 2,
+            },
+          },
+        }),
+        { status: 200 },
+      ),
     );
+
+    const result = await adapter.fetchPostMetrics("token", "id");
+    expect(result.impressions).toBe(100);
+    expect(result.observedAt).toBeInstanceOf(Date);
   });
 });

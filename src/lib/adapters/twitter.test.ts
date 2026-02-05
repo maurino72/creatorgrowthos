@@ -242,4 +242,117 @@ describe("TwitterAdapter", () => {
       );
     });
   });
+
+  describe("fetchPostMetrics", () => {
+    it("fetches tweet with metrics fields using Bearer token", async () => {
+      const mockResponse = {
+        data: {
+          id: "tweet-123",
+          public_metrics: {
+            impression_count: 1500,
+            like_count: 42,
+            reply_count: 7,
+            retweet_count: 12,
+          },
+          non_public_metrics: {
+            url_link_clicks: 25,
+            user_profile_clicks: 8,
+          },
+        },
+      };
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 }),
+      );
+
+      await adapter.fetchPostMetrics("access-token-123", "tweet-123");
+
+      const [url, options] = fetchSpy.mock.calls[0];
+      expect(url).toContain("https://api.x.com/2/tweets/tweet-123");
+      const parsed = new URL(url as string);
+      expect(parsed.searchParams.get("tweet.fields")).toBe("public_metrics,non_public_metrics,organic_metrics");
+      expect(options?.headers).toEqual(
+        expect.objectContaining({
+          Authorization: "Bearer access-token-123",
+        }),
+      );
+    });
+
+    it("returns mapped RawMetricSnapshot from full response", async () => {
+      const mockResponse = {
+        data: {
+          id: "tweet-123",
+          public_metrics: {
+            impression_count: 1500,
+            like_count: 42,
+            reply_count: 7,
+            retweet_count: 12,
+          },
+          non_public_metrics: {
+            url_link_clicks: 25,
+            user_profile_clicks: 8,
+          },
+        },
+      };
+
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 }),
+      );
+
+      const result = await adapter.fetchPostMetrics("token", "tweet-123");
+      expect(result.impressions).toBe(1500);
+      expect(result.likes).toBe(42);
+      expect(result.replies).toBe(7);
+      expect(result.reposts).toBe(12);
+      expect(result.clicks).toBe(25);
+      expect(result.profileVisits).toBe(8);
+      expect(result.observedAt).toBeInstanceOf(Date);
+    });
+
+    it("handles missing non_public_metrics gracefully", async () => {
+      const mockResponse = {
+        data: {
+          id: "tweet-123",
+          public_metrics: {
+            impression_count: 500,
+            like_count: 10,
+            reply_count: 2,
+            retweet_count: 3,
+          },
+        },
+      };
+
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 }),
+      );
+
+      const result = await adapter.fetchPostMetrics("token", "tweet-123");
+      expect(result.impressions).toBe(500);
+      expect(result.likes).toBe(10);
+      expect(result.replies).toBe(2);
+      expect(result.reposts).toBe(3);
+      expect(result.clicks).toBeUndefined();
+      expect(result.profileVisits).toBeUndefined();
+    });
+
+    it("throws on non-OK response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Not Found" }), { status: 404 }),
+      );
+
+      await expect(
+        adapter.fetchPostMetrics("token", "nonexistent-id"),
+      ).rejects.toThrow("Fetch metrics failed");
+    });
+
+    it("throws on rate limit (429) response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Too Many Requests" }), { status: 429 }),
+      );
+
+      await expect(
+        adapter.fetchPostMetrics("token", "tweet-123"),
+      ).rejects.toThrow("Fetch metrics failed");
+    });
+  });
 });

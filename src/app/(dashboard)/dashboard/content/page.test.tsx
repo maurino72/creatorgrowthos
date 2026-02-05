@@ -34,7 +34,19 @@ vi.mock("@/lib/queries/posts", () => ({
   },
 }));
 
+vi.mock("@/lib/queries/metrics", () => ({
+  useLatestMetrics: vi.fn(() => ({
+    data: null,
+    isLoading: false,
+  })),
+  metricKeys: {
+    all: ["metrics"],
+    latest: (id: string) => ["metrics", "latest", id],
+  },
+}));
+
 import { usePosts } from "@/lib/queries/posts";
+import { useLatestMetrics } from "@/lib/queries/metrics";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -196,5 +208,66 @@ describe("Content list page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.getByTestId("platform-twitter")).toBeInTheDocument();
+  });
+
+  it("shows metrics on published post cards", async () => {
+    vi.mocked(usePosts).mockReturnValue({
+      data: [
+        {
+          id: "post-1",
+          body: "Published post with metrics",
+          status: "published",
+          published_at: "2024-06-01T12:00:00Z",
+          created_at: "2024-06-01T10:00:00Z",
+          post_publications: [{ platform: "twitter", status: "published" }],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    vi.mocked(useLatestMetrics).mockReturnValue({
+      data: [
+        {
+          id: "event-1",
+          impressions: 1500,
+          likes: 42,
+          replies: 7,
+          reposts: 12,
+          engagement_rate: 0.041,
+          observed_at: new Date().toISOString(),
+        },
+      ],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("1.5K views")).toBeInTheDocument();
+    expect(screen.getByText(/42/)).toBeInTheDocument();
+    expect(screen.getByText(/4.1% engagement/)).toBeInTheDocument();
+  });
+
+  it("does not show metrics on draft post cards", async () => {
+    vi.mocked(usePosts).mockReturnValue({
+      data: [
+        {
+          id: "post-1",
+          body: "Draft post without metrics",
+          status: "draft",
+          created_at: "2024-06-01T10:00:00Z",
+          post_publications: [{ platform: "twitter", status: "pending" }],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.queryByText(/views/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/engagement/)).not.toBeInTheDocument();
   });
 });

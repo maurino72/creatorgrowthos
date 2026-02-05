@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { usePosts, useDeletePost, usePublishPost } from "@/lib/queries/posts";
+import { useLatestMetrics } from "@/lib/queries/metrics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber, formatEngagementRate, formatTimeAgo } from "@/lib/utils/format";
 
 const STATUS_TABS = [
   { label: "All", value: undefined },
@@ -78,6 +80,36 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function PostMetrics({ postId }: { postId: string }) {
+  const { data: metrics } = useLatestMetrics(postId);
+
+  if (!metrics || metrics.length === 0) return null;
+
+  // Aggregate across all publications
+  const totals = metrics.reduce(
+    (acc: { impressions: number; likes: number; replies: number; reposts: number; engagementRate: number | null; observedAt: string | null }, m: { impressions?: number; likes?: number; replies?: number; reposts?: number; engagement_rate?: number | null; observed_at?: string }) => ({
+      impressions: acc.impressions + (m.impressions ?? 0),
+      likes: acc.likes + (m.likes ?? 0),
+      replies: acc.replies + (m.replies ?? 0),
+      reposts: acc.reposts + (m.reposts ?? 0),
+      engagementRate: m.engagement_rate ?? acc.engagementRate,
+      observedAt: m.observed_at ?? acc.observedAt,
+    }),
+    { impressions: 0, likes: 0, replies: 0, reposts: 0, engagementRate: null, observedAt: null },
+  );
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <span>{formatNumber(totals.impressions)} views</span>
+      <span>{totals.likes} likes · {totals.replies} replies · {totals.reposts} reposts</span>
+      <span>{formatEngagementRate(totals.engagementRate)} engagement</span>
+      {totals.observedAt && (
+        <span>Updated {formatTimeAgo(totals.observedAt)}</span>
+      )}
+    </div>
+  );
+}
+
 function PostCard({
   post,
 }: {
@@ -124,6 +156,9 @@ function PostCard({
                 </span>
               )}
             </div>
+            {post.status === "published" && (
+              <PostMetrics postId={post.id} />
+            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1">

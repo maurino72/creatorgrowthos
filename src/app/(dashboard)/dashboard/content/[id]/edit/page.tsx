@@ -6,9 +6,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { usePost, useUpdatePost, useDeletePost, usePublishPost } from "@/lib/queries/posts";
 import { useConnections } from "@/lib/queries/connections";
+import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber, formatEngagementRate, formatTimeAgo } from "@/lib/utils/format";
 
 const CHAR_LIMIT = 280;
 
@@ -16,6 +18,153 @@ function getCharColor(count: number): string {
   if (count > CHAR_LIMIT) return "text-red-500";
   if (count >= 260) return "text-yellow-500";
   return "text-muted-foreground";
+}
+
+interface MetricEvent {
+  id: string;
+  impressions?: number;
+  likes?: number;
+  replies?: number;
+  reposts?: number;
+  engagement_rate?: number | null;
+  hours_since_publish?: number;
+  observed_at?: string;
+  post_publication_id?: string;
+}
+
+function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function MetricsTimeline({ events }: { events: MetricEvent[] }) {
+  if (!events || events.length === 0) return null;
+
+  // Sort oldest first for the timeline
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.observed_at!).getTime() - new Date(b.observed_at!).getTime(),
+  );
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Performance over time</p>
+      <div className="space-y-1.5">
+        {sorted.map((event) => (
+          <div
+            key={event.id}
+            className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs"
+          >
+            <span className="text-muted-foreground">
+              {event.hours_since_publish != null
+                ? `${event.hours_since_publish}h after publish`
+                : formatTimeAgo(event.observed_at)}
+            </span>
+            <div className="flex items-center gap-3 font-medium">
+              <span>{formatNumber(event.impressions)} views</span>
+              <span>{event.likes ?? 0} likes</span>
+              <span>{event.replies ?? 0} replies</span>
+              <span>{event.reposts ?? 0} reposts</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MetricsSection({ postId }: { postId: string }) {
+  const { data: latestMetrics, isLoading: latestLoading } = useLatestMetrics(postId);
+  const { data: allMetrics } = usePostMetrics(postId);
+  const refreshMetrics = useRefreshMetrics();
+
+  if (latestLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-5 space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="grid grid-cols-3 gap-3">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasMetrics = latestMetrics && latestMetrics.length > 0;
+
+  // Aggregate latest metrics across publications
+  const totals = hasMetrics
+    ? (latestMetrics as MetricEvent[]).reduce(
+        (acc, m) => ({
+          impressions: acc.impressions + (m.impressions ?? 0),
+          likes: acc.likes + (m.likes ?? 0),
+          replies: acc.replies + (m.replies ?? 0),
+          reposts: acc.reposts + (m.reposts ?? 0),
+          engagementRate: m.engagement_rate ?? acc.engagementRate,
+          observedAt: m.observed_at ?? acc.observedAt,
+        }),
+        { impressions: 0, likes: 0, replies: 0, reposts: 0, engagementRate: null as number | null, observedAt: null as string | null },
+      )
+    : null;
+
+  return (
+    <Card>
+      <CardContent className="pt-5 space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">Performance</h2>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() =>
+              refreshMetrics.mutate(postId, {
+                onSuccess: () => toast.success("Metrics refreshed"),
+                onError: () => toast.error("Failed to refresh metrics"),
+              })
+            }
+            disabled={refreshMetrics.isPending}
+          >
+            Refresh
+          </Button>
+        </div>
+
+        {!hasMetrics ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            Metrics will appear soon after publishing.
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <MetricCard
+                label="Impressions"
+                value={formatNumber(totals!.impressions)}
+                sub={totals!.observedAt ? `Updated ${formatTimeAgo(totals!.observedAt)}` : undefined}
+              />
+              <MetricCard
+                label="Engagement"
+                value={String(totals!.likes + totals!.replies + totals!.reposts)}
+                sub={`${totals!.likes} likes · ${totals!.replies} replies · ${totals!.reposts} reposts`}
+              />
+              <MetricCard
+                label="Engagement Rate"
+                value={formatEngagementRate(totals!.engagementRate)}
+              />
+            </div>
+
+            {allMetrics && allMetrics.length > 1 && (
+              <MetricsTimeline events={allMetrics as MetricEvent[]} />
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function EditPostPage() {
@@ -260,6 +409,10 @@ export default function EditPostPage() {
           </div>
         </CardContent>
       </Card>
+
+      {post.status === "published" && (
+        <MetricsSection postId={postId} />
+      )}
     </div>
   );
 }

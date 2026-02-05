@@ -191,10 +191,58 @@ export class TwitterAdapter implements PlatformAdapter {
   }
 
   async fetchPostMetrics(
-    _accessToken: string,
-    _platformPostId: string,
+    accessToken: string,
+    platformPostId: string,
   ): Promise<RawMetricSnapshot> {
-    throw new Error("Not implemented");
+    const params = new URLSearchParams({
+      "tweet.fields": "public_metrics,non_public_metrics,organic_metrics",
+    });
+
+    const response = await fetch(
+      `${TWITTER_TWEETS_URL}/${platformPostId}?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail =
+        (error as Record<string, string>).detail ??
+        (error as Record<string, string>).title ??
+        response.statusText;
+      throw new Error(`Fetch metrics failed: ${detail}`);
+    }
+
+    const json = (await response.json()) as {
+      data: {
+        id: string;
+        public_metrics?: {
+          impression_count?: number;
+          like_count?: number;
+          reply_count?: number;
+          retweet_count?: number;
+        };
+        non_public_metrics?: {
+          url_link_clicks?: number;
+          user_profile_clicks?: number;
+        };
+      };
+    };
+
+    const { public_metrics, non_public_metrics } = json.data;
+
+    return {
+      impressions: public_metrics?.impression_count,
+      likes: public_metrics?.like_count,
+      replies: public_metrics?.reply_count,
+      reposts: public_metrics?.retweet_count,
+      clicks: non_public_metrics?.url_link_clicks,
+      profileVisits: non_public_metrics?.user_profile_clicks,
+      observedAt: new Date(),
+    };
   }
 
   private parseTokenResponse(json: {
