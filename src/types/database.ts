@@ -323,6 +323,91 @@ export type Database = {
           },
         ]
       }
+      content_imports: {
+        Row: {
+          id: string
+          user_id: string
+          platform: string
+          requested_count: number
+          imported_count: number | null
+          failed_count: number | null
+          status: string
+          error_message: string | null
+          started_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          platform: string
+          requested_count: number
+          imported_count?: number | null
+          failed_count?: number | null
+          status?: string
+          error_message?: string | null
+          started_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          platform?: string
+          requested_count?: number
+          imported_count?: number | null
+          failed_count?: number | null
+          status?: string
+          error_message?: string | null
+          started_at?: string
+          completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_imports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          primary_niche: string
+          primary_goal: string
+          target_audience: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          primary_niche: string
+          primary_goal: string
+          target_audience: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          primary_niche?: string
+          primary_goal?: string
+          target_audience?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -331,6 +416,7 @@ export type Database = {
           full_name: string | null
           id: string
           onboarded_at: string | null
+          onboarding_step: string | null
           timezone: string | null
           updated_at: string | null
         }
@@ -341,6 +427,7 @@ export type Database = {
           full_name?: string | null
           id: string
           onboarded_at?: string | null
+          onboarding_step?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -351,6 +438,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarded_at?: string | null
+          onboarding_step?: string | null
           timezone?: string | null
           updated_at?: string | null
         }

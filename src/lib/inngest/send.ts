@@ -71,6 +71,17 @@ export async function sendPostPublishResults(
   await inngest.send(events);
 }
 
+export async function sendPostImported(
+  userId: string,
+  postIds: string[],
+  count: number,
+) {
+  await inngest.send({
+    name: "post/imported",
+    data: { userId, postIds, count },
+  });
+}
+
 export async function sendConnectionCreated(
   userId: string,
   platform: string,

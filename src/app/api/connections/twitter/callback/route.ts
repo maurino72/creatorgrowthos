@@ -104,11 +104,20 @@ export async function GET(request: Request) {
   // Send Inngest event (fire-and-forget)
   sendConnectionCreated(user.id, "twitter", userInfo.platformUserId).catch(() => {});
 
+  // Determine redirect: non-onboarded users go to onboarding, others to connections
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("onboarded_at")
+    .eq("id", user.id)
+    .single();
+
+  const redirectUrl =
+    profile?.onboarded_at == null
+      ? `${appUrl}/onboarding?connected=twitter`
+      : `${connectionsUrl}?connected=twitter`;
+
   // Clear cookie and redirect
-  const response = NextResponse.redirect(
-    `${connectionsUrl}?connected=twitter`,
-    302,
-  );
+  const response = NextResponse.redirect(redirectUrl, 302);
   const isSecure = appUrl.startsWith("https");
   response.headers.set(
     "set-cookie",

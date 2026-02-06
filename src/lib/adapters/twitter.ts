@@ -9,6 +9,22 @@ import type {
   RawMetricSnapshot,
 } from "./types";
 
+export interface TweetData {
+  id: string;
+  text: string;
+  created_at: string;
+  public_metrics: {
+    impression_count: number;
+    like_count: number;
+    reply_count: number;
+    retweet_count: number;
+  };
+}
+
+export interface FetchUserTweetsResult {
+  tweets: TweetData[];
+}
+
 const TWITTER_AUTH_URL = "https://twitter.com/i/oauth2/authorize";
 const TWITTER_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const TWITTER_USER_URL = "https://api.x.com/2/users/me";
@@ -243,6 +259,59 @@ export class TwitterAdapter implements PlatformAdapter {
     }
 
     return mediaId;
+  }
+
+  async fetchUserTweets(
+    accessToken: string,
+    platformUserId: string,
+    maxCount: number,
+  ): Promise<FetchUserTweetsResult> {
+    const allTweets: TweetData[] = [];
+    let paginationToken: string | undefined;
+
+    while (allTweets.length < maxCount) {
+      const params = new URLSearchParams({
+        max_results: String(Math.min(100, maxCount - allTweets.length)),
+        "tweet.fields": "created_at,public_metrics,entities",
+      });
+      if (paginationToken) {
+        params.set("pagination_token", paginationToken);
+      }
+
+      const response = await fetch(
+        `https://api.x.com/2/users/${platformUserId}/tweets?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        const detail =
+          (error as Record<string, string>).detail ??
+          (error as Record<string, string>).title ??
+          response.statusText;
+        throw new Error(`Fetch user tweets failed: ${detail}`);
+      }
+
+      const json = (await response.json()) as {
+        data?: TweetData[];
+        meta: { result_count: number; next_token?: string };
+      };
+
+      if (json.data) {
+        allTweets.push(...json.data);
+      }
+
+      if (!json.meta.next_token || allTweets.length >= maxCount) {
+        break;
+      }
+      paginationToken = json.meta.next_token;
+    }
+
+    return { tweets: allTweets.slice(0, maxCount) };
   }
 
   async deletePost(

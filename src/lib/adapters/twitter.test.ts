@@ -440,6 +440,128 @@ describe("TwitterAdapter", () => {
     });
   });
 
+  describe("fetchUserTweets", () => {
+    it("fetches user tweets with public_metrics and created_at", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "tweet-1",
+                text: "Hello world",
+                created_at: "2024-01-15T10:30:00.000Z",
+                public_metrics: {
+                  impression_count: 100,
+                  like_count: 5,
+                  reply_count: 1,
+                  retweet_count: 2,
+                },
+              },
+              {
+                id: "tweet-2",
+                text: "Second tweet",
+                created_at: "2024-01-14T08:00:00.000Z",
+                public_metrics: {
+                  impression_count: 50,
+                  like_count: 3,
+                  reply_count: 0,
+                  retweet_count: 1,
+                },
+              },
+            ],
+            meta: { result_count: 2 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchUserTweets("token", "user-id-1", 50);
+      expect(result.tweets).toHaveLength(2);
+      expect(result.tweets[0].id).toBe("tweet-1");
+      expect(result.tweets[0].text).toBe("Hello world");
+      expect(result.tweets[0].created_at).toBe("2024-01-15T10:30:00.000Z");
+      expect(result.tweets[0].public_metrics.impression_count).toBe(100);
+    });
+
+    it("paginates when there is a next_token", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      // First page
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ id: "t-1", text: "A", created_at: "2024-01-15T00:00:00Z", public_metrics: { impression_count: 0, like_count: 0, reply_count: 0, retweet_count: 0 } }],
+            meta: { result_count: 1, next_token: "page2-token" },
+          }),
+          { status: 200 },
+        ),
+      );
+      // Second page
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ id: "t-2", text: "B", created_at: "2024-01-14T00:00:00Z", public_metrics: { impression_count: 0, like_count: 0, reply_count: 0, retweet_count: 0 } }],
+            meta: { result_count: 1 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchUserTweets("token", "user-id-1", 200);
+      expect(result.tweets).toHaveLength(2);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      // Second call should include pagination_token
+      const secondUrl = fetchSpy.mock.calls[1][0] as string;
+      expect(secondUrl).toContain("pagination_token=page2-token");
+    });
+
+    it("returns empty array when user has no tweets", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ meta: { result_count: 0 } }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchUserTweets("token", "user-id-1", 50);
+      expect(result.tweets).toHaveLength(0);
+    });
+
+    it("throws on API error", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ detail: "Unauthorized" }),
+          { status: 401 },
+        ),
+      );
+
+      await expect(
+        adapter.fetchUserTweets("token", "user-id-1", 50),
+      ).rejects.toThrow("Fetch user tweets failed");
+    });
+
+    it("stops fetching when max count is reached", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      // Return 100 tweets with next_token
+      const tweets = Array.from({ length: 100 }, (_, i) => ({
+        id: `t-${i}`,
+        text: `Tweet ${i}`,
+        created_at: "2024-01-15T00:00:00Z",
+        public_metrics: { impression_count: 0, like_count: 0, reply_count: 0, retweet_count: 0 },
+      }));
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: tweets, meta: { result_count: 100, next_token: "more" } }),
+          { status: 200 },
+        ),
+      );
+
+      // Request only 50
+      const result = await adapter.fetchUserTweets("token", "user-id-1", 50);
+      expect(result.tweets.length).toBeLessThanOrEqual(50);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("publishPost with media", () => {
     it("includes media.media_ids when mediaIds provided", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(

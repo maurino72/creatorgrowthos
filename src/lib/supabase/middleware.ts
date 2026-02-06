@@ -31,8 +31,8 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Redirect unauthenticated users away from dashboard
-  if (!user && pathname.startsWith("/dashboard")) {
+  // Redirect unauthenticated users away from dashboard and onboarding
+  if (!user && (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -43,6 +43,32 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Onboarding routing for authenticated users on protected pages
+  if (user && (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding"))) {
+    // Check onboarding status
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarded_at")
+      .eq("id", user.id)
+      .single();
+
+    const isOnboarded = profile?.onboarded_at != null;
+
+    // Not onboarded + trying to access dashboard → redirect to onboarding
+    if (!isOnboarded && pathname.startsWith("/dashboard")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    // Already onboarded + trying to access onboarding → redirect to dashboard
+    if (isOnboarded && pathname.startsWith("/onboarding")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

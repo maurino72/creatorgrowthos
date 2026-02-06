@@ -33,7 +33,10 @@ describe("GET /api/connections/twitter/callback", () => {
     return mod.GET;
   }
 
-  function mockAuth(userId: string | null) {
+  function mockAuth(
+    userId: string | null,
+    profile?: { onboarded_at: string | null } | null,
+  ) {
     const supabase = {
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -41,6 +44,18 @@ describe("GET /api/connections/twitter/callback", () => {
           error: userId ? null : { message: "No session" },
         }),
       },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: profile ?? null,
+              error: profile
+                ? null
+                : { code: "PGRST116", message: "Not found" },
+            }),
+          }),
+        }),
+      }),
     };
     vi.mocked(createClient).mockResolvedValue(supabase as never);
     return supabase;
@@ -142,7 +157,7 @@ describe("GET /api/connections/twitter/callback", () => {
   });
 
   it("completes OAuth flow and redirects to connections page on success", async () => {
-    mockAuth("user-123");
+    mockAuth("user-123", { onboarded_at: "2024-01-01" });
     const cookiePayload = JSON.stringify({
       state: "valid-state",
       codeVerifier: "verifier-123",
@@ -188,5 +203,28 @@ describe("GET /api/connections/twitter/callback", () => {
     const setCookie = response.headers.get("set-cookie");
     expect(setCookie).toContain("twitter_oauth=");
     expect(setCookie).toContain("Max-Age=0");
+  });
+
+  it("redirects non-onboarded user to /onboarding?connected=twitter", async () => {
+    mockAuth("user-123", { onboarded_at: null });
+    const cookiePayload = JSON.stringify({
+      state: "valid-state",
+      codeVerifier: "verifier-123",
+    });
+    vi.mocked(decrypt).mockReturnValue(cookiePayload);
+    mockAdapter();
+    vi.mocked(upsertConnection).mockResolvedValue(undefined);
+
+    const GET = await importGET();
+    const request = makeRequestWithCookie(
+      makeCallbackUrl({ code: "auth-code", state: "valid-state" }),
+      "encrypted-cookie",
+    );
+    const response = await GET(request);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toContain(
+      "/onboarding?connected=twitter",
+    );
   });
 });
