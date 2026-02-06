@@ -44,5 +44,64 @@ test.describe("Experiments", () => {
     await expect(page.getByText("No experiments yet")).toBeVisible({
       timeout: 15000,
     });
+    await expect(
+      page.getByText(
+        "Suggest experiments to start testing what works for your audience.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("switching to Suggested tab shows empty state", async ({ page }) => {
+    await page.goto("/dashboard/experiments");
+
+    await page.getByRole("button", { name: "Suggested" }).click();
+
+    await expect(page.getByText("No experiments yet")).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test("switching to Accepted tab shows empty state", async ({ page }) => {
+    await page.goto("/dashboard/experiments");
+
+    await page.getByRole("button", { name: "Accepted" }).click();
+
+    await expect(page.getByText("No experiments yet")).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test("switching to Running tab shows empty state", async ({ page }) => {
+    await page.goto("/dashboard/experiments");
+
+    await page.getByRole("button", { name: "Running" }).click();
+
+    await expect(page.getByText("No experiments yet")).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test("switching to Complete tab shows empty state", async ({ page }) => {
+    await page.goto("/dashboard/experiments");
+
+    await page.getByRole("button", { name: "Complete" }).click();
+
+    await expect(page.getByText("No experiments yet")).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test("Suggest Experiments button shows loading state on click", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/experiments");
+
+    const btn = page.getByRole("button", { name: "Suggest Experiments" });
+    await btn.click();
+
+    // Should show loading text
+    await expect(
+      page.getByRole("button", { name: "Suggesting..." }),
+    ).toBeVisible();
   });
 });
