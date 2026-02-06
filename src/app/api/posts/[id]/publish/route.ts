@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { publishPost } from "@/lib/services/publishing";
+import { sendPostPublishResults } from "@/lib/inngest/send";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -18,6 +19,10 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const results = await publishPost(user.id, id);
+
+    // Send Inngest events for metrics collection etc. (fire-and-forget)
+    sendPostPublishResults(id, user.id, results).catch(() => {});
+
     return NextResponse.json({ results });
   } catch (error) {
     const message = (error as Error).message;

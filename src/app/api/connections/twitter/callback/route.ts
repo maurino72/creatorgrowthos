@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAdapterForPlatform } from "@/lib/adapters";
 import { decrypt } from "@/lib/utils/encryption";
 import { upsertConnection } from "@/lib/services/connections";
+import { sendConnectionCreated } from "@/lib/inngest/send";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -99,6 +100,9 @@ export async function GET(request: Request) {
     expiresAt: tokens.expiresAt,
     scopes: tokens.scopes ?? [],
   });
+
+  // Send Inngest event (fire-and-forget)
+  sendConnectionCreated(user.id, "twitter", userInfo.platformUserId).catch(() => {});
 
   // Clear cookie and redirect
   const response = NextResponse.redirect(

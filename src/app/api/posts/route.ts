@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createPostSchema } from "@/lib/validators/posts";
 import { createPost, getPostsForUser } from "@/lib/services/posts";
 import { getConnectionByPlatform } from "@/lib/services/connections";
+import { sendPostCreated, sendPostScheduled } from "@/lib/inngest/send";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -36,6 +37,13 @@ export async function POST(request: Request) {
   }
 
   const post = await createPost(user.id, parsed.data);
+
+  // Send Inngest events (fire-and-forget)
+  sendPostCreated(post.id, user.id).catch(() => {});
+  if (parsed.data.scheduled_at) {
+    sendPostScheduled(post.id, user.id, parsed.data.scheduled_at).catch(() => {});
+  }
+
   return NextResponse.json({ post }, { status: 201 });
 }
 

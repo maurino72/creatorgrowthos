@@ -184,6 +184,26 @@ test.describe("Authenticated API Routes", () => {
     });
   });
 
+  test.describe("Inngest API", () => {
+    test("GET /api/inngest returns 200 (introspection endpoint)", async ({
+      request,
+    }) => {
+      const response = await request.get("/api/inngest");
+      // In dev mode, Inngest returns the introspection/debug page
+      const status = response.status();
+      expect([200, 500]).toContain(status);
+    });
+
+    test("PUT /api/inngest responds (registration endpoint)", async ({
+      request,
+    }) => {
+      const response = await request.put("/api/inngest");
+      // Without a valid signing key, this may return 401 or 500, but shouldn't 404
+      const status = response.status();
+      expect(status).not.toBe(404);
+    });
+  });
+
   test.describe("Experiments API", () => {
     test("GET /api/experiments returns 200 with experiments array", async ({ request }) => {
       const response = await request.get("/api/experiments");

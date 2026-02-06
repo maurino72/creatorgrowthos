@@ -6,6 +6,11 @@ import {
   updatePost,
   deletePost,
 } from "@/lib/services/posts";
+import {
+  sendPostUpdated,
+  sendPostScheduled,
+  sendPostScheduleCancelled,
+} from "@/lib/inngest/send";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -53,6 +58,16 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const post = await updatePost(user.id, id, parsed.data);
+
+    // Send Inngest events (fire-and-forget)
+    const changedFields = Object.keys(parsed.data);
+    sendPostUpdated(id, user.id, changedFields).catch(() => {});
+    if (parsed.data.scheduled_at) {
+      sendPostScheduled(id, user.id, parsed.data.scheduled_at).catch(() => {});
+    } else if (parsed.data.scheduled_at === null) {
+      sendPostScheduleCancelled(id, user.id).catch(() => {});
+    }
+
     return NextResponse.json({ post });
   } catch (error) {
     const message = (error as Error).message;
