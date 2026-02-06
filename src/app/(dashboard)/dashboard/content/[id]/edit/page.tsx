@@ -8,6 +8,7 @@ import { usePost, useUpdatePost, useDeletePost, usePublishPost, useClassifyPost,
 import { INTENTS, CONTENT_TYPES } from "@/lib/ai/taxonomy";
 import { useConnections } from "@/lib/queries/connections";
 import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
+import { useImproveContent } from "@/lib/queries/ai";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -260,6 +261,7 @@ export default function EditPostPage() {
   const deletePost = useDeletePost();
   const publishPost = usePublishPost();
   const { data: connections } = useConnections();
+  const improveContent = useImproveContent();
 
   const [body, setBody] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -492,6 +494,67 @@ export default function EditPostPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Improve Section */}
+      {!isReadOnly && (
+        <Card className="border-dashed">
+          <CardContent className="pt-4 pb-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium text-foreground/80">AI Improvement</h2>
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() =>
+                  improveContent.mutate(body, {
+                    onError: (err: Error) => toast.error(err.message),
+                  })
+                }
+                disabled={improveContent.isPending || !body.trim()}
+              >
+                {improveContent.isPending ? "Improving..." : "Improve"}
+              </Button>
+            </div>
+
+            {improveContent.isSuccess && improveContent.data && (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {(improveContent.data as { overall_assessment: string }).overall_assessment}
+                </p>
+
+                <div className="space-y-2">
+                  {((improveContent.data as { improvements: { type: string; suggestion: string; example: string }[] }).improvements).map((imp, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-border/60 bg-muted/30 p-2.5 space-y-1"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium uppercase">
+                          {imp.type}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground/90">{imp.suggestion}</p>
+                      <p className="text-xs italic text-muted-foreground">{imp.example}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {(improveContent.data as { improved_version?: string }).improved_version && (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      setBody((improveContent.data as { improved_version: string }).improved_version);
+                      toast.success("Improved version applied");
+                    }}
+                  >
+                    Apply Improved Version
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ClassificationSection
         postId={postId}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useCreatePost } from "@/lib/queries/posts";
 import { useConnections } from "@/lib/queries/connections";
+import { useGenerateIdeas } from "@/lib/queries/ai";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -22,10 +23,13 @@ export default function NewPostPage() {
   const createPost = useCreatePost();
   const { data: connections, isLoading: connectionsLoading } = useConnections();
 
+  const generateIdeas = useGenerateIdeas();
+
   const [body, setBody] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [ideasOpen, setIdeasOpen] = useState(false);
 
   const activeConnections = connections?.filter((c) => c.status === "active") ?? [];
   const charCount = body.length;
@@ -124,6 +128,96 @@ export default function NewPostPage() {
           <Link href="/dashboard/content">Cancel</Link>
         </Button>
       </div>
+
+      {/* Ideation Panel */}
+      <Card className="border-dashed">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIdeasOpen(!ideasOpen)}
+              className="flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`transition-transform ${ideasOpen ? "rotate-90" : ""}`}
+              >
+                <path d="M6 4l4 4-4 4" />
+              </svg>
+              Content Ideas
+            </button>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                generateIdeas.mutate(undefined, {
+                  onSuccess: () => {
+                    setIdeasOpen(true);
+                    toast.success("Ideas generated!");
+                  },
+                  onError: (err: Error) => toast.error(err.message),
+                });
+              }}
+              disabled={generateIdeas.isPending}
+            >
+              {generateIdeas.isPending ? "Generating..." : "Get Ideas"}
+            </Button>
+          </div>
+
+          {(ideasOpen || generateIdeas.isSuccess) && generateIdeas.data && (
+            <div className="mt-3 space-y-2">
+              {(generateIdeas.data as { headline: string; format: string; intent: string; topic: string; rationale: string; suggested_hook: string; confidence: string }[]).map((idea, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1 flex-1">
+                      <p className="text-sm font-medium leading-snug">
+                        {idea.headline}
+                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium">
+                          {idea.format}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium">
+                          {idea.intent}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium">
+                          {idea.topic}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => {
+                        setBody(idea.suggested_hook);
+                        setIdeasOpen(false);
+                      }}
+                    >
+                      Use This Idea
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {idea.rationale}
+                  </p>
+                  <p className="text-xs italic text-foreground/60">
+                    {idea.suggested_hook}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Editor */}
       <Card>

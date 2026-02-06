@@ -45,7 +45,17 @@ vi.mock("@/lib/queries/connections", () => ({
   })),
 }));
 
+vi.mock("@/lib/queries/ai", () => ({
+  useGenerateIdeas: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    data: null,
+    isSuccess: false,
+  })),
+}));
+
 import { useCreatePost } from "@/lib/queries/posts";
+import { useGenerateIdeas } from "@/lib/queries/ai";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -146,5 +156,61 @@ describe("New post editor page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.getByLabelText(/schedule for later/i)).toBeInTheDocument();
+  });
+
+  it("shows Get Ideas button", async () => {
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByRole("button", { name: /get ideas/i })).toBeInTheDocument();
+  });
+
+  it("shows idea cards when ideas are generated", async () => {
+    vi.mocked(useGenerateIdeas).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      data: [
+        {
+          headline: "Behind-the-scenes of AI tool building",
+          format: "thread",
+          intent: "educate",
+          topic: "ai",
+          rationale: "Your AI threads get 3x engagement",
+          suggested_hook: "I just built an AI tool. Here's how:",
+          confidence: "high",
+        },
+      ],
+      isSuccess: true,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Behind-the-scenes of AI tool building")).toBeInTheDocument();
+    expect(screen.getByText(/I just built an AI tool/)).toBeInTheDocument();
+  });
+
+  it("shows Use This Idea button on idea cards", async () => {
+    vi.mocked(useGenerateIdeas).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      data: [
+        {
+          headline: "Test idea",
+          format: "single",
+          intent: "engage",
+          topic: "ai",
+          rationale: "Rationale",
+          suggested_hook: "Hook text",
+          confidence: "medium",
+        },
+      ],
+      isSuccess: true,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByRole("button", { name: /use this idea/i })).toBeInTheDocument();
   });
 });

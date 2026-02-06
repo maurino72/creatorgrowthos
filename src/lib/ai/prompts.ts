@@ -1,5 +1,8 @@
 import { INTENTS, CONTENT_TYPES } from "./taxonomy";
 import { INSIGHT_TYPES, CONFIDENCE_LEVELS } from "./insights";
+import type { ContentIdea } from "./ideas";
+import { IMPROVEMENT_TYPES } from "./improvement";
+import { EXPERIMENT_TYPES } from "./experiments";
 import type { InsightContext, PerformanceByCategory, OutlierPost } from "@/lib/services/aggregation";
 
 export const CLASSIFY_POST_TEMPLATE = "classify_post";
@@ -226,5 +229,308 @@ export function buildInsightsPrompt(context: InsightContext): InsightsPromptResu
     system: INSIGHTS_SYSTEM_PROMPT,
     user,
     fullPrompt: `${INSIGHTS_SYSTEM_PROMPT}\n\n${user}`,
+  };
+}
+
+// --- Content Ideation prompt ---
+
+export const GENERATE_IDEAS_TEMPLATE = "generate_content_ideas";
+export const GENERATE_IDEAS_VERSION = "1.0";
+
+const CONTENT_TYPE_IDEA_DESCRIPTIONS: Record<string, string> = {
+  single: "Standard single post (tweet)",
+  thread: "Multi-post thread — good for long-form storytelling",
+  reply: "Reply to a trending topic or conversation",
+  quote: "Quote tweet with your unique take",
+};
+
+const INTENT_IDEA_DESCRIPTIONS: Record<string, string> = {
+  educate: "Teaching, sharing knowledge — tutorials, how-tos, explanations",
+  engage: "Starting conversations — questions, polls, hot takes",
+  promote: "Marketing — product launches, feature announcements",
+  personal: "Personal stories — reflections, experiences, opinions",
+  curate: "Sharing others' content with commentary — recommendations",
+  entertain: "Humor, casual content — memes, observations",
+};
+
+const IDEAS_SYSTEM_PROMPT = `You are a content strategist with deep knowledge of this creator's audience and performance data. Your job is to suggest content ideas grounded in real data about what works.
+
+## Your Role
+
+- Suggest 3-5 content ideas based on the creator's performance data
+- Each idea should be specific and actionable
+- Ground every suggestion in data (what has worked before)
+- Vary formats and intents across suggestions
+- Avoid repeating recent posts
+
+## Content Formats
+
+${CONTENT_TYPES.map((t) => `- **${t}**: ${CONTENT_TYPE_IDEA_DESCRIPTIONS[t]}`).join("\n")}
+
+## Intent Categories
+
+${INTENTS.map((i) => `- **${i}**: ${INTENT_IDEA_DESCRIPTIONS[i]}`).join("\n")}
+
+## Confidence Levels
+
+- **high**: Strong data support (topic/format has 2x+ better performance)
+- **medium**: Moderate data support (1.5x+ better performance)
+- **low**: Exploratory suggestion based on limited data
+
+## Response Format
+
+Return ONLY valid JSON — an array of 3 to 5 idea objects with this exact structure:
+
+[
+  {
+    "headline": "<catchy idea title>",
+    "format": "<one of: ${CONTENT_TYPES.join(", ")}>",
+    "intent": "<one of: ${INTENTS.join(", ")}>",
+    "topic": "<topic-slug>",
+    "rationale": "<why this idea, grounded in data>",
+    "suggested_hook": "<opening line suggestion>",
+    "confidence": "<one of: ${CONFIDENCE_LEVELS.join(", ")}>"
+  }
+]
+
+## Rules
+
+- Every rationale MUST reference real numbers from the data
+- Vary formats and intents — don't suggest 5 threads or 5 educational posts
+- Avoid topics the creator posted about recently (listed under Recent Posts)
+- Suggest at least one idea in the creator's top-performing format/intent
+- Do not include any explanation, markdown, or text outside the JSON array.`;
+
+export interface IdeasPromptResult {
+  system: string;
+  user: string;
+  fullPrompt: string;
+}
+
+export function buildIdeasPrompt(
+  context: InsightContext,
+  recentPosts: string[],
+): IdeasPromptResult {
+  const { creatorSummary, byIntent, byTopic, byContentType, outliers } = context;
+
+  const userParts: string[] = [];
+
+  // Creator summary
+  userParts.push("## Creator Summary");
+  userParts.push(`- Total published posts: ${creatorSummary.totalPosts}`);
+  userParts.push(`- Platforms: ${creatorSummary.platforms.join(", ")}`);
+  userParts.push("");
+
+  // Performance by intent
+  userParts.push("## Performance by Intent");
+  userParts.push(formatCategory("Intent", byIntent));
+
+  // Performance by topic
+  userParts.push("## Performance by Topic");
+  userParts.push(formatCategory("Topic", byTopic));
+
+  // Performance by content type
+  userParts.push("## Performance by Content Type");
+  userParts.push(formatCategory("Type", byContentType));
+
+  // Top performers
+  if (outliers.top.length > 0) {
+    userParts.push("## Top Performing Posts");
+    userParts.push(formatOutliers("top", outliers.top));
+  }
+
+  // Recent posts (to avoid repetition)
+  userParts.push("## Recent Posts (Avoid Repetition)");
+  if (recentPosts.length > 0) {
+    for (const post of recentPosts) {
+      userParts.push(`- "${post}"`);
+    }
+  } else {
+    userParts.push("No recent posts available.");
+  }
+
+  const user = userParts.join("\n");
+
+  return {
+    system: IDEAS_SYSTEM_PROMPT,
+    user,
+    fullPrompt: `${IDEAS_SYSTEM_PROMPT}\n\n${user}`,
+  };
+}
+
+// --- Content Improvement prompt ---
+
+export const IMPROVE_CONTENT_TEMPLATE = "improve_content";
+export const IMPROVE_CONTENT_VERSION = "1.0";
+
+const IMPROVEMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
+  hook: "Opening line improvement — lead with the outcome or a surprising statement",
+  clarity: "Clarity and readability — simplify confusing sentences",
+  engagement: "Engagement boosters — add questions, calls-to-action, or controversy",
+  length: "Length optimization — trim or expand based on what performs best",
+  focus: "Topic focus — narrow to one clear message if too scattered",
+};
+
+const IMPROVE_SYSTEM_PROMPT = `You are an editor helping improve social media posts before publishing. You understand what makes content perform well on social platforms.
+
+## Your Role
+
+- Analyze the draft and suggest specific improvements
+- Maintain the creator's authentic voice — don't make it sound generic
+- Be concrete: show exactly what to change with examples
+- Provide an optional improved version that applies all suggestions
+
+## Improvement Types
+
+${IMPROVEMENT_TYPES.map((t) => `- **${t}**: ${IMPROVEMENT_TYPE_DESCRIPTIONS[t]}`).join("\n")}
+
+## Response Format
+
+Return ONLY valid JSON with this exact structure:
+
+{
+  "overall_assessment": "<1-2 sentence summary of the draft's strengths and weaknesses>",
+  "improvements": [
+    {
+      "type": "<one of: ${IMPROVEMENT_TYPES.join(", ")}>",
+      "suggestion": "<specific actionable suggestion>",
+      "example": "<concrete example of the improvement>"
+    }
+  ],
+  "improved_version": "<optional: full rewritten version applying all suggestions>"
+}
+
+## Rules
+
+- Suggest 1-5 improvements, ordered by impact
+- Each suggestion must be specific and actionable
+- The improved_version should sound natural, not AI-generated
+- Reference the creator's style from their top performing posts when available
+- Do not include any explanation, markdown, or text outside the JSON object.`;
+
+export interface ImprovePromptResult {
+  system: string;
+  user: string;
+  fullPrompt: string;
+}
+
+export function buildImprovePrompt(
+  content: string,
+  topPosts: string[],
+): ImprovePromptResult {
+  const userParts: string[] = [];
+
+  userParts.push("## Draft to Improve");
+  userParts.push(content);
+  userParts.push("");
+
+  userParts.push("## Creator's Top Performing Posts (Style Reference)");
+  if (topPosts.length > 0) {
+    for (const post of topPosts) {
+      userParts.push(`- "${post}"`);
+    }
+  } else {
+    userParts.push("No previous posts available for style reference.");
+  }
+
+  const user = userParts.join("\n");
+
+  return {
+    system: IMPROVE_SYSTEM_PROMPT,
+    user,
+    fullPrompt: `${IMPROVE_SYSTEM_PROMPT}\n\n${user}`,
+  };
+}
+
+// --- Experiment Suggestions prompt ---
+
+export const SUGGEST_EXPERIMENTS_TEMPLATE = "suggest_experiments";
+export const SUGGEST_EXPERIMENTS_VERSION = "1.0";
+
+const EXPERIMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
+  format_test: "Test the same content in different formats (thread vs single, quote vs reply)",
+  topic_test: "Test a new or underexplored topic based on adjacent success signals",
+  style_test: "Test a different tone or style (more personal, more data-driven, etc.)",
+};
+
+const EXPERIMENTS_SYSTEM_PROMPT = `You are a growth strategist helping content creators run deliberate experiments to learn what works.
+
+## Your Role
+
+- Suggest 1-3 experiments based on the creator's performance data
+- Each experiment should test one specific variable
+- Ground every hypothesis in real data
+- Focus on experiments that can produce actionable learnings
+
+## Experiment Types
+
+${EXPERIMENT_TYPES.map((t) => `- **${t}**: ${EXPERIMENT_TYPE_DESCRIPTIONS[t]}`).join("\n")}
+
+## Confidence Levels
+
+- **high**: Strong data support for the hypothesis
+- **medium**: Moderate data, worth testing
+- **low**: Exploratory, limited data
+
+## Response Format
+
+Return ONLY valid JSON — an array of 1 to 3 experiment objects with this exact structure:
+
+[
+  {
+    "type": "<one of: ${EXPERIMENT_TYPES.join(", ")}>",
+    "hypothesis": "<what we expect to learn>",
+    "description": "<how to run the experiment>",
+    "recommended_action": "<specific next step for the creator>",
+    "confidence": "<one of: ${CONFIDENCE_LEVELS.join(", ")}>"
+  }
+]
+
+## Rules
+
+- Every hypothesis MUST reference real numbers from the data
+- Each experiment should test ONE variable only
+- Include clear, actionable steps
+- Vary experiment types when possible
+- Do not include any explanation, markdown, or text outside the JSON array.`;
+
+export interface ExperimentsPromptResult {
+  system: string;
+  user: string;
+  fullPrompt: string;
+}
+
+export function buildExperimentsPrompt(
+  context: InsightContext,
+): ExperimentsPromptResult {
+  const { creatorSummary, byIntent, byTopic, byContentType, recentTrend } = context;
+
+  const userParts: string[] = [];
+
+  userParts.push("## Creator Summary");
+  userParts.push(`- Total published posts: ${creatorSummary.totalPosts}`);
+  userParts.push(`- Platforms: ${creatorSummary.platforms.join(", ")}`);
+  userParts.push("");
+
+  userParts.push("## Performance by Intent");
+  userParts.push(formatCategory("Intent", byIntent));
+
+  userParts.push("## Performance by Topic");
+  userParts.push(formatCategory("Topic", byTopic));
+
+  userParts.push("## Performance by Content Type");
+  userParts.push(formatCategory("Type", byContentType));
+
+  userParts.push("## Recent Trend");
+  const { currentPeriod, previousPeriod } = recentTrend;
+  userParts.push(`- Current: ${currentPeriod.postCount} posts, ${Math.round(currentPeriod.avgImpressions)} avg impressions, ${(currentPeriod.avgEngagementRate * 100).toFixed(1)}% rate`);
+  userParts.push(`- Previous: ${previousPeriod.postCount} posts, ${Math.round(previousPeriod.avgImpressions)} avg impressions, ${(previousPeriod.avgEngagementRate * 100).toFixed(1)}% rate`);
+
+  const user = userParts.join("\n");
+
+  return {
+    system: EXPERIMENTS_SYSTEM_PROMPT,
+    user,
+    fullPrompt: `${EXPERIMENTS_SYSTEM_PROMPT}\n\n${user}`,
   };
 }

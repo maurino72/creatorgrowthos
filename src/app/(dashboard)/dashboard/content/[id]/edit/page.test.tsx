@@ -42,8 +42,18 @@ vi.mock("@/lib/queries/metrics", () => ({
   },
 }));
 
+vi.mock("@/lib/queries/ai", () => ({
+  useImproveContent: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    data: null,
+    isSuccess: false,
+  })),
+}));
+
 import { usePost } from "@/lib/queries/posts";
 import { useLatestMetrics, usePostMetrics } from "@/lib/queries/metrics";
+import { useImproveContent } from "@/lib/queries/ai";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -338,5 +348,91 @@ describe("Edit post page — classification section", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.getByRole("button", { name: /classify/i })).toBeInTheDocument();
+  });
+});
+
+describe("Edit post page — improve section", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows Improve button for draft posts", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "My draft post",
+        status: "draft",
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "pending" }],
+      },
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByRole("button", { name: /improve/i })).toBeInTheDocument();
+  });
+
+  it("does not show Improve button for published posts", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "Published post",
+        status: "published",
+        published_at: "2024-06-01T12:00:00Z",
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "published" }],
+      },
+      isLoading: false,
+    } as never);
+
+    vi.mocked(useLatestMetrics).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.queryByRole("button", { name: /improve/i })).not.toBeInTheDocument();
+  });
+
+  it("shows improvement suggestions when available", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "My draft post",
+        status: "draft",
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "pending" }],
+      },
+      isLoading: false,
+    } as never);
+
+    vi.mocked(useImproveContent).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      data: {
+        overall_assessment: "Strong draft with room for a better hook",
+        improvements: [
+          { type: "hook", suggestion: "Lead with outcome", example: "I grew to $10K MRR" },
+          { type: "engagement", suggestion: "End with a question", example: "What about you?" },
+        ],
+        improved_version: "Better version of the post",
+      },
+      isSuccess: true,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText(/strong draft/i)).toBeInTheDocument();
+    expect(screen.getByText(/lead with outcome/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /apply improved version/i })).toBeInTheDocument();
   });
 });
