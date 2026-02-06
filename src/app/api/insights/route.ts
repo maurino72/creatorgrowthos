@@ -17,6 +17,11 @@ export async function GET(request: Request) {
   const type = url.searchParams.get("type") || undefined;
   const limit = Number(url.searchParams.get("limit")) || 10;
 
-  const insights = await getInsightsForUser(user.id, { status, type, limit });
-  return NextResponse.json({ insights });
+  try {
+    const insights = await getInsightsForUser(user.id, { status, type, limit });
+    return NextResponse.json({ insights });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch insights";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

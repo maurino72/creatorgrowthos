@@ -22,8 +22,13 @@ export async function GET(request: Request) {
     ? Number(searchParams.get("limit"))
     : undefined;
 
-  const experiments = await getExperimentsForUser(user.id, { status, limit });
-  return NextResponse.json({ experiments });
+  try {
+    const experiments = await getExperimentsForUser(user.id, { status, limit });
+    return NextResponse.json({ experiments });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch experiments";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST() {

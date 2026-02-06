@@ -148,18 +148,40 @@ test.describe("Authenticated API Routes", () => {
   });
 
   test.describe("Insights API", () => {
-    test("GET /api/insights returns a response", async ({ request }) => {
+    test("GET /api/insights returns 200 with insights array", async ({ request }) => {
       const response = await request.get("/api/insights");
-      // May return 200 (with data) or 500 (if insights table not set up)
-      expect([200, 500]).toContain(response.status());
+      expect(response.status()).toBe(200);
+
+      const data = await response.json();
+      expect(data).toHaveProperty("insights");
+      expect(Array.isArray(data.insights)).toBe(true);
+    });
+
+    test("GET /api/insights supports status filter", async ({ request }) => {
+      const response = await request.get("/api/insights?status=active");
+      expect(response.status()).toBe(200);
+
+      const data = await response.json();
+      expect(data).toHaveProperty("insights");
     });
   });
 
   test.describe("Experiments API", () => {
-    test("GET /api/experiments returns a response", async ({ request }) => {
+    test("GET /api/experiments returns 200 with experiments array", async ({ request }) => {
       const response = await request.get("/api/experiments");
-      // May return 200 (with data) or 500 (if experiments table not set up)
-      expect([200, 500]).toContain(response.status());
+      expect(response.status()).toBe(200);
+
+      const data = await response.json();
+      expect(data).toHaveProperty("experiments");
+      expect(Array.isArray(data.experiments)).toBe(true);
+    });
+
+    test("GET /api/experiments supports status filter", async ({ request }) => {
+      const response = await request.get("/api/experiments?status=suggested");
+      expect(response.status()).toBe(200);
+
+      const data = await response.json();
+      expect(data).toHaveProperty("experiments");
     });
   });
 });
