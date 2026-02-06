@@ -128,6 +128,35 @@ describe("publishing service", () => {
       expect(results[0].success).toBe(true);
     });
 
+    it("publishes a scheduled post successfully", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter();
+      mockConnection();
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Scheduled tweet!",
+          status: "scheduled",
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Scheduled tweet!",
+      });
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(true);
+    });
+
     it("rejects publishing a post that is not draft or failed", async () => {
       const { chain } = mockSupabase();
       mockAdapter();
@@ -143,7 +172,7 @@ describe("publishing service", () => {
 
       await expect(
         publishPost(TEST_USER_ID, TEST_POST_ID),
-      ).rejects.toThrow("Post must be in draft or failed status to publish");
+      ).rejects.toThrow("Post must be in draft, scheduled, or failed status to publish");
     });
 
     it("rejects when post not found", async () => {

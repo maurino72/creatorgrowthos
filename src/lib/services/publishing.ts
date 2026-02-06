@@ -35,8 +35,8 @@ export async function publishPost(
   if (error) throw new Error(error.message);
   if (!post) throw new Error("Post not found");
 
-  if (post.status !== "draft" && post.status !== "failed") {
-    throw new Error("Post must be in draft or failed status to publish");
+  if (post.status !== "draft" && post.status !== "scheduled" && post.status !== "failed") {
+    throw new Error("Post must be in draft, scheduled, or failed status to publish");
   }
 
   const results: PublishResult[] = [];
