@@ -284,6 +284,24 @@ describe("metrics service", () => {
       expect(result.postCount).toBe(0);
     });
 
+    it("filters by platform when provided", async () => {
+      const { chain } = mockSupabase();
+      chain.order.mockResolvedValue({ data: [], error: null });
+
+      await getDashboardMetrics(TEST_USER_ID, 7, "twitter");
+
+      expect(chain.eq).toHaveBeenCalledWith("post_publications.platform", "twitter");
+    });
+
+    it("does not filter platform when not provided", async () => {
+      const { chain } = mockSupabase();
+      chain.order.mockResolvedValue({ data: [], error: null });
+
+      await getDashboardMetrics(TEST_USER_ID, 7);
+
+      expect(chain.eq).not.toHaveBeenCalledWith("post_publications.platform", expect.anything());
+    });
+
     it("throws on query error", async () => {
       const { chain } = mockSupabase();
       chain.order.mockResolvedValue({
@@ -322,6 +340,15 @@ describe("metrics service", () => {
       expect(from).toHaveBeenCalledWith("metric_events");
       expect(chain.limit).toHaveBeenCalledWith(5);
       expect(result).toHaveLength(1);
+    });
+
+    it("filters by platform when provided", async () => {
+      const { chain } = mockSupabase();
+      chain.limit.mockResolvedValue({ data: [], error: null });
+
+      await getTopPosts(TEST_USER_ID, 7, 5, "twitter");
+
+      expect(chain.eq).toHaveBeenCalledWith("post_publications.platform", "twitter");
     });
 
     it("throws on query error", async () => {

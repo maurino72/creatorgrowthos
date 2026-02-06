@@ -70,11 +70,13 @@ describe("useGenerateInsights", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.mutate();
+    result.current.mutate(undefined);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(global.fetch).toHaveBeenCalledWith("/api/insights/generate", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ platform: undefined }),
     });
   });
 });

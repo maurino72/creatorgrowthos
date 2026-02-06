@@ -126,18 +126,24 @@ export async function getLatestMetricsForPost(
 export async function getDashboardMetrics(
   userId: string,
   days: number,
+  platform?: string,
 ): Promise<DashboardMetrics> {
   const supabase = createAdminClient();
 
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
   // Get the latest metric event per publication within the period
-  const { data, error } = await supabase
+  let query = supabase
     .from("metric_events")
     .select("*, post_publications!inner(post_id, published_at)")
     .eq("user_id", userId)
-    .gte("post_publications.published_at", since)
-    .order("observed_at", { ascending: false });
+    .gte("post_publications.published_at", since);
+
+  if (platform) {
+    query = query.eq("post_publications.platform", platform);
+  }
+
+  const { data, error } = await query.order("observed_at", { ascending: false });
 
   if (error) throw new Error(error.message);
 
@@ -192,16 +198,23 @@ export async function getTopPosts(
   userId: string,
   days: number,
   count: number,
+  platform?: string,
 ) {
   const supabase = createAdminClient();
 
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("metric_events")
     .select("*, post_publications!inner(post_id, platform, published_at, posts(body, status))")
     .eq("user_id", userId)
-    .gte("post_publications.published_at", since)
+    .gte("post_publications.published_at", since);
+
+  if (platform) {
+    query = query.eq("post_publications.platform", platform);
+  }
+
+  const { data, error } = await query
     .order("observed_at", { ascending: false })
     .limit(count);
 

@@ -126,6 +126,16 @@ describe("suggestExperiments", () => {
     expect(result).toHaveLength(2);
   });
 
+  it("passes platform to getAggregatedData when provided", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    mockSupabaseForSuggest();
+    mockOpenAIResponse(JSON.stringify(validSuggestions));
+
+    await suggestExperiments("user-1", "twitter");
+
+    expect(getAggregatedData).toHaveBeenCalledWith("user-1", "twitter");
+  });
+
   it("throws InsufficientDataError when <MIN_EXPERIMENT_POSTS", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue({
       ...baseContext,

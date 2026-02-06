@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PlatformSelector } from "@/components/shared/platform-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,17 +56,6 @@ const navItems = [
         <path d="M7 2h4l2 5H5L7 2Z" />
         <path d="M5 7v6a1.5 1.5 0 0 0 1.5 1.5h5A1.5 1.5 0 0 0 13 13V7" />
         <path d="M9 10v3" />
-      </svg>
-    ),
-  },
-  {
-    label: "Connections",
-    href: "/dashboard/connections",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="5" cy="5" r="2" />
-        <circle cx="13" cy="13" r="2" />
-        <path d="M6.5 6.5 11.5 11.5" />
       </svg>
     ),
   },
@@ -157,6 +147,11 @@ export function Sidebar() {
           <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">
             Growth OS
           </span>
+        </div>
+
+        {/* Platform Selector */}
+        <div className="px-3 pt-1">
+          <PlatformSelector />
         </div>
 
         {/* Navigation */}

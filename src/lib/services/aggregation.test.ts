@@ -175,6 +175,33 @@ describe("getAggregatedData", () => {
     expect(Object.keys(result.byIntent)).toHaveLength(0);
   });
 
+  it("filters by platform when provided", async () => {
+    const posts = createMockPosts(5);
+    const chain = mockSupabaseQuery(posts);
+
+    await getAggregatedData("user-1", "twitter");
+
+    expect(chain.eq).toHaveBeenCalledWith("post_publications.platform", "twitter");
+  });
+
+  it("uses inner join when platform is provided", async () => {
+    const posts = createMockPosts(5);
+    const chain = mockSupabaseQuery(posts);
+
+    await getAggregatedData("user-1", "twitter");
+
+    expect(chain.select).toHaveBeenCalledWith("*, post_publications!inner(*, metric_events(*))");
+  });
+
+  it("uses regular join when no platform", async () => {
+    const posts = createMockPosts(5);
+    const chain = mockSupabaseQuery(posts);
+
+    await getAggregatedData("user-1");
+
+    expect(chain.select).toHaveBeenCalledWith("*, post_publications(*, metric_events(*))");
+  });
+
   it("handles posts without classification (null intent/topics)", async () => {
     const posts = createMockPosts(25).map((p) => ({
       ...p,

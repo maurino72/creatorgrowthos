@@ -10,9 +10,10 @@ export const metricKeys = {
   all: ["metrics"] as const,
   post: (postId: string) => ["metrics", "post", postId] as const,
   latest: (postId: string) => ["metrics", "latest", postId] as const,
-  dashboard: (days: number) => ["metrics", "dashboard", days] as const,
-  topPosts: (days: number, limit: number) =>
-    ["metrics", "topPosts", days, limit] as const,
+  dashboard: (days: number, platform?: string) =>
+    ["metrics", "dashboard", days, ...(platform ? [platform] : [])] as const,
+  topPosts: (days: number, limit: number, platform?: string) =>
+    ["metrics", "topPosts", days, limit, ...(platform ? [platform] : [])] as const,
 };
 
 async function fetchPostMetrics(postId: string) {
@@ -33,18 +34,23 @@ async function fetchLatestMetrics(postId: string) {
   return data.metrics;
 }
 
-async function fetchDashboardMetrics(days: number) {
-  const response = await fetch(`/api/dashboard/metrics?days=${days}`);
+async function fetchDashboardMetrics(days: number, platform?: string) {
+  const params = new URLSearchParams({ days: String(days) });
+  if (platform) params.set("platform", platform);
+  const response = await fetch(`/api/dashboard/metrics?${params}`);
   if (!response.ok) {
     throw new Error("Failed to fetch dashboard metrics");
   }
   return response.json();
 }
 
-async function fetchTopPosts(days: number, limit: number) {
-  const response = await fetch(
-    `/api/dashboard/metrics/top?days=${days}&limit=${limit}`,
-  );
+async function fetchTopPosts(days: number, limit: number, platform?: string) {
+  const params = new URLSearchParams({
+    days: String(days),
+    limit: String(limit),
+  });
+  if (platform) params.set("platform", platform);
+  const response = await fetch(`/api/dashboard/metrics/top?${params}`);
   if (!response.ok) {
     throw new Error("Failed to fetch top posts");
   }
@@ -68,18 +74,18 @@ export function useLatestMetrics(postId: string) {
   });
 }
 
-export function useDashboardMetrics(days: number) {
+export function useDashboardMetrics(days: number, platform?: string) {
   return useQuery({
-    queryKey: metricKeys.dashboard(days),
-    queryFn: () => fetchDashboardMetrics(days),
+    queryKey: metricKeys.dashboard(days, platform),
+    queryFn: () => fetchDashboardMetrics(days, platform),
     staleTime: 10 * 60 * 1000,
   });
 }
 
-export function useTopPosts(days: number, limit: number) {
+export function useTopPosts(days: number, limit: number, platform?: string) {
   return useQuery({
-    queryKey: metricKeys.topPosts(days, limit),
-    queryFn: () => fetchTopPosts(days, limit),
+    queryKey: metricKeys.topPosts(days, limit, platform),
+    queryFn: () => fetchTopPosts(days, limit, platform),
     staleTime: 10 * 60 * 1000,
   });
 }

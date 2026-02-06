@@ -12,8 +12,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let platform: string | undefined;
   try {
-    const insights = await generateInsights(user.id);
+    const body = await request.json();
+    platform = body.platform || undefined;
+  } catch {
+    // No body or invalid JSON — proceed without platform
+  }
+
+  try {
+    const insights = await generateInsights(user.id, platform);
     return NextResponse.json({ insights }, { status: 201 });
   } catch (err) {
     if (err instanceof InsufficientDataError) {

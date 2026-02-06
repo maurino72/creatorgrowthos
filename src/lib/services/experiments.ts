@@ -31,9 +31,9 @@ export interface GetExperimentsOptions {
   limit?: number;
 }
 
-export async function suggestExperiments(userId: string) {
+export async function suggestExperiments(userId: string, platform?: string) {
   // 1. Aggregate data
-  const context = await getAggregatedData(userId);
+  const context = await getAggregatedData(userId, platform);
 
   // 2. Check minimum threshold
   if (context.creatorSummary.totalPosts < MIN_EXPERIMENT_POSTS) {

@@ -84,6 +84,31 @@ describe("usePosts", () => {
     );
   });
 
+  it("passes platform filter as query param", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ posts: [] }), { status: 200 }),
+      );
+
+    const { result } = renderHook(() => usePosts({ platform: "twitter" }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("platform=twitter"),
+    );
+  });
+
+  it("includes platform in query key", async () => {
+    expect(postKeys.list({ platform: "twitter" })).toEqual([
+      "posts",
+      "list",
+      { platform: "twitter" },
+    ]);
+  });
+
   it("throws on non-OK response", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),

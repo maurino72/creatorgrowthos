@@ -4,8 +4,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn() })),
   usePathname: vi.fn(() => "/dashboard"),
+  useSearchParams: vi.fn(() => ({ get: () => null, toString: () => "" })),
+}));
+
+vi.mock("@/lib/queries/connections", () => ({
+  useConnections: vi.fn(() => ({
+    data: [{ platform: "twitter", status: "active", platform_username: "testuser" }],
+    isLoading: false,
+  })),
+  connectionKeys: { all: ["connections"] },
 }));
 
 vi.mock("@/lib/queries/metrics", () => ({

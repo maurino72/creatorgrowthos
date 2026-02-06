@@ -46,9 +46,11 @@ export function useGenerateInsights() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (platform?: string) => {
       const response = await fetch("/api/insights/generate", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));

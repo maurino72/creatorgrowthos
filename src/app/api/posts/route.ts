@@ -62,9 +62,10 @@ export async function GET(request: Request) {
   const intent = url.searchParams.get("intent") || undefined;
   const content_type = url.searchParams.get("content_type") || undefined;
   const topic = url.searchParams.get("topic") || undefined;
+  const platform = url.searchParams.get("platform") || undefined;
   const limit = Number(url.searchParams.get("limit")) || 20;
   const offset = Number(url.searchParams.get("offset")) || 0;
 
-  const posts = await getPostsForUser(user.id, { status, intent, content_type, topic, limit, offset });
+  const posts = await getPostsForUser(user.id, { status, intent, content_type, topic, platform, limit, offset });
   return NextResponse.json({ posts });
 }

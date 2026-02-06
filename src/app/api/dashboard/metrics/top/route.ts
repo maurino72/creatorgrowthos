@@ -15,9 +15,10 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const days = Number(url.searchParams.get("days")) || 7;
   const limit = Number(url.searchParams.get("limit")) || 5;
+  const platform = url.searchParams.get("platform") || undefined;
 
   try {
-    const posts = await getTopPosts(user.id, days, limit);
+    const posts = await getTopPosts(user.id, days, limit, platform);
     return NextResponse.json({ posts });
   } catch (error) {
     return NextResponse.json(

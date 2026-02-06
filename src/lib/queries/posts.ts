@@ -20,6 +20,7 @@ export interface PostFilters {
   intent?: string;
   content_type?: string;
   topic?: string;
+  platform?: string;
 }
 
 async function fetchPosts(filters?: PostFilters) {
@@ -28,6 +29,7 @@ async function fetchPosts(filters?: PostFilters) {
   if (filters?.intent) params.set("intent", filters.intent);
   if (filters?.content_type) params.set("content_type", filters.content_type);
   if (filters?.topic) params.set("topic", filters.topic);
+  if (filters?.platform) params.set("platform", filters.platform);
 
   const url = `/api/posts${params.toString() ? `?${params}` : ""}`;
   const response = await fetch(url);

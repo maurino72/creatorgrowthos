@@ -60,7 +60,7 @@ describe("GET /api/dashboard/metrics/top", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.posts).toHaveLength(2);
-    expect(getTopPosts).toHaveBeenCalledWith("user-123", 7, 5);
+    expect(getTopPosts).toHaveBeenCalledWith("user-123", 7, 5, undefined);
   });
 
   it("accepts days and limit query parameters", async () => {
@@ -74,6 +74,6 @@ describe("GET /api/dashboard/metrics/top", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    expect(getTopPosts).toHaveBeenCalledWith("user-123", 30, 3);
+    expect(getTopPosts).toHaveBeenCalledWith("user-123", 30, 3, undefined);
   });
 });

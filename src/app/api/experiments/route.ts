@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,8 +41,16 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let platform: string | undefined;
   try {
-    const experiments = await suggestExperiments(user.id);
+    const body = await request.json();
+    platform = body.platform || undefined;
+  } catch {
+    // No body or invalid JSON — proceed without platform
+  }
+
+  try {
+    const experiments = await suggestExperiments(user.id, platform);
     return NextResponse.json({ experiments }, { status: 201 });
   } catch (err) {
     if (err instanceof InsufficientDataError) {

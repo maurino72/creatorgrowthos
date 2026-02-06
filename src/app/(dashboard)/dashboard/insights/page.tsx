@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { toast } from "sonner";
+import { usePlatform } from "@/lib/hooks/use-platform";
 import {
   useInsights,
   useGenerateInsights,
@@ -168,9 +169,11 @@ function InsightSkeleton() {
   );
 }
 
-export default function InsightsPage() {
+function InsightsPageInner() {
   const [activeStatus, setActiveStatus] = useState("active");
   const [activeType, setActiveType] = useState<string | undefined>(undefined);
+  const { platform } = usePlatform();
+  const platformFilter = platform ?? undefined;
 
   const { data: insights, isLoading } = useInsights({
     status: activeStatus,
@@ -191,7 +194,7 @@ export default function InsightsPage() {
         </div>
         <Button
           onClick={() =>
-            generateInsights.mutate(undefined, {
+            generateInsights.mutate(platformFilter, {
               onSuccess: () => toast.success("Insights generated!"),
               onError: (err: Error) => toast.error(err.message),
             })
@@ -280,5 +283,13 @@ export default function InsightsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function InsightsPage() {
+  return (
+    <Suspense>
+      <InsightsPageInner />
+    </Suspense>
   );
 }

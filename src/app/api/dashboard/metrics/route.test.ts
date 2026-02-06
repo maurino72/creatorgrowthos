@@ -61,7 +61,7 @@ describe("GET /api/dashboard/metrics", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.totalImpressions).toBe(5000);
-    expect(getDashboardMetrics).toHaveBeenCalledWith("user-123", 7);
+    expect(getDashboardMetrics).toHaveBeenCalledWith("user-123", 7, undefined);
   });
 
   it("accepts days query parameter", async () => {
@@ -83,6 +83,6 @@ describe("GET /api/dashboard/metrics", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    expect(getDashboardMetrics).toHaveBeenCalledWith("user-123", 30);
+    expect(getDashboardMetrics).toHaveBeenCalledWith("user-123", 30, undefined);
   });
 });

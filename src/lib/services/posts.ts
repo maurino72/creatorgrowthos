@@ -20,6 +20,7 @@ export interface GetPostsOptions {
   intent?: string;
   content_type?: string;
   topic?: string;
+  platform?: string;
   limit?: number;
   offset?: number;
 }
@@ -64,14 +65,22 @@ export async function getPostsForUser(
   options: GetPostsOptions = {},
 ) {
   const supabase = createAdminClient();
-  const { status, intent, content_type, topic, limit = 20, offset = 0 } = options;
+  const { status, intent, content_type, topic, platform, limit = 20, offset = 0 } = options;
+
+  const selectClause = platform
+    ? "*, post_publications!inner(*)"
+    : "*, post_publications(*)";
 
   let query = supabase
     .from("posts")
-    .select("*, post_publications(*)")
+    .select(selectClause)
     .eq("user_id", userId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
+
+  if (platform) {
+    query = query.eq("post_publications.platform", platform);
+  }
 
   if (status) {
     query = query.eq("status", status);

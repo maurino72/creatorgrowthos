@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { toast } from "sonner";
+import { usePlatform } from "@/lib/hooks/use-platform";
 import {
   useExperiments,
   useSuggestExperiments,
@@ -142,8 +143,10 @@ function ExperimentSkeleton() {
   );
 }
 
-export default function ExperimentsPage() {
+function ExperimentsPageInner() {
   const [activeStatus, setActiveStatus] = useState<string | undefined>(undefined);
+  const { platform } = usePlatform();
+  const platformFilter = platform ?? undefined;
 
   const { data: experiments, isLoading } = useExperiments(
     activeStatus ? { status: activeStatus } : undefined,
@@ -161,7 +164,7 @@ export default function ExperimentsPage() {
         </div>
         <Button
           onClick={() =>
-            suggestExperiments.mutate(undefined, {
+            suggestExperiments.mutate(platformFilter, {
               onSuccess: () => toast.success("Experiments suggested!"),
               onError: (err: Error) => toast.error(err.message),
             })
@@ -229,5 +232,13 @@ export default function ExperimentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExperimentsPage() {
+  return (
+    <Suspense>
+      <ExperimentsPageInner />
+    </Suspense>
   );
 }

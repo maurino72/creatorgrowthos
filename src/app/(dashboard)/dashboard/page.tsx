@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { usePlatform } from "@/lib/hooks/use-platform";
 import { useDashboardMetrics, useTopPosts } from "@/lib/queries/metrics";
 import { usePosts } from "@/lib/queries/posts";
 import {
@@ -152,12 +153,14 @@ interface TopPostEvent {
   };
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [days, setDays] = useState(7);
+  const { platform, hasConnections } = usePlatform();
+  const platformFilter = platform ?? undefined;
   const { data: metrics, isLoading: metricsLoading } =
-    useDashboardMetrics(days);
-  const { data: topPosts, isLoading: topLoading } = useTopPosts(days, 5);
-  const { data: posts } = usePosts();
+    useDashboardMetrics(days, platformFilter);
+  const { data: topPosts, isLoading: topLoading } = useTopPosts(days, 5, platformFilter);
+  const { data: posts } = usePosts(platformFilter ? { platform: platformFilter } : undefined);
   const { data: insights, isLoading: insightsLoading } = useInsights({ limit: 3 });
   const generateInsights = useGenerateInsights();
 
@@ -335,7 +338,7 @@ export default function DashboardPage() {
               variant="outline"
               size="xs"
               onClick={() =>
-                generateInsights.mutate(undefined, {
+                generateInsights.mutate(platformFilter, {
                   onSuccess: () => toast.success("Insights generated!"),
                   onError: (err: Error) => toast.error(err.message),
                 })
@@ -376,5 +379,13 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
   );
 }

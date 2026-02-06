@@ -158,8 +158,18 @@ describe("generateInsights", () => {
 
     const result = await generateInsights("user-1");
 
-    expect(getAggregatedData).toHaveBeenCalledWith("user-1");
+    expect(getAggregatedData).toHaveBeenCalledWith("user-1", undefined);
     expect(result).toHaveLength(3);
+  });
+
+  it("passes platform to getAggregatedData when provided", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
+    mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockSupabase();
+
+    await generateInsights("user-1", "twitter");
+
+    expect(getAggregatedData).toHaveBeenCalledWith("user-1", "twitter");
   });
 
   it("throws InsufficientDataError when less than 20 posts", async () => {

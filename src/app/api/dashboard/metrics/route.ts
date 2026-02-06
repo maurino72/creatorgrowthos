@@ -14,9 +14,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const days = Number(url.searchParams.get("days")) || 7;
+  const platform = url.searchParams.get("platform") || undefined;
 
   try {
-    const metrics = await getDashboardMetrics(user.id, days);
+    const metrics = await getDashboardMetrics(user.id, days, platform);
     return NextResponse.json(metrics);
   } catch (error) {
     return NextResponse.json(

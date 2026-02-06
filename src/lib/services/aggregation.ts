@@ -118,16 +118,25 @@ function computeAvg(items: { impressions: number; engagement: number; engagement
   };
 }
 
-export async function getAggregatedData(userId: string): Promise<InsightContext> {
+export async function getAggregatedData(userId: string, platform?: string): Promise<InsightContext> {
   const supabase = createAdminClient();
 
-  const { data: posts, error } = await supabase
+  const selectClause = platform
+    ? "*, post_publications!inner(*, metric_events(*))"
+    : "*, post_publications(*, metric_events(*))";
+
+  let query = supabase
     .from("posts")
-    .select("*, post_publications(*, metric_events(*))")
+    .select(selectClause)
     .eq("user_id", userId)
     .eq("status", "published")
-    .is("deleted_at", null)
-    .order("published_at", { ascending: false });
+    .is("deleted_at", null);
+
+  if (platform) {
+    query = query.eq("post_publications.platform", platform);
+  }
+
+  const { data: posts, error } = await query.order("published_at", { ascending: false });
 
   if (error) throw new Error(error.message);
 

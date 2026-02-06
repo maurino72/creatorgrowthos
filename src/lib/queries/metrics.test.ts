@@ -163,6 +163,32 @@ describe("useDashboardMetrics", () => {
       "/api/dashboard/metrics?days=30",
     );
   });
+
+  it("includes platform in URL when provided", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({}), { status: 200 }),
+      );
+
+    const { result } = renderHook(() => useDashboardMetrics(7, "twitter"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/dashboard/metrics?days=7&platform=twitter",
+    );
+  });
+
+  it("includes platform in query key", () => {
+    expect(metricKeys.dashboard(7, "twitter")).toEqual([
+      "metrics",
+      "dashboard",
+      7,
+      "twitter",
+    ]);
+  });
 });
 
 describe("useTopPosts", () => {
@@ -202,6 +228,33 @@ describe("useTopPosts", () => {
     expect(fetchSpy).toHaveBeenCalledWith(
       "/api/dashboard/metrics/top?days=30&limit=3",
     );
+  });
+
+  it("includes platform in URL when provided", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ posts: [] }), { status: 200 }),
+      );
+
+    const { result } = renderHook(() => useTopPosts(7, 5, "twitter"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/dashboard/metrics/top?days=7&limit=5&platform=twitter",
+    );
+  });
+
+  it("includes platform in query key", () => {
+    expect(metricKeys.topPosts(7, 5, "twitter")).toEqual([
+      "metrics",
+      "topPosts",
+      7,
+      5,
+      "twitter",
+    ]);
   });
 });
 

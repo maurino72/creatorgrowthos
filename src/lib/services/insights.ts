@@ -30,9 +30,9 @@ export interface GetInsightsOptions {
   limit?: number;
 }
 
-export async function generateInsights(userId: string) {
+export async function generateInsights(userId: string, platform?: string) {
   // 1. Aggregate data
-  const context = await getAggregatedData(userId);
+  const context = await getAggregatedData(userId, platform);
 
   // 2. Check minimum threshold
   if (context.creatorSummary.totalPosts < MIN_POSTS) {

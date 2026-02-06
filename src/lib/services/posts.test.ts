@@ -194,6 +194,25 @@ describe("posts service", () => {
       });
     });
 
+    it("filters by platform when provided", async () => {
+      const { chain } = mockSupabase();
+      chain.range.mockResolvedValue({ data: [], error: null });
+
+      await getPostsForUser(TEST_USER_ID, { platform: "twitter" });
+
+      expect(chain.select).toHaveBeenCalledWith("*, post_publications!inner(*)");
+      expect(chain.eq).toHaveBeenCalledWith("post_publications.platform", "twitter");
+    });
+
+    it("uses regular join when no platform filter", async () => {
+      const { chain } = mockSupabase();
+      chain.range.mockResolvedValue({ data: [], error: null });
+
+      await getPostsForUser(TEST_USER_ID);
+
+      expect(chain.select).toHaveBeenCalledWith("*, post_publications(*)");
+    });
+
     it("throws on database error", async () => {
       const { chain } = mockSupabase();
       chain.range.mockResolvedValue({
