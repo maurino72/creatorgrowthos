@@ -26,8 +26,29 @@ vi.mock("@/lib/queries/posts", () => ({
   },
 }));
 
+vi.mock("@/lib/queries/insights", () => ({
+  useInsights: vi.fn(),
+  useGenerateInsights: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+  useDismissInsight: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+  useMarkInsightActed: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+  insightKeys: {
+    all: ["insights"],
+    list: (filters: Record<string, string>) => ["insights", "list", filters],
+  },
+}));
+
 import { useDashboardMetrics, useTopPosts } from "@/lib/queries/metrics";
 import { usePosts } from "@/lib/queries/posts";
+import { useInsights } from "@/lib/queries/insights";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -54,6 +75,13 @@ describe("Dashboard page", () => {
     vi.restoreAllMocks();
   });
 
+  function mockDefaultInsights() {
+    vi.mocked(useInsights).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+  }
+
   it("renders dashboard heading", async () => {
     vi.mocked(useDashboardMetrics).mockReturnValue({
       data: null,
@@ -67,6 +95,7 @@ describe("Dashboard page", () => {
       data: [],
       isLoading: true,
     } as never);
+    mockDefaultInsights();
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
@@ -95,6 +124,7 @@ describe("Dashboard page", () => {
       data: [],
       isLoading: false,
     } as never);
+    mockDefaultInsights();
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
@@ -126,6 +156,7 @@ describe("Dashboard page", () => {
       data: [],
       isLoading: false,
     } as never);
+    mockDefaultInsights();
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
@@ -157,6 +188,7 @@ describe("Dashboard page", () => {
       ],
       isLoading: false,
     } as never);
+    mockDefaultInsights();
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
@@ -200,6 +232,7 @@ describe("Dashboard page", () => {
       data: [],
       isLoading: false,
     } as never);
+    mockDefaultInsights();
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
@@ -221,6 +254,7 @@ describe("Dashboard page", () => {
       data: [],
       isLoading: true,
     } as never);
+    mockDefaultInsights();
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
@@ -228,5 +262,167 @@ describe("Dashboard page", () => {
     expect(screen.getByRole("button", { name: /7 days/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /30 days/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /90 days/i })).toBeInTheDocument();
+  });
+
+  it("shows insights section with active insights", async () => {
+    vi.mocked(useDashboardMetrics).mockReturnValue({
+      data: {
+        totalImpressions: 5000,
+        totalLikes: 100,
+        totalReplies: 20,
+        totalReposts: 30,
+        totalEngagement: 150,
+        averageEngagementRate: 0.03,
+        postCount: 5,
+      },
+      isLoading: false,
+    } as never);
+    vi.mocked(useTopPosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(useInsights).mockReturnValue({
+      data: [
+        {
+          id: "i1",
+          type: "performance_pattern",
+          headline: "Educational content is your superpower",
+          detail: "Your educational posts get 3.2x more engagement.",
+          action: "Post more educational threads",
+          confidence: "high",
+          data_points: [],
+          status: "active",
+        },
+        {
+          id: "i2",
+          type: "opportunity",
+          headline: "Threads outperform single posts",
+          detail: "Threads average 3,500 impressions vs 1,200.",
+          action: "Convert top posts to threads",
+          confidence: "medium",
+          data_points: [],
+          status: "active",
+        },
+        {
+          id: "i3",
+          type: "anomaly",
+          headline: "One post broke out",
+          detail: "Your top post got 8,000 impressions.",
+          action: "Analyze what made it successful",
+          confidence: "high",
+          data_points: [],
+          status: "active",
+        },
+      ],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Insights")).toBeInTheDocument();
+    expect(screen.getByText("Educational content is your superpower")).toBeInTheDocument();
+    expect(screen.getByText("Threads outperform single posts")).toBeInTheDocument();
+    expect(screen.getByText("One post broke out")).toBeInTheDocument();
+  });
+
+  it("shows insights empty state when no insights exist", async () => {
+    vi.mocked(useDashboardMetrics).mockReturnValue({
+      data: {
+        totalImpressions: 5000,
+        totalLikes: 100,
+        totalReplies: 20,
+        totalReposts: 30,
+        totalEngagement: 150,
+        averageEngagementRate: 0.03,
+        postCount: 5,
+      },
+      isLoading: false,
+    } as never);
+    vi.mocked(useTopPosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    mockDefaultInsights();
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Insights")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /generate insights/i })).toBeInTheDocument();
+  });
+
+  it("shows view all insights link", async () => {
+    vi.mocked(useDashboardMetrics).mockReturnValue({
+      data: {
+        totalImpressions: 5000,
+        totalLikes: 100,
+        totalReplies: 20,
+        totalReposts: 30,
+        totalEngagement: 150,
+        averageEngagementRate: 0.03,
+        postCount: 5,
+      },
+      isLoading: false,
+    } as never);
+    vi.mocked(useTopPosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(useInsights).mockReturnValue({
+      data: [
+        {
+          id: "i1",
+          type: "performance_pattern",
+          headline: "Test insight",
+          detail: "Detail",
+          action: "Do something",
+          confidence: "high",
+          data_points: [],
+          status: "active",
+        },
+        {
+          id: "i2",
+          type: "opportunity",
+          headline: "Test 2",
+          detail: "Detail 2",
+          action: "Do something else",
+          confidence: "medium",
+          data_points: [],
+          status: "active",
+        },
+        {
+          id: "i3",
+          type: "anomaly",
+          headline: "Test 3",
+          detail: "Detail 3",
+          action: "Do another thing",
+          confidence: "low",
+          data_points: [],
+          status: "active",
+        },
+      ],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByRole("link", { name: /view all/i })).toHaveAttribute(
+      "href",
+      "/dashboard/insights",
+    );
   });
 });
