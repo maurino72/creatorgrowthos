@@ -411,36 +411,45 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
           onboarded_at: string | null
           onboarding_step: string | null
+          preferences: Record<string, unknown>
           timezone: string | null
           updated_at: string | null
+          website: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           onboarded_at?: string | null
           onboarding_step?: string | null
+          preferences?: Record<string, unknown>
           timezone?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           onboarded_at?: string | null
           onboarding_step?: string | null
+          preferences?: Record<string, unknown>
           timezone?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: []
       }
