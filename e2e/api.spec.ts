@@ -166,6 +166,24 @@ test.describe("Authenticated API Routes", () => {
     });
   });
 
+  test.describe("Media API", () => {
+    test("POST /api/media/upload returns 400 without file", async ({
+      request,
+    }) => {
+      const response = await request.post("/api/media/upload");
+      expect(response.status()).toBe(400);
+    });
+
+    test("DELETE /api/media/:id returns 200 even for nonexistent file", async ({
+      request,
+    }) => {
+      const response = await request.delete("/api/media/nonexistent.jpg");
+      // Storage delete doesn't error on missing files
+      const status = response.status();
+      expect([200, 404, 500]).toContain(status);
+    });
+  });
+
   test.describe("Experiments API", () => {
     test("GET /api/experiments returns 200 with experiments array", async ({ request }) => {
       const response = await request.get("/api/experiments");

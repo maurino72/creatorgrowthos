@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useCreatePost } from "@/lib/queries/posts";
 import { useConnections } from "@/lib/queries/connections";
 import { useGenerateIdeas } from "@/lib/queries/ai";
+import { ImageUploadZone, type ImageItem } from "@/components/image-upload-zone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -26,10 +27,14 @@ export default function NewPostPage() {
   const generateIdeas = useGenerateIdeas();
 
   const [body, setBody] = useState("");
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(false);
+
+  const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
+  const hasUploading = images.some((i) => i.uploading);
 
   const activeConnections = connections?.filter((c) => c.status === "active") ?? [];
   const charCount = body.length;
@@ -38,7 +43,8 @@ export default function NewPostPage() {
     body.trim().length > 0 &&
     !isOverLimit &&
     selectedPlatforms.length > 0 &&
-    !createPost.isPending;
+    !createPost.isPending &&
+    !hasUploading;
 
   function togglePlatform(platform: string) {
     setSelectedPlatforms((prev) =>
@@ -55,6 +61,7 @@ export default function NewPostPage() {
       {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
+        ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
       },
       {
         onSuccess: () => {
@@ -73,6 +80,7 @@ export default function NewPostPage() {
       {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
+        ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
       },
       {
         onSuccess: (post) => {
@@ -104,6 +112,7 @@ export default function NewPostPage() {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         scheduled_at: new Date(scheduledAt).toISOString(),
+        ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
       },
       {
         onSuccess: () => {
@@ -237,6 +246,13 @@ export default function NewPostPage() {
               </span>
             </div>
           </div>
+
+          {/* Image Upload */}
+          <ImageUploadZone
+            images={images}
+            onChange={setImages}
+            disabled={createPost.isPending}
+          />
 
           {/* Platform Selector */}
           <div className="space-y-2">

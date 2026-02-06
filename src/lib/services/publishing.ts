@@ -5,6 +5,7 @@ import {
   updateTokens,
 } from "@/lib/services/connections";
 import { decrypt } from "@/lib/utils/encryption";
+import { downloadImage, deleteImage } from "@/lib/services/media";
 import type { PlatformType } from "@/lib/adapters/types";
 
 export interface PublishResult {
@@ -75,7 +76,7 @@ export async function publishPost(
 
 async function publishToPlatform(
   userId: string,
-  post: { body: string },
+  post: { body: string; media_urls?: string[] | null },
   publication: { id: string; platform: string },
   platform: PlatformType,
   supabase: ReturnType<typeof createAdminClient>,
@@ -110,9 +111,33 @@ async function publishToPlatform(
   // Publish via adapter
   try {
     const adapter = getAdapterForPlatform(platform);
-    const result = await adapter.publishPost(accessToken, {
+
+    // Upload media if present
+    const mediaIds: string[] = [];
+    const mediaUrls = post.media_urls ?? [];
+    for (const mediaPath of mediaUrls) {
+      const buffer = await downloadImage(mediaPath);
+      const ext = mediaPath.split(".").pop()?.toLowerCase() ?? "jpg";
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        gif: "image/gif",
+        webp: "image/webp",
+      };
+      const mimeType = mimeMap[ext] ?? "image/jpeg";
+      const mediaId = await adapter.uploadMedia(accessToken, buffer, mimeType);
+      mediaIds.push(mediaId);
+    }
+
+    const payload: { text: string; mediaIds?: string[] } = {
       text: post.body,
-    });
+    };
+    if (mediaIds.length > 0) {
+      payload.mediaIds = mediaIds;
+    }
+
+    const result = await adapter.publishPost(accessToken, payload);
 
     await updatePublication(supabase, publication.id, {
       status: "published",
@@ -120,6 +145,11 @@ async function publishToPlatform(
       platform_url: result.platformUrl,
       published_at: result.publishedAt.toISOString(),
     });
+
+    // Clean up storage after successful publish
+    for (const mediaPath of mediaUrls) {
+      await deleteImage(mediaPath).catch(() => {});
+    }
 
     return {
       platform,

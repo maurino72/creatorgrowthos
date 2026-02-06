@@ -5,12 +5,14 @@ export interface CreatePostData {
   body: string;
   platforms: PlatformType[];
   scheduled_at?: string;
+  media_urls?: string[];
 }
 
 export interface UpdatePostData {
   body?: string;
   platforms?: PlatformType[];
   scheduled_at?: string | null;
+  media_urls?: string[] | null;
 }
 
 export interface GetPostsOptions {
@@ -33,6 +35,7 @@ export async function createPost(userId: string, data: CreatePostData) {
       body: data.body,
       status,
       scheduled_at: data.scheduled_at ?? null,
+      media_urls: data.media_urls ?? [],
     })
     .select("*")
     .single();
@@ -120,6 +123,10 @@ export async function updatePost(
 
   if (data.body !== undefined) {
     updates.body = data.body;
+  }
+
+  if (data.media_urls !== undefined) {
+    updates.media_urls = data.media_urls ?? [];
   }
 
   // Handle status transitions based on scheduled_at

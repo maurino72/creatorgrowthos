@@ -115,6 +115,55 @@ describe("createPostSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts media_urls as optional", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.media_urls).toBeUndefined();
+    }
+  });
+
+  it("accepts valid media_urls array", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      media_urls: ["user-123/a.jpg", "user-123/b.png"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts up to 4 media_urls", () => {
+    const paths = Array.from({ length: 4 }, (_, i) => `user-123/${i}.jpg`);
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      media_urls: paths,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects more than 4 media_urls", () => {
+    const paths = Array.from({ length: 5 }, (_, i) => `user-123/${i}.jpg`);
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      media_urls: paths,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty strings in media_urls", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      media_urls: [""],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("updatePostSchema", () => {
@@ -186,5 +235,30 @@ describe("updatePostSchema", () => {
   it("accepts empty object (no fields to update)", () => {
     const result = updatePostSchema.safeParse({});
     expect(result.success).toBe(true);
+  });
+
+  it("accepts media_urls update", () => {
+    const result = updatePostSchema.safeParse({
+      media_urls: ["user-123/updated.jpg"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null media_urls to clear images", () => {
+    const result = updatePostSchema.safeParse({
+      media_urls: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.media_urls).toBeNull();
+    }
+  });
+
+  it("rejects more than 4 media_urls on update", () => {
+    const paths = Array.from({ length: 5 }, (_, i) => `user-123/${i}.jpg`);
+    const result = updatePostSchema.safeParse({
+      media_urls: paths,
+    });
+    expect(result.success).toBe(false);
   });
 });

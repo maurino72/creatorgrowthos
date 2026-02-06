@@ -17,6 +17,11 @@ vi.mock("@/lib/utils/encryption", () => ({
   decrypt: vi.fn((val: string) => val.replace("encrypted:", "")),
 }));
 
+vi.mock("@/lib/services/media", () => ({
+  downloadImage: vi.fn(),
+  deleteImage: vi.fn(),
+}));
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdapterForPlatform } from "@/lib/adapters";
 import {
@@ -24,6 +29,7 @@ import {
   updateTokens,
 } from "@/lib/services/connections";
 import { decrypt } from "@/lib/utils/encryption";
+import { downloadImage, deleteImage } from "@/lib/services/media";
 import { publishPost } from "./publishing";
 
 const TEST_USER_ID = "user-123";
@@ -319,6 +325,123 @@ describe("publishing service", () => {
 
       expect(results[0].success).toBe(false);
       expect(results[0].error).toContain("No active connection");
+    });
+
+    it("uploads media to Twitter and passes media_ids when post has media_urls", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "tw-post-123",
+          platformUrl: "https://twitter.com/i/status/tw-post-123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn().mockResolvedValue("media-id-1"),
+      });
+      mockConnection();
+      vi.mocked(downloadImage).mockResolvedValue(Buffer.from("image-data"));
+      vi.mocked(deleteImage).mockResolvedValue(undefined);
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Post with image!",
+          status: "draft",
+          media_urls: ["user-123/img1.jpg"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(results[0].success).toBe(true);
+      expect(downloadImage).toHaveBeenCalledWith("user-123/img1.jpg");
+      expect(adapter.uploadMedia).toHaveBeenCalledWith(
+        "access-token",
+        expect.any(Buffer),
+        "image/jpeg",
+      );
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Post with image!",
+        mediaIds: ["media-id-1"],
+      });
+    });
+
+    it("deletes media from storage after successful publish", async () => {
+      const { chain } = mockSupabase();
+      mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "tw-post-123",
+          platformUrl: "https://twitter.com/i/status/tw-post-123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn().mockResolvedValue("media-id-1"),
+      });
+      mockConnection();
+      vi.mocked(downloadImage).mockResolvedValue(Buffer.from("image-data"));
+      vi.mocked(deleteImage).mockResolvedValue(undefined);
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Post with image!",
+          status: "draft",
+          media_urls: ["user-123/img1.jpg"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(deleteImage).toHaveBeenCalledWith("user-123/img1.jpg");
+    });
+
+    it("does not upload media when post has no media_urls", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "tw-post-123",
+          platformUrl: "https://twitter.com/i/status/tw-post-123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn(),
+      });
+      mockConnection();
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Text only!",
+          status: "draft",
+          media_urls: null,
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(adapter.uploadMedia).not.toHaveBeenCalled();
+      expect(downloadImage).not.toHaveBeenCalled();
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Text only!",
+      });
     });
   });
 });

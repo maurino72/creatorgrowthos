@@ -9,6 +9,8 @@ import { INTENTS, CONTENT_TYPES } from "@/lib/ai/taxonomy";
 import { useConnections } from "@/lib/queries/connections";
 import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
 import { useImproveContent } from "@/lib/queries/ai";
+import { useSignedUrls } from "@/lib/queries/media";
+import { ImageUploadZone, type ImageItem } from "@/components/image-upload-zone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -263,7 +265,11 @@ export default function EditPostPage() {
   const { data: connections } = useConnections();
   const improveContent = useImproveContent();
 
+  const existingMediaPaths: string[] = post?.media_urls ?? [];
+  const { data: signedUrls } = useSignedUrls(existingMediaPaths);
+
   const [body, setBody] = useState("");
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -287,16 +293,32 @@ export default function EditPostPage() {
     }
   }, [post, initialized]);
 
+  // Pre-populate images once signed URLs are available
+  useEffect(() => {
+    if (signedUrls && signedUrls.length > 0 && images.length === 0 && initialized) {
+      setImages(
+        signedUrls.map((item) => ({
+          id: item.path.split("/").pop() ?? item.path,
+          path: item.path,
+          url: item.url,
+        })),
+      );
+    }
+  }, [signedUrls, images.length, initialized]);
+
   const activeConnections =
     connections?.filter((c) => c.status === "active") ?? [];
   const charCount = body.length;
   const isOverLimit = charCount > CHAR_LIMIT;
   const isReadOnly = post?.status === "published";
+  const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
+  const hasUploading = images.some((i) => i.uploading);
   const canSubmit =
     body.trim().length > 0 &&
     !isOverLimit &&
     selectedPlatforms.length > 0 &&
-    !updatePost.isPending;
+    !updatePost.isPending &&
+    !hasUploading;
 
   function togglePlatform(platform: string) {
     setSelectedPlatforms((prev) =>
@@ -314,6 +336,7 @@ export default function EditPostPage() {
           body,
           platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
           scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
+          media_urls: uploadedPaths.length > 0 ? uploadedPaths : null,
         },
       },
       {
@@ -407,6 +430,24 @@ export default function EditPostPage() {
               </span>
             </div>
           </div>
+
+          {/* Image Upload */}
+          {!isReadOnly && (
+            <ImageUploadZone
+              images={images}
+              onChange={setImages}
+              disabled={updatePost.isPending}
+            />
+          )}
+
+          {/* Read-only image display */}
+          {isReadOnly && images.length > 0 && (
+            <ImageUploadZone
+              images={images}
+              onChange={() => {}}
+              disabled
+            />
+          )}
 
           {/* Platform Selector */}
           {!isReadOnly && (

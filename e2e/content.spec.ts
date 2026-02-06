@@ -235,4 +235,27 @@ test.describe("New Post", () => {
     // Content Ideas toggle button is visible
     await expect(page.getByText("Content Ideas")).toBeVisible();
   });
+
+  test("image upload zone is visible with drop area", async ({ page }) => {
+    await page.goto("/dashboard/content/new");
+
+    await expect(page.getByText("Images", { exact: true })).toBeVisible();
+    await expect(page.getByText("0/4")).toBeVisible();
+    await expect(page.getByText(/Drop images here or/)).toBeVisible();
+    await expect(
+      page.getByText("JPEG, PNG, GIF, WEBP up to 5MB"),
+    ).toBeVisible();
+  });
+
+  test("image upload zone has a hidden file input", async ({ page }) => {
+    await page.goto("/dashboard/content/new");
+
+    const input = page.getByLabel("Upload images");
+    await expect(input).toBeAttached();
+    await expect(input).toHaveAttribute("type", "file");
+    await expect(input).toHaveAttribute(
+      "accept",
+      "image/jpeg,image/png,image/gif,image/webp",
+    );
+  });
 });

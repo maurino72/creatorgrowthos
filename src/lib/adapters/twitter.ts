@@ -13,6 +13,7 @@ const TWITTER_AUTH_URL = "https://twitter.com/i/oauth2/authorize";
 const TWITTER_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const TWITTER_USER_URL = "https://api.x.com/2/users/me";
 const TWITTER_TWEETS_URL = "https://api.x.com/2/tweets";
+const TWITTER_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json";
 const SCOPES = "tweet.read tweet.write users.read offline.access";
 
 export class TwitterAdapter implements PlatformAdapter {
@@ -145,6 +146,9 @@ export class TwitterAdapter implements PlatformAdapter {
     if (payload.replyToId) {
       body.reply = { in_reply_to_tweet_id: payload.replyToId };
     }
+    if (payload.mediaIds && payload.mediaIds.length > 0) {
+      body.media = { media_ids: payload.mediaIds };
+    }
 
     const response = await fetch(TWITTER_TWEETS_URL, {
       method: "POST",
@@ -170,6 +174,75 @@ export class TwitterAdapter implements PlatformAdapter {
       platformUrl: `https://twitter.com/i/status/${json.data.id}`,
       publishedAt: new Date(),
     };
+  }
+
+  async uploadMedia(
+    accessToken: string,
+    buffer: Buffer,
+    mimeType: string,
+  ): Promise<string> {
+    // INIT
+    const initBody = new URLSearchParams({
+      command: "INIT",
+      total_bytes: String(buffer.length),
+      media_type: mimeType,
+    });
+
+    const initResponse = await fetch(TWITTER_UPLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: initBody,
+    });
+
+    if (!initResponse.ok) {
+      throw new Error(`Media INIT failed: ${initResponse.statusText}`);
+    }
+
+    const initJson = (await initResponse.json()) as { media_id_string: string };
+    const mediaId = initJson.media_id_string;
+
+    // APPEND
+    const appendForm = new FormData();
+    appendForm.append("command", "APPEND");
+    appendForm.append("media_id", mediaId);
+    appendForm.append("segment_index", "0");
+    appendForm.append("media_data", buffer.toString("base64"));
+
+    const appendResponse = await fetch(TWITTER_UPLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: appendForm,
+    });
+
+    if (!appendResponse.ok && appendResponse.status !== 204) {
+      throw new Error(`Media APPEND failed: ${appendResponse.statusText}`);
+    }
+
+    // FINALIZE
+    const finalizeBody = new URLSearchParams({
+      command: "FINALIZE",
+      media_id: mediaId,
+    });
+
+    const finalizeResponse = await fetch(TWITTER_UPLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: finalizeBody,
+    });
+
+    if (!finalizeResponse.ok) {
+      throw new Error(`Media FINALIZE failed: ${finalizeResponse.statusText}`);
+    }
+
+    return mediaId;
   }
 
   async deletePost(

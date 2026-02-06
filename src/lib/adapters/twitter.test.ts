@@ -355,4 +355,121 @@ describe("TwitterAdapter", () => {
       ).rejects.toThrow("Fetch metrics failed");
     });
   });
+
+  describe("uploadMedia", () => {
+    it("uploads media via INIT, APPEND, FINALIZE and returns media_id", async () => {
+      const imageBuffer = Buffer.from("fake-image-data");
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // INIT response
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ media_id_string: "media-123" }),
+          { status: 200 },
+        ),
+      );
+
+      // APPEND response (empty 204)
+      fetchSpy.mockResolvedValueOnce(
+        new Response(null, { status: 204 }),
+      );
+
+      // FINALIZE response
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ media_id_string: "media-123" }),
+          { status: 200 },
+        ),
+      );
+
+      const mediaId = await adapter.uploadMedia("access-token", imageBuffer, "image/jpeg");
+
+      expect(mediaId).toBe("media-123");
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+      // INIT call
+      const initCall = fetchSpy.mock.calls[0];
+      expect(initCall[0]).toContain("upload.twitter.com");
+      const initBody = initCall[1]?.body as URLSearchParams;
+      expect(initBody.get("command")).toBe("INIT");
+      expect(initBody.get("media_type")).toBe("image/jpeg");
+      expect(initBody.get("total_bytes")).toBe(String(imageBuffer.length));
+    });
+
+    it("throws on INIT failure", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "Invalid media" }), { status: 400 }),
+      );
+
+      await expect(
+        adapter.uploadMedia("token", Buffer.from("data"), "image/jpeg"),
+      ).rejects.toThrow("Media INIT failed");
+    });
+
+    it("throws on APPEND failure", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ media_id_string: "media-123" }), { status: 200 }),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "Upload error" }), { status: 400 }),
+      );
+
+      await expect(
+        adapter.uploadMedia("token", Buffer.from("data"), "image/jpeg"),
+      ).rejects.toThrow("Media APPEND failed");
+    });
+
+    it("throws on FINALIZE failure", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ media_id_string: "media-123" }), { status: 200 }),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response(null, { status: 204 }),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "Processing error" }), { status: 400 }),
+      );
+
+      await expect(
+        adapter.uploadMedia("token", Buffer.from("data"), "image/jpeg"),
+      ).rejects.toThrow("Media FINALIZE failed");
+    });
+  });
+
+  describe("publishPost with media", () => {
+    it("includes media.media_ids when mediaIds provided", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-1", text: "Hello" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Hello with image",
+        mediaIds: ["media-123", "media-456"],
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.media).toEqual({ media_ids: ["media-123", "media-456"] });
+    });
+
+    it("does not include media field when no mediaIds", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-1", text: "Hello" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", { text: "Hello text only" });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.media).toBeUndefined();
+    });
+  });
 });

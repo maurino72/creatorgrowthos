@@ -17,6 +17,7 @@ export interface PlatformUserInfo {
 export interface PostPayload {
   text: string;
   mediaUrls?: string[];
+  mediaIds?: string[];
   replyToId?: string;
 }
 
@@ -55,6 +56,11 @@ export interface PlatformAdapter {
     accessToken: string,
     payload: PostPayload,
   ): Promise<PlatformPostResult>;
+  uploadMedia(
+    accessToken: string,
+    buffer: Buffer,
+    mimeType: string,
+  ): Promise<string>;
   deletePost(accessToken: string, platformPostId: string): Promise<void>;
   fetchPostMetrics(
     accessToken: string,
