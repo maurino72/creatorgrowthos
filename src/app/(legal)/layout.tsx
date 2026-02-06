@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { AtmosphericBackground } from "@/components/shared/atmospheric-background";
 
 export const metadata: Metadata = {
   title: {
@@ -14,7 +15,8 @@ export default function LegalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background">
+      <AtmosphericBackground intensity="minimal" />
       {/* Compact header */}
       <header className="sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex h-12 max-w-2xl items-center justify-between px-6">

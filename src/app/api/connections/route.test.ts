@@ -52,7 +52,7 @@ describe("GET /api/connections", () => {
         connected_at: "2024-01-01",
       },
     ];
-    vi.mocked(getConnectionsForUser).mockResolvedValue(mockConnections);
+    vi.mocked(getConnectionsForUser).mockResolvedValue(mockConnections as never);
 
     const GET = await importGET();
     const request = new Request("http://localhost:3000/api/connections");
@@ -86,7 +86,7 @@ describe("GET /api/connections", () => {
         platform_username: "testuser",
         status: "active",
       },
-    ]);
+    ] as never);
 
     const GET = await importGET();
     const request = new Request("http://localhost:3000/api/connections");

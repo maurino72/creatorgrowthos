@@ -4,7 +4,7 @@ import { getAdapterForPlatform } from "@/lib/adapters";
 import { encrypt } from "@/lib/utils/encryption";
 import { disconnectPlatform } from "@/lib/services/connections";
 
-export async function GET() {
+export async function GET(_request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,7 +35,7 @@ export async function GET() {
   return response;
 }
 
-export async function DELETE() {
+export async function DELETE(_request: Request) {
   const supabase = await createClient();
   const {
     data: { user },

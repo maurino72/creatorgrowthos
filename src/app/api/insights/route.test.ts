@@ -46,7 +46,7 @@ describe("GET /api/insights", () => {
     const mockInsights = [
       { id: "i1", type: "performance_pattern", headline: "Test insight", status: "active" },
     ];
-    vi.mocked(getInsightsForUser).mockResolvedValue(mockInsights);
+    vi.mocked(getInsightsForUser).mockResolvedValue(mockInsights as never);
 
     const { GET } = await importRoute();
     const request = new Request("http://localhost/api/insights");

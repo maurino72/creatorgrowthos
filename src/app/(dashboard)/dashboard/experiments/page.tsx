@@ -12,6 +12,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  EXPERIMENT_TYPE_BADGE_STYLES,
+  EXPERIMENT_STATUS_STYLES,
+} from "@/lib/ui/badge-styles";
 
 const STATUS_TABS = [
   { label: "All", value: undefined },
@@ -21,29 +25,6 @@ const STATUS_TABS = [
   { label: "Complete", value: "complete" },
 ] as const;
 
-const EXPERIMENT_TYPE_STYLES: Record<string, string> = {
-  format_test:
-    "bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-500/20",
-  topic_test:
-    "bg-violet-50 text-violet-700 ring-violet-600/20 dark:bg-violet-500/10 dark:text-violet-400 dark:ring-violet-500/20",
-  style_test:
-    "bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20",
-};
-
-const EXPERIMENT_TYPE_LABELS: Record<string, string> = {
-  format_test: "Format Test",
-  topic_test: "Topic Test",
-  style_test: "Style Test",
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  suggested: "text-amber-600 dark:text-amber-400",
-  accepted: "text-blue-600 dark:text-blue-400",
-  running: "text-emerald-600 dark:text-emerald-400",
-  analyzing: "text-violet-600 dark:text-violet-400",
-  complete: "text-zinc-600 dark:text-zinc-400",
-  dismissed: "text-zinc-400 dark:text-zinc-500",
-};
 
 interface ExperimentItem {
   id: string;
@@ -68,12 +49,12 @@ function ExperimentCard({
       <CardContent className="pt-5 space-y-3">
         <div className="flex items-center gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${EXPERIMENT_TYPE_STYLES[experiment.type] ?? ""}`}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${EXPERIMENT_TYPE_BADGE_STYLES[experiment.type]?.className ?? ""}`}
           >
-            {EXPERIMENT_TYPE_LABELS[experiment.type] ?? experiment.type}
+            {EXPERIMENT_TYPE_BADGE_STYLES[experiment.type]?.label ?? experiment.type}
           </span>
           <span
-            className={`text-[11px] font-medium capitalize ${STATUS_STYLES[experiment.status] ?? ""}`}
+            className={`text-[11px] font-medium capitalize ${EXPERIMENT_STATUS_STYLES[experiment.status]?.className ?? ""}`}
           >
             {experiment.status}
           </span>

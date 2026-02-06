@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PlatformType } from "@/lib/adapters/types";
+import type { Database } from "@/types/database";
 
 export interface CreatePostData {
   body: string;
@@ -79,11 +80,11 @@ export async function getPostsForUser(
     .order("created_at", { ascending: false });
 
   if (platform) {
-    query = query.eq("post_publications.platform", platform);
+    query = query.eq("post_publications.platform", platform as Database["public"]["Enums"]["platform_type"]);
   }
 
   if (status) {
-    query = query.eq("status", status);
+    query = query.eq("status", status as Database["public"]["Enums"]["post_status"]);
   }
   if (intent) {
     query = query.eq("intent", intent);

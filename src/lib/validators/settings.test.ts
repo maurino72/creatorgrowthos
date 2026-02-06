@@ -218,8 +218,8 @@ describe("settings validators", () => {
       expect(DEFAULT_PREFERENCES.ai.writing_style).toBe("match_my_style");
     });
 
-    it("has system theme by default", () => {
-      expect(DEFAULT_PREFERENCES.appearance.theme).toBe("system");
+    it("has dark theme by default", () => {
+      expect(DEFAULT_PREFERENCES.appearance.theme).toBe("dark");
     });
   });
 });

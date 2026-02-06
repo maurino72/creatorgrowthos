@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
 
 export interface PerformanceByCategory {
   avgImpressions: number;
@@ -133,7 +134,7 @@ export async function getAggregatedData(userId: string, platform?: string): Prom
     .is("deleted_at", null);
 
   if (platform) {
-    query = query.eq("post_publications.platform", platform);
+    query = query.eq("post_publications.platform", platform as Database["public"]["Enums"]["platform_type"]);
   }
 
   const { data: posts, error } = await query.order("published_at", { ascending: false });

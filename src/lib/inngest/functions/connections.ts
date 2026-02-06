@@ -33,7 +33,7 @@ export const checkExpiringTokens = inngest.createFunction(
         userId: conn.user_id,
         platform: conn.platform,
         connectionId: conn.id,
-        expiresAt: conn.token_expires_at,
+        expiresAt: conn.token_expires_at ?? "",
       },
     }));
 
@@ -82,7 +82,7 @@ export const refreshToken = inngest.createFunction(
       await updateTokens(connectionId, {
         accessToken: newTokens.accessToken,
         refreshToken: newTokens.refreshToken,
-        expiresAt: newTokens.expiresAt,
+        expiresAt: newTokens.expiresAt ? new Date(newTokens.expiresAt as unknown as string) : undefined,
       });
     });
 

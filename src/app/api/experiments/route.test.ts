@@ -45,7 +45,7 @@ describe("GET /api/experiments", () => {
     mockAuth({ id: "user-1" });
     vi.mocked(getExperimentsForUser).mockResolvedValue([
       { id: "exp-1", type: "format_test", status: "suggested" },
-    ]);
+    ] as never);
     const { GET } = await importRoute();
     const req = new Request("http://localhost/api/experiments");
     const res = await GET(req);
@@ -70,7 +70,7 @@ describe("POST /api/experiments", () => {
     mockAuth({ id: "user-1" });
     vi.mocked(suggestExperiments).mockResolvedValue([
       { id: "exp-1", type: "format_test", status: "suggested" },
-    ]);
+    ] as never);
     const { POST } = await importRoute();
     const req = new Request("http://localhost/api/experiments", { method: "POST" });
     const res = await POST(req);

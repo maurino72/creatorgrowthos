@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
 import type { PlatformType } from "@/lib/adapters/types";
 
 export interface InsertMetricEventData {
@@ -140,7 +141,7 @@ export async function getDashboardMetrics(
     .gte("post_publications.published_at", since);
 
   if (platform) {
-    query = query.eq("post_publications.platform", platform);
+    query = query.eq("post_publications.platform", platform as Database["public"]["Enums"]["platform_type"]);
   }
 
   const { data, error } = await query.order("observed_at", { ascending: false });
@@ -211,7 +212,7 @@ export async function getTopPosts(
     .gte("post_publications.published_at", since);
 
   if (platform) {
-    query = query.eq("post_publications.platform", platform);
+    query = query.eq("post_publications.platform", platform as Database["public"]["Enums"]["platform_type"]);
   }
 
   const { data, error } = await query

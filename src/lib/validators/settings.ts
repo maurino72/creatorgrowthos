@@ -153,7 +153,7 @@ export const DEFAULT_PREFERENCES = {
     inapp_new_insights: true,
   },
   appearance: {
-    theme: "system" as const,
+    theme: "dark" as const,
     compact_mode: false,
     show_metrics_inline: true,
   },

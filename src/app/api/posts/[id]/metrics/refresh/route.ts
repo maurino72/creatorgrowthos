@@ -47,7 +47,7 @@ export async function POST(request: Request, context: RouteContext) {
         continue;
       }
 
-      const accessToken = decrypt(connection.access_token_enc);
+      const accessToken = decrypt(connection.access_token_enc!);
       const adapter = getAdapterForPlatform(platform);
       const metrics = await adapter.fetchPostMetrics(
         accessToken,

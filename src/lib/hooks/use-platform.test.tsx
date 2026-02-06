@@ -44,7 +44,7 @@ describe("usePlatform", () => {
     vi.mocked(useConnections).mockReturnValue({
       data: [],
       isLoading: false,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue(null);
 
     const { result } = renderHook(() => usePlatform(), {
@@ -59,7 +59,7 @@ describe("usePlatform", () => {
     vi.mocked(useConnections).mockReturnValue({
       data: undefined,
       isLoading: true,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue(null);
 
     const { result } = renderHook(() => usePlatform(), {
@@ -77,7 +77,7 @@ describe("usePlatform", () => {
         { id: "2", platform: "linkedin", status: "active", platform_username: "bob" },
       ],
       isLoading: false,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue(null);
 
     const { result } = renderHook(() => usePlatform(), {
@@ -95,7 +95,7 @@ describe("usePlatform", () => {
         { id: "2", platform: "linkedin", status: "active", platform_username: "bob" },
       ],
       isLoading: false,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue("linkedin");
 
     const { result } = renderHook(() => usePlatform(), {
@@ -111,7 +111,7 @@ describe("usePlatform", () => {
         { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
       ],
       isLoading: false,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue("invalid-platform");
 
     const { result } = renderHook(() => usePlatform(), {
@@ -128,7 +128,7 @@ describe("usePlatform", () => {
         { id: "2", platform: "linkedin", status: "active", platform_username: "bob" },
       ],
       isLoading: false,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue(null);
 
     const { result } = renderHook(() => usePlatform(), {
@@ -145,7 +145,7 @@ describe("usePlatform", () => {
         { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
       ],
       isLoading: false,
-    } as ReturnType<typeof useConnections>);
+    } as unknown as ReturnType<typeof useConnections>);
     mockGet.mockReturnValue(null);
 
     const { result } = renderHook(() => usePlatform(), {

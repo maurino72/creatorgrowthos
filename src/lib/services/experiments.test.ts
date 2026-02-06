@@ -56,8 +56,8 @@ const baseContext: InsightContext = {
     single: { avgImpressions: 1200, avgEngagement: 30, avgEngagementRate: 0.025, count: 15 },
   },
   recentTrend: {
-    currentPeriod: { postCount: 12, avgImpressions: 2000, avgEngagement: 50, avgEngagementRate: 0.035, count: 12 },
-    previousPeriod: { postCount: 13, avgImpressions: 1800, avgEngagement: 45, avgEngagementRate: 0.03, count: 13 },
+    currentPeriod: { postCount: 12, avgImpressions: 2000, avgEngagement: 50, avgEngagementRate: 0.035 },
+    previousPeriod: { postCount: 13, avgImpressions: 1800, avgEngagement: 45, avgEngagementRate: 0.03 },
   },
   outliers: { top: [], bottom: [] },
   postingPattern: { totalDays: 150, postsPerWeek: 1.17 },

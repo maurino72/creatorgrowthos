@@ -9,6 +9,7 @@ import type { PlatformType } from "@/lib/adapters/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { STATUS_BADGE_STYLES } from "@/lib/ui/badge-styles";
 
 const PLATFORMS: {
   id: PlatformType;
@@ -74,28 +75,16 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 function ConnectionStatusBadge({ status }: { status: string | null }) {
-  if (status === "active") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20">
-        Active
-      </span>
-    );
-  }
-  if (status === "expired") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-500/10 dark:text-yellow-400 dark:ring-yellow-500/20">
-        Expired
-      </span>
-    );
-  }
-  if (status === "revoked") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20">
-        Revoked
-      </span>
-    );
-  }
-  return null;
+  if (!status) return null;
+  const style = STATUS_BADGE_STYLES[status];
+  if (!style) return null;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${style.className}`}
+    >
+      {style.label}
+    </span>
+  );
 }
 
 function ConnectionCard({

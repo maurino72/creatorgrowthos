@@ -44,7 +44,7 @@ describe("PATCH /api/insights/:id/acted", () => {
   it("marks insight as acted on", async () => {
     mockAuth({ id: "user-1" });
     const mockInsight = { id: "i1", status: "acted_on" };
-    vi.mocked(markInsightActedOn).mockResolvedValue(mockInsight);
+    vi.mocked(markInsightActedOn).mockResolvedValue(mockInsight as never);
 
     const { PATCH } = await importRoute();
     const request = new Request("http://localhost/api/insights/i1/acted", { method: "PATCH" });

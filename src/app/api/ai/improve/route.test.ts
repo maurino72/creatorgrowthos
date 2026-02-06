@@ -53,7 +53,7 @@ describe("POST /api/ai/improve", () => {
       ],
       improved_version: "Better version here",
     };
-    vi.mocked(improveContent).mockResolvedValue(mockResult);
+    vi.mocked(improveContent).mockResolvedValue(mockResult as never);
 
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/ai/improve", {

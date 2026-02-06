@@ -82,6 +82,9 @@ export const fetchMetrics = inngest.createFunction(
         throw new Error(`No active connection for ${platform}`);
       }
 
+      if (!connection.access_token_enc) {
+        throw new Error(`No access token for ${platform}`);
+      }
       const accessToken = decrypt(connection.access_token_enc);
       const adapter = getAdapterForPlatform(platform as PlatformType);
       return adapter.fetchPostMetrics(accessToken, publication.platform_post_id!);

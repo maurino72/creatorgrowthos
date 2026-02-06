@@ -17,13 +17,13 @@ export default function LoginPage() {
   return (
     <div className="flex w-full max-w-sm flex-col items-center px-6">
       {/* Logo mark */}
-      <div className="mb-10 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm">
+      <div className="mb-10 flex h-12 w-12 items-center justify-center rounded-xl border border-input bg-secondary backdrop-blur-sm">
         <svg
           width="20"
           height="20"
           viewBox="0 0 20 20"
           fill="none"
-          className="text-white"
+          className="text-foreground"
         >
           <path
             d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm11 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
@@ -36,22 +36,22 @@ export default function LoginPage() {
       </div>
 
       {/* Title */}
-      <h1 className="mb-2 text-center font-sans text-2xl font-semibold tracking-tight text-white">
+      <h1 className="mb-2 text-center font-sans text-2xl font-semibold tracking-tight text-foreground">
         Creator Growth OS
       </h1>
-      <p className="mb-10 text-center text-sm leading-relaxed text-white/40">
+      <p className="mb-10 text-center text-sm leading-relaxed text-muted-foreground">
         Grow your audience with AI-powered
         <br />
         content strategy and analytics.
       </p>
 
       {/* Sign in card */}
-      <div className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-md">
+      <div className="w-full rounded-2xl border border-glass-border bg-glass-bg p-6 backdrop-blur-md">
         <Button
           onClick={handleGoogleSignIn}
           variant="outline"
           size="lg"
-          className="w-full cursor-pointer gap-3 border-white/10 bg-white/5 py-6 text-sm font-medium text-white transition-all duration-200 hover:border-white/20 hover:bg-white/10"
+          className="w-full cursor-pointer gap-3 border-input bg-secondary py-6 text-sm font-medium text-foreground transition-all duration-200 hover:border-glass-hover hover:bg-glass-hover"
         >
           <svg width="18" height="18" viewBox="0 0 18 18">
             <path
@@ -76,7 +76,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <p className="mt-8 text-center text-xs text-white/20">
+      <p className="mt-8 text-center text-xs text-muted-foreground/40">
         By continuing, you agree to our Terms of Service.
       </p>
     </div>

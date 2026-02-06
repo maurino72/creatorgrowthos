@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PlatformIcon } from "@/components/shared/platform-icon";
 import { formatNumber, formatEngagementRate, formatTimeAgo } from "@/lib/utils/format";
+import { STATUS_BADGE_STYLES } from "@/lib/ui/badge-styles";
 
 const STATUS_TABS = [
   { label: "All", value: undefined },
@@ -29,24 +30,13 @@ const EMPTY_MESSAGES: Record<string, string> = {
   failed: "All clear! No failed posts",
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  draft:
-    "bg-zinc-100 text-zinc-700 ring-zinc-500/20 dark:bg-zinc-500/10 dark:text-zinc-400 dark:ring-zinc-500/20",
-  scheduled:
-    "bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",
-  published:
-    "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20",
-  failed:
-    "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20",
-};
-
 function StatusBadge({ status }: { status: string }) {
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  const style = STATUS_BADGE_STYLES[status];
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[status] ?? ""}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${style?.className ?? ""}`}
     >
-      {label}
+      {style?.label ?? status}
     </span>
   );
 }

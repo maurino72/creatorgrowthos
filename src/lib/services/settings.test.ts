@@ -110,7 +110,7 @@ describe("settings service", () => {
       expect(result.profile.email).toBe("test@example.com");
       expect(result.preferences.publishing.auto_save_drafts).toBe(true);
       expect(result.preferences.ai.enabled).toBe(true);
-      expect(result.preferences.appearance.theme).toBe("system");
+      expect(result.preferences.appearance.theme).toBe("dark");
     });
 
     it("merges saved preferences over defaults", async () => {

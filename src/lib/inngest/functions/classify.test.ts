@@ -32,7 +32,7 @@ describe("classify-post function", () => {
 
     vi.mocked(classifyPost).mockResolvedValue({
       intent: "educate",
-      content_type: "tutorial",
+      content_type: "single",
       topics: ["typescript", "testing"],
     } as Awaited<ReturnType<typeof classifyPost>>);
 

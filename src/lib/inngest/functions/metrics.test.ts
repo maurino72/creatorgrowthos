@@ -126,7 +126,7 @@ describe("fetch-metrics", () => {
       platform_user_id: "tw-user",
       platform_username: "testuser",
       connected_at: "2025-01-01",
-    } as ReturnType<Awaited<typeof getConnectionByPlatform>>);
+    } as unknown as Awaited<ReturnType<typeof getConnectionByPlatform>>);
 
     const mockAdapter = {
       fetchPostMetrics: vi.fn().mockResolvedValue({

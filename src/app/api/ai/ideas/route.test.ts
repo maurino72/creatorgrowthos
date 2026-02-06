@@ -57,7 +57,7 @@ describe("POST /api/ai/ideas", () => {
       { headline: "Idea 2", format: "single", intent: "engage", topic: "saas", rationale: "Community", suggested_hook: "Hook 2", confidence: "medium" },
       { headline: "Idea 3", format: "quote", intent: "curate", topic: "devtools", rationale: "Sharing", suggested_hook: "Hook 3", confidence: "low" },
     ];
-    vi.mocked(generateContentIdeas).mockResolvedValue(mockIdeas);
+    vi.mocked(generateContentIdeas).mockResolvedValue(mockIdeas as never);
 
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/ai/ideas", {

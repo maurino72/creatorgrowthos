@@ -36,7 +36,7 @@ describe("PATCH /api/experiments/:id/accept", () => {
 
   it("accepts experiment successfully", async () => {
     mockAuth({ id: "user-1" });
-    vi.mocked(acceptExperiment).mockResolvedValue({ id: "exp-1", status: "accepted" });
+    vi.mocked(acceptExperiment).mockResolvedValue({ id: "exp-1", status: "accepted" } as never);
     const { PATCH } = await importRoute();
     const req = new Request("http://localhost/api/experiments/exp-1/accept", { method: "PATCH" });
     const res = await PATCH(req, { params: Promise.resolve({ id: "exp-1" }) });

@@ -44,7 +44,7 @@ describe("PATCH /api/insights/:id/dismiss", () => {
   it("dismisses insight successfully", async () => {
     mockAuth({ id: "user-1" });
     const mockInsight = { id: "i1", status: "dismissed" };
-    vi.mocked(dismissInsight).mockResolvedValue(mockInsight);
+    vi.mocked(dismissInsight).mockResolvedValue(mockInsight as never);
 
     const { PATCH } = await importRoute();
     const request = new Request("http://localhost/api/insights/i1/dismiss", { method: "PATCH" });

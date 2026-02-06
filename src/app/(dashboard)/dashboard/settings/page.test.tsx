@@ -95,6 +95,15 @@ vi.mock("@/lib/queries/settings", () => ({
   })),
 }));
 
+const mockSetTheme = vi.fn();
+vi.mock("@/components/theme-provider", () => ({
+  useTheme: vi.fn(() => ({
+    theme: "dark",
+    resolvedTheme: "dark",
+    setTheme: mockSetTheme,
+  })),
+}));
+
 vi.mock("@/lib/queries/connections", () => ({
   useConnections: vi.fn(() => ({
     data: [
@@ -488,7 +497,7 @@ describe("SettingsPage", () => {
     expect(screen.getByText("System")).toBeInTheDocument();
   });
 
-  it("selects dark theme", () => {
+  it("selects dark theme and calls setTheme", () => {
     renderSettings();
     fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
     fireEvent.click(screen.getByText("Dark"));
@@ -497,6 +506,15 @@ describe("SettingsPage", () => {
       { section: "appearance", settings: { theme: "dark" } },
       expect.objectContaining({ onError: expect.any(Function) }),
     );
+    expect(mockSetTheme).toHaveBeenCalledWith("dark");
+  });
+
+  it("selects light theme and calls setTheme", () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
+    fireEvent.click(screen.getByText("Light"));
+
+    expect(mockSetTheme).toHaveBeenCalledWith("light");
   });
 
   it("toggles compact mode", () => {

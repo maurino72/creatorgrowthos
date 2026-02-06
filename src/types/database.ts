@@ -453,6 +453,109 @@ export type Database = {
         }
         Relationships: []
       }
+      insights: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          headline: string
+          detail: string
+          data_points: Json | null
+          action: string | null
+          confidence: string
+          status: string
+          generated_at: string | null
+          expires_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          headline: string
+          detail: string
+          data_points?: Json | null
+          action?: string | null
+          confidence: string
+          status?: string
+          generated_at?: string | null
+          expires_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          headline?: string
+          detail?: string
+          data_points?: Json | null
+          action?: string | null
+          confidence?: string
+          status?: string
+          generated_at?: string | null
+          expires_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experiments: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          hypothesis: string
+          description: string
+          status: string
+          results: Json | null
+          suggested_at: string | null
+          started_at: string | null
+          completed_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          hypothesis: string
+          description: string
+          status?: string
+          results?: Json | null
+          suggested_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          hypothesis?: string
+          description?: string
+          status?: string
+          results?: Json | null
+          suggested_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

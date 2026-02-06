@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTheme } from "@/components/theme-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -170,7 +171,7 @@ function ProfileSection({
   const [timezone, setTimezone] = useState(
     profile.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
   );
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   function debouncedSave(field: string, value: string) {
     clearTimeout(debounceRef.current);
@@ -289,7 +290,7 @@ function AccountSection({
         </SettingRow>
 
         <SettingRow label="Authentication" description="Sign in via Google">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-status-success-muted px-2 py-0.5 text-xs font-medium text-status-success ring-1 ring-inset ring-status-success/20">
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             Connected
           </span>
@@ -396,7 +397,7 @@ function PlatformsSection() {
             }
           >
             {twitterConn ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-status-success-muted px-2 py-0.5 text-xs font-medium text-status-success ring-1 ring-inset ring-status-success/20">
                 Active
               </span>
             ) : (
@@ -480,10 +481,10 @@ function AiSection({
   prefs: typeof DEFAULT_PREFERENCES.ai;
   onUpdate: (settings: Record<string, unknown>) => void;
 }) {
-  const [customInstructions, setCustomInstructions] = useState(
+  const [customInstructions, setCustomInstructions] = useState<string>(
     prefs.custom_instructions,
   );
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   return (
     <SectionCard
@@ -712,6 +713,8 @@ function AppearanceSection({
   prefs: typeof DEFAULT_PREFERENCES.appearance;
   onUpdate: (settings: Record<string, unknown>) => void;
 }) {
+  const { setTheme } = useTheme();
+
   return (
     <SectionCard title="Appearance" description="Customize the look and feel">
       <SettingRow label="Theme" description="Choose your preferred theme">
@@ -720,7 +723,10 @@ function AppearanceSection({
             <button
               key={theme}
               type="button"
-              onClick={() => onUpdate({ theme })}
+              onClick={() => {
+                setTheme(theme);
+                onUpdate({ theme });
+              }}
               className={cn(
                 "rounded-md px-3 py-1 text-xs font-medium transition-colors",
                 prefs.theme === theme

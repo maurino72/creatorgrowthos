@@ -7,7 +7,7 @@ import {
   updateTokens,
 } from "@/lib/services/connections";
 
-export async function POST() {
+export async function POST(_request: Request) {
   const supabase = await createClient();
   const {
     data: { user },

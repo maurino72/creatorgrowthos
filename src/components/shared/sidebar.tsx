@@ -130,7 +130,7 @@ export function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden w-56 flex-shrink-0 flex-col border-r border-border bg-sidebar lg:flex">
+      <aside className="relative z-20 hidden w-56 flex-shrink-0 flex-col border-r border-border bg-sidebar/80 backdrop-blur-sm lg:flex">
         {/* Brand */}
         <div className="flex h-14 items-center gap-2.5 px-5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground">

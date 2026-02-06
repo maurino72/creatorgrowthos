@@ -170,13 +170,17 @@ async function publishToPlatform(
 async function getValidAccessToken(
   connection: {
     id: string;
-    access_token_enc: string;
+    access_token_enc: string | null;
     refresh_token_enc?: string | null;
     token_expires_at?: string | null;
     platform: string;
   },
   platform: PlatformType,
 ): Promise<string> {
+  if (!connection.access_token_enc) {
+    throw new Error(`No access token for ${platform}`);
+  }
+
   const isExpired =
     connection.token_expires_at &&
     new Date(connection.token_expires_at) <= new Date();

@@ -54,7 +54,7 @@ describe("POST /api/insights/generate", () => {
       { id: "i2", type: "opportunity", headline: "Another insight" },
       { id: "i3", type: "anomaly", headline: "Third insight" },
     ];
-    vi.mocked(generateInsights).mockResolvedValue(mockInsights);
+    vi.mocked(generateInsights).mockResolvedValue(mockInsights as never);
 
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/insights/generate", { method: "POST" });

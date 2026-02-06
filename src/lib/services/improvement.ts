@@ -32,7 +32,7 @@ export async function improveContent(
     .limit(5);
 
   const topPosts = (topPostRows ?? []).map(
-    (r: { posts: { body: string } }) => r.posts.body,
+    (r) => (r as unknown as { posts: { body: string } }).posts.body,
   );
 
   // 2. Build prompt

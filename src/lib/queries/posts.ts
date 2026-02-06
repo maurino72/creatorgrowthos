@@ -10,7 +10,7 @@ import type { ClassificationOverride } from "@/lib/ai/taxonomy";
 
 export const postKeys = {
   all: ["posts"] as const,
-  list: (filters: { status?: string }) =>
+  list: (filters: PostFilters) =>
     ["posts", "list", filters] as const,
   detail: (id: string) => ["posts", "detail", id] as const,
 };

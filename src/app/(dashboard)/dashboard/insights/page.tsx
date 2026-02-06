@@ -12,6 +12,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  INSIGHT_TYPE_BADGE_STYLES,
+  CONFIDENCE_STYLES,
+} from "@/lib/ui/badge-styles";
 
 const STATUS_TABS = [
   { label: "Active", value: "active" },
@@ -27,29 +31,6 @@ const TYPE_TABS = [
   { label: "Anomaly", value: "anomaly" },
 ] as const;
 
-const INSIGHT_TYPE_STYLES: Record<string, string> = {
-  performance_pattern:
-    "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20",
-  consistency_pattern:
-    "bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",
-  opportunity:
-    "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20",
-  anomaly:
-    "bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20",
-};
-
-const INSIGHT_TYPE_LABELS: Record<string, string> = {
-  performance_pattern: "Performance",
-  consistency_pattern: "Consistency",
-  opportunity: "Opportunity",
-  anomaly: "Anomaly",
-};
-
-const CONFIDENCE_STYLES: Record<string, string> = {
-  high: "text-emerald-600 dark:text-emerald-400",
-  medium: "text-amber-600 dark:text-amber-400",
-  low: "text-zinc-500 dark:text-zinc-400",
-};
 
 interface InsightItem {
   id: string;
@@ -77,12 +58,12 @@ function InsightCard({
       <CardContent className="pt-5 space-y-3">
         <div className="flex items-center gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${INSIGHT_TYPE_STYLES[insight.type] ?? ""}`}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${INSIGHT_TYPE_BADGE_STYLES[insight.type]?.className ?? ""}`}
           >
-            {INSIGHT_TYPE_LABELS[insight.type] ?? insight.type}
+            {INSIGHT_TYPE_BADGE_STYLES[insight.type]?.label ?? insight.type}
           </span>
           <span
-            className={`text-[11px] font-medium ${CONFIDENCE_STYLES[insight.confidence] ?? ""}`}
+            className={`text-[11px] font-medium ${CONFIDENCE_STYLES[insight.confidence]?.className ?? ""}`}
           >
             {insight.confidence} confidence
           </span>

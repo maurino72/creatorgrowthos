@@ -54,7 +54,7 @@ describe("PATCH /api/posts/[id]/classifications", () => {
       content_type: "single",
       topics: ["startup"],
       ai_assisted: false,
-    });
+    } as never);
 
     const res = await PATCH(
       makeRequest({ intent: "promote", content_type: "single", topics: ["startup"] }),
@@ -92,7 +92,7 @@ describe("PATCH /api/posts/[id]/classifications", () => {
       id: "post-1",
       intent: "curate",
       ai_assisted: false,
-    });
+    } as never);
 
     const res = await PATCH(makeRequest({ intent: "curate" }), makeContext("post-1"));
     expect(res.status).toBe(200);

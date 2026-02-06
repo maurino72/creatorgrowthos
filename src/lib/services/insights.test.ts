@@ -58,8 +58,8 @@ const MOCK_CONTEXT: InsightContext = {
     thread: { avgImpressions: 3500, avgEngagement: 90, avgEngagementRate: 0.055, count: 10 },
   },
   recentTrend: {
-    currentPeriod: { postCount: 12, avgImpressions: 2000, avgEngagement: 50, avgEngagementRate: 0.035, count: 12 },
-    previousPeriod: { postCount: 13, avgImpressions: 1800, avgEngagement: 45, avgEngagementRate: 0.03, count: 13 },
+    currentPeriod: { postCount: 12, avgImpressions: 2000, avgEngagement: 50, avgEngagementRate: 0.035 },
+    previousPeriod: { postCount: 13, avgImpressions: 1800, avgEngagement: 45, avgEngagementRate: 0.03 },
   },
   outliers: {
     top: [{ id: "p1", body: "Top post", intent: "educate", topics: ["ai"], impressions: 8000, engagement: 200, engagementRate: 0.08 }],

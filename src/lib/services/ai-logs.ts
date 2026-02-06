@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/types/database";
 
 export interface AiLogData {
   userId: string;
@@ -7,7 +8,7 @@ export interface AiLogData {
   model: string;
   promptTemplate: string;
   promptVersion: number;
-  contextPayload: Record<string, unknown>;
+  contextPayload: Record<string, Json | undefined>;
   fullPrompt: string;
   response: string;
   tokensIn: number;
@@ -28,7 +29,7 @@ export async function insertAiLog(data: AiLogData) {
       model: data.model,
       prompt_template: data.promptTemplate,
       prompt_version: data.promptVersion,
-      context_payload: data.contextPayload,
+      context_payload: data.contextPayload as Json,
       full_prompt: data.fullPrompt,
       response: data.response,
       tokens_in: data.tokensIn,

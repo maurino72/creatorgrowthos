@@ -68,6 +68,7 @@ function mockAdapter(overrides: Record<string, unknown> = {}) {
       refreshToken: "new-refresh",
       expiresAt: new Date(Date.now() + 7200000),
     }),
+    uploadMedia: vi.fn().mockResolvedValue("media-id-1"),
     ...overrides,
   };
   vi.mocked(getAdapterForPlatform).mockReturnValue(adapter as never);

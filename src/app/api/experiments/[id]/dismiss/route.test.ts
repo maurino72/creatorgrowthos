@@ -36,7 +36,7 @@ describe("PATCH /api/experiments/:id/dismiss", () => {
 
   it("dismisses experiment successfully", async () => {
     mockAuth({ id: "user-1" });
-    vi.mocked(dismissExperiment).mockResolvedValue({ id: "exp-1", status: "dismissed" });
+    vi.mocked(dismissExperiment).mockResolvedValue({ id: "exp-1", status: "dismissed" } as never);
     const { PATCH } = await importRoute();
     const req = new Request("http://localhost/api/experiments/exp-1/dismiss", { method: "PATCH" });
     const res = await PATCH(req, { params: Promise.resolve({ id: "exp-1" }) });
