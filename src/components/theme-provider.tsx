@@ -28,10 +28,10 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 }
 
 function applyTheme(resolved: "light" | "dark") {
-  if (resolved === "light") {
-    document.documentElement.classList.add("light");
+  if (resolved === "dark") {
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove("light");
+    document.documentElement.classList.remove("dark");
   }
 }
 

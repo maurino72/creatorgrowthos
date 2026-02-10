@@ -239,7 +239,7 @@ export default function NewPostPage() {
 
         <div className="ml-auto">
           <Button
-            variant="outline"
+            variant="coral"
             size="xs"
             onClick={() => {
               generateIdeas.mutate(undefined, {
@@ -430,6 +430,7 @@ export default function NewPostPage() {
 
         {scheduleEnabled ? (
           <Button
+            variant="coral"
             size="sm"
             onClick={handleSchedule}
             disabled={!canSubmit || !scheduledAt}
@@ -438,6 +439,7 @@ export default function NewPostPage() {
           </Button>
         ) : (
           <Button
+            variant="coral"
             size="sm"
             onClick={handlePublishNow}
             disabled={!canSubmit}

@@ -27,8 +27,8 @@ describe("ThemeProvider", () => {
   beforeEach(() => {
     // Clear localStorage
     localStorage.clear();
-    // Remove light class from documentElement
-    document.documentElement.classList.remove("light");
+    // Remove dark class from documentElement
+    document.documentElement.classList.remove("dark");
 
     matchMediaListeners = new Map();
 
@@ -55,7 +55,7 @@ describe("ThemeProvider", () => {
   });
 
   afterEach(() => {
-    document.documentElement.classList.remove("light");
+    document.documentElement.classList.remove("dark");
   });
 
   it("defaults to dark theme", () => {
@@ -67,10 +67,10 @@ describe("ThemeProvider", () => {
 
     expect(screen.getByTestId("theme").textContent).toBe("dark");
     expect(screen.getByTestId("resolved").textContent).toBe("dark");
-    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("applies light class when theme is light", () => {
+  it("removes dark class when theme is light", () => {
     render(
       <ThemeProvider>
         <TestConsumer />
@@ -83,10 +83,10 @@ describe("ThemeProvider", () => {
 
     expect(screen.getByTestId("theme").textContent).toBe("light");
     expect(screen.getByTestId("resolved").textContent).toBe("light");
-    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
-  it("removes light class when switching back to dark", () => {
+  it("adds dark class when switching back to dark", () => {
     render(
       <ThemeProvider>
         <TestConsumer />
@@ -96,12 +96,12 @@ describe("ThemeProvider", () => {
     act(() => {
       screen.getByText("Set Light").click();
     });
-    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
 
     act(() => {
       screen.getByText("Set Dark").click();
     });
-    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
   it("persists theme to localStorage", () => {
@@ -128,7 +128,7 @@ describe("ThemeProvider", () => {
     );
 
     expect(screen.getByTestId("theme").textContent).toBe("light");
-    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
   it("resolves system preference to dark when prefers-color-scheme is dark", () => {
@@ -145,7 +145,7 @@ describe("ThemeProvider", () => {
 
     expect(screen.getByTestId("theme").textContent).toBe("system");
     expect(screen.getByTestId("resolved").textContent).toBe("dark");
-    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
   it("resolves system preference to light when prefers-color-scheme is light", () => {
@@ -182,7 +182,7 @@ describe("ThemeProvider", () => {
 
     expect(screen.getByTestId("theme").textContent).toBe("system");
     expect(screen.getByTestId("resolved").textContent).toBe("light");
-    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
   it("uses DB preference when available", async () => {

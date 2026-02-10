@@ -554,6 +554,7 @@ export default function EditPostPage() {
       <div className="flex items-center gap-4 pt-6 pb-2">
         {!isReadOnly && (
           <Button
+            variant="coral"
             size="sm"
             onClick={handleSave}
             disabled={!canSubmit}

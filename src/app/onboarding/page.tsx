@@ -249,6 +249,7 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
       <div className="mb-6 h-px w-full bg-editorial-rule" />
 
       <Button
+        variant="coral"
         onClick={onContinue}
         className="w-full cursor-pointer py-6 text-sm font-medium"
       >
@@ -492,6 +493,7 @@ function QuickProfileStep({
       </div>
 
       <Button
+        variant="coral"
         onClick={onSubmit}
         disabled={isSubmitting}
         className="w-full cursor-pointer py-6 text-sm font-medium disabled:opacity-50"
@@ -544,6 +546,7 @@ function ImportContentStep({
             : `${20 - importedCount} more posts until insights unlock.`}
         </p>
         <Button
+          variant="coral"
           onClick={onContinue}
           className="w-full cursor-pointer py-6 text-sm font-medium"
         >
@@ -691,6 +694,7 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
         )}
         {tourIndex < stops.length - 1 ? (
           <Button
+            variant="coral"
             onClick={() => setTourIndex(tourIndex + 1)}
             className="flex-1 cursor-pointer py-5 text-sm font-medium"
           >
@@ -698,6 +702,7 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
           </Button>
         ) : (
           <Button
+            variant="coral"
             onClick={onContinue}
             className="flex-1 cursor-pointer py-5 text-sm font-medium"
           >
@@ -763,6 +768,7 @@ function ActivateStep({
 
         <div className="w-full space-y-2">
           <Button
+            variant="coral"
             onClick={onComplete}
             className="w-full cursor-pointer py-6 text-sm font-medium"
           >
@@ -854,6 +860,7 @@ function ActivateStep({
 
       <div className="space-y-2">
         <Button
+          variant="coral"
           onClick={onComplete}
           className="w-full cursor-pointer py-6 text-sm font-medium"
         >

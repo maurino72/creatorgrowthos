@@ -288,7 +288,7 @@ function AccountSection({
         </SettingRow>
 
         <SettingRow label="Authentication" description="Sign in via Google">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-status-success-muted px-2 py-0.5 text-xs font-medium text-status-success ring-1 ring-inset ring-status-success/20">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-success-muted px-2 py-0.5 text-xs font-medium text-success ring-1 ring-inset ring-success/20">
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             Connected
           </span>
@@ -395,7 +395,7 @@ function PlatformsSection() {
             }
           >
             {twitterConn ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-status-success-muted px-2 py-0.5 text-xs font-medium text-status-success ring-1 ring-inset ring-status-success/20">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success-muted px-2 py-0.5 text-xs font-medium text-success ring-1 ring-inset ring-success/20">
                 Active
               </span>
             ) : (

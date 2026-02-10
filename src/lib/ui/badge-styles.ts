@@ -19,33 +19,33 @@ export const STATUS_BADGE_STYLES: Record<string, BadgeStyle> = {
   },
   scheduled: {
     className:
-      "bg-status-info-muted text-status-info ring-status-info/20",
+      "bg-info-muted text-info ring-info/20",
     label: "Scheduled",
   },
   published: {
     className:
-      "bg-status-success-muted text-status-success ring-status-success/20",
+      "bg-success-muted text-success ring-success/20",
     label: "Published",
   },
   failed: {
     className:
-      "bg-status-error-muted text-status-error ring-status-error/20",
+      "bg-destructive-muted text-destructive ring-destructive/20",
     label: "Failed",
   },
   // Connection statuses
   active: {
     className:
-      "bg-status-success-muted text-status-success ring-status-success/20",
+      "bg-success-muted text-success ring-success/20",
     label: "Active",
   },
   expired: {
     className:
-      "bg-status-warning-muted text-status-warning ring-status-warning/20",
+      "bg-warning-muted text-warning ring-warning/20",
     label: "Expired",
   },
   revoked: {
     className:
-      "bg-status-error-muted text-status-error ring-status-error/20",
+      "bg-destructive-muted text-destructive ring-destructive/20",
     label: "Revoked",
   },
 };
@@ -53,9 +53,9 @@ export const STATUS_BADGE_STYLES: Record<string, BadgeStyle> = {
 // ─── Experiment Statuses (text-only, no background badge) ───
 
 export const EXPERIMENT_STATUS_STYLES: Record<string, BadgeStyle> = {
-  suggested: { className: "text-status-warning", label: "Suggested" },
-  accepted: { className: "text-status-info", label: "Accepted" },
-  running: { className: "text-status-success", label: "Running" },
+  suggested: { className: "text-warning", label: "Suggested" },
+  accepted: { className: "text-info", label: "Accepted" },
+  running: { className: "text-success", label: "Running" },
   analyzing: { className: "text-violet-400", label: "Analyzing" },
   complete: { className: "text-muted-foreground", label: "Complete" },
   dismissed: { className: "text-muted-foreground/60", label: "Dismissed" },

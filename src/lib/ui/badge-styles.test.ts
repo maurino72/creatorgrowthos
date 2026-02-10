@@ -30,10 +30,10 @@ describe("badge-styles", () => {
       }
     });
 
-    it("uses status token classes", () => {
-      expect(STATUS_BADGE_STYLES.published.className).toContain("status-success");
-      expect(STATUS_BADGE_STYLES.failed.className).toContain("status-error");
-      expect(STATUS_BADGE_STYLES.scheduled.className).toContain("status-info");
+    it("uses semantic token classes", () => {
+      expect(STATUS_BADGE_STYLES.published.className).toContain("success");
+      expect(STATUS_BADGE_STYLES.failed.className).toContain("destructive");
+      expect(STATUS_BADGE_STYLES.scheduled.className).toContain("info");
     });
   });
 

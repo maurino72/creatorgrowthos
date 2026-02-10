@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(:root:not(.light) *));
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -26,6 +26,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -56,15 +57,17 @@
   --color-mesh-2: var(--mesh-2);
   --color-mesh-3: var(--mesh-3);
 
-  /* Status colors */
-  --color-status-success: var(--status-success);
-  --color-status-success-muted: var(--status-success-muted);
-  --color-status-warning: var(--status-warning);
-  --color-status-warning-muted: var(--status-warning-muted);
-  --color-status-error: var(--status-error);
-  --color-status-error-muted: var(--status-error-muted);
-  --color-status-info: var(--status-info);
-  --color-status-info-muted: var(--status-info-muted);
+  /* Status / semantic colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-destructive-muted: var(--destructive-muted);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-muted: var(--info-muted);
 
   /* Editorial tokens */
   --color-editorial-rule: var(--editorial-rule);
@@ -80,93 +83,11 @@
 }
 
 /* =============================================
-   CREATIVE PULSE — DARK (default)
-   Deep indigo base with glowing purple accents
+   CREATIVE PULSE — LIGHT (default)
+   Clean cool-white with purple accents
    ============================================= */
 :root {
   --radius: 0.625rem;
-  --background: hsl(240 21% 8%);
-  --foreground: hsl(213 31% 91%);
-
-  --card: hsl(240 18% 12%);
-  --card-foreground: hsl(213 31% 91%);
-
-  --popover: hsl(240 18% 12%);
-  --popover-foreground: hsl(213 31% 91%);
-
-  --primary: hsl(263 83% 65%);
-  --primary-foreground: hsl(0 0% 100%);
-
-  --secondary: hsl(244 30% 18%);
-  --secondary-foreground: hsl(258 90% 76%);
-
-  --muted: hsl(240 15% 15%);
-  --muted-foreground: hsl(215 16% 57%);
-
-  --accent: hsl(4 90% 62%);
-  --accent-foreground: hsl(0 0% 100%);
-
-  --destructive: hsl(0 72% 51%);
-
-  --border: hsl(240 12% 20%);
-  --input: hsl(240 12% 20%);
-  --ring: hsl(263 83% 65%);
-
-  /* Charts */
-  --chart-1: hsl(263 83% 65%);
-  --chart-2: hsl(4 93% 69%);
-  --chart-3: hsl(258 90% 76%);
-  --chart-4: hsl(172 66% 60%);
-  --chart-5: hsl(38 92% 60%);
-
-  /* Sidebar */
-  --sidebar: hsl(240 21% 10%);
-  --sidebar-foreground: hsl(213 31% 91%);
-  --sidebar-primary: hsl(263 83% 65%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(244 30% 18%);
-  --sidebar-accent-foreground: hsl(258 90% 76%);
-  --sidebar-border: hsl(240 12% 20%);
-  --sidebar-ring: hsl(263 83% 65%);
-
-  /* Glass — purple-tinted */
-  --glass-bg: hsl(240 18% 14% / 80%);
-  --glass-border: hsl(263 30% 30% / 30%);
-  --glass-hover: hsl(263 30% 30% / 45%);
-
-  /* Mesh gradient — deep purple/indigo */
-  --mesh-1: hsl(263 40% 15%);
-  --mesh-2: hsl(244 30% 12%);
-  --mesh-3: hsl(4 30% 12%);
-
-  /* Status */
-  --status-success: hsl(160 84% 45%);
-  --status-success-muted: hsl(160 84% 45% / 15%);
-  --status-warning: hsl(38 92% 56%);
-  --status-warning-muted: hsl(38 92% 56% / 15%);
-  --status-error: hsl(0 72% 51%);
-  --status-error-muted: hsl(0 72% 51% / 15%);
-  --status-info: hsl(199 89% 55%);
-  --status-info-muted: hsl(199 89% 55% / 15%);
-
-  /* Editorial — purple-tinted rule lines */
-  --editorial-rule: hsl(240 12% 28%);
-  --editorial-rule-subtle: hsl(240 12% 22%);
-  --editorial-label: hsl(215 16% 57%);
-
-  /* Creative Pulse brand tokens */
-  --coral: hsl(4 90% 62%);
-  --coral-foreground: hsl(0 0% 100%);
-  --coral-soft: hsl(4 40% 15%);
-  --purple-light: hsl(258 90% 76%);
-  --purple-soft: hsl(257 40% 15%);
-}
-
-/* =============================================
-   CREATIVE PULSE — LIGHT (opt-in)
-   Clean cool-white with purple accents
-   ============================================= */
-.light {
   --background: hsl(210 40% 98%);
   --foreground: hsl(244 47% 20%);
 
@@ -189,6 +110,7 @@
   --accent-foreground: hsl(0 0% 100%);
 
   --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
 
   --border: hsl(220 13% 91%);
   --input: hsl(220 13% 91%);
@@ -221,15 +143,17 @@
   --mesh-2: hsl(257 89% 93%);
   --mesh-3: hsl(4 86% 97%);
 
-  /* Status */
-  --status-success: hsl(160 84% 39%);
-  --status-success-muted: hsl(160 84% 39% / 10%);
-  --status-warning: hsl(38 92% 50%);
-  --status-warning-muted: hsl(38 92% 50% / 10%);
-  --status-error: hsl(0 84% 60%);
-  --status-error-muted: hsl(0 84% 60% / 10%);
-  --status-info: hsl(199 89% 48%);
-  --status-info-muted: hsl(199 89% 48% / 10%);
+  /* Status / semantic */
+  --success: hsl(160 84% 39%);
+  --success-foreground: hsl(0 0% 100%);
+  --success-muted: hsl(160 84% 39% / 10%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(0 0% 100%);
+  --warning-muted: hsl(38 92% 50% / 10%);
+  --destructive-muted: hsl(0 84% 60% / 10%);
+  --info: hsl(199 89% 48%);
+  --info-foreground: hsl(0 0% 100%);
+  --info-muted: hsl(199 89% 48% / 10%);
 
   /* Editorial — cool slate rule lines */
   --editorial-rule: hsl(220 13% 82%);
@@ -242,6 +166,91 @@
   --coral-soft: hsl(4 86% 97%);
   --purple-light: hsl(258 90% 76%);
   --purple-soft: hsl(257 89% 96%);
+}
+
+/* =============================================
+   CREATIVE PULSE — DARK (opt-in via .dark)
+   Deep indigo base with glowing purple accents
+   ============================================= */
+.dark {
+  --background: hsl(240 21% 8%);
+  --foreground: hsl(213 31% 91%);
+
+  --card: hsl(240 18% 12%);
+  --card-foreground: hsl(213 31% 91%);
+
+  --popover: hsl(240 18% 12%);
+  --popover-foreground: hsl(213 31% 91%);
+
+  --primary: hsl(263 83% 65%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  --secondary: hsl(244 30% 18%);
+  --secondary-foreground: hsl(258 90% 76%);
+
+  --muted: hsl(240 15% 15%);
+  --muted-foreground: hsl(215 16% 57%);
+
+  --accent: hsl(4 90% 62%);
+  --accent-foreground: hsl(0 0% 100%);
+
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+
+  --border: hsl(240 12% 20%);
+  --input: hsl(240 12% 20%);
+  --ring: hsl(263 83% 65%);
+
+  /* Charts */
+  --chart-1: hsl(263 83% 65%);
+  --chart-2: hsl(4 93% 69%);
+  --chart-3: hsl(258 90% 76%);
+  --chart-4: hsl(172 66% 60%);
+  --chart-5: hsl(38 92% 60%);
+
+  /* Sidebar */
+  --sidebar: hsl(240 21% 10%);
+  --sidebar-foreground: hsl(213 31% 91%);
+  --sidebar-primary: hsl(263 83% 65%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(244 30% 18%);
+  --sidebar-accent-foreground: hsl(258 90% 76%);
+  --sidebar-border: hsl(240 12% 20%);
+  --sidebar-ring: hsl(263 83% 65%);
+
+  /* Glass — purple-tinted */
+  --glass-bg: hsl(240 18% 14% / 80%);
+  --glass-border: hsl(263 30% 30% / 30%);
+  --glass-hover: hsl(263 30% 30% / 45%);
+
+  /* Mesh gradient — deep purple/indigo */
+  --mesh-1: hsl(263 40% 15%);
+  --mesh-2: hsl(244 30% 12%);
+  --mesh-3: hsl(4 30% 12%);
+
+  /* Status / semantic */
+  --success: hsl(160 84% 45%);
+  --success-foreground: hsl(0 0% 100%);
+  --success-muted: hsl(160 84% 45% / 15%);
+  --warning: hsl(38 92% 56%);
+  --warning-foreground: hsl(0 0% 100%);
+  --warning-muted: hsl(38 92% 56% / 15%);
+  --destructive-muted: hsl(0 72% 51% / 15%);
+  --info: hsl(199 89% 55%);
+  --info-foreground: hsl(0 0% 100%);
+  --info-muted: hsl(199 89% 55% / 15%);
+
+  /* Editorial — purple-tinted rule lines */
+  --editorial-rule: hsl(240 12% 28%);
+  --editorial-rule-subtle: hsl(240 12% 22%);
+  --editorial-label: hsl(215 16% 57%);
+
+  /* Creative Pulse brand tokens */
+  --coral: hsl(4 90% 62%);
+  --coral-foreground: hsl(0 0% 100%);
+  --coral-soft: hsl(4 40% 15%);
+  --purple-light: hsl(258 90% 76%);
+  --purple-soft: hsl(257 40% 15%);
 }
 
 @layer base {
