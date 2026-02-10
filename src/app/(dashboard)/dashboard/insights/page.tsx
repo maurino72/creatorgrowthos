@@ -150,7 +150,7 @@ function InsightsPageInner() {
   const showActions = activeStatus === "active";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       {/* ── Masthead ── */}
       <div className="flex items-end justify-between">
         <h1 className="text-3xl font-normal tracking-tight font-serif">

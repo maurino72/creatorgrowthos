@@ -254,9 +254,10 @@ describe("Content list page", () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("1.5K views")).toBeInTheDocument();
+    expect(screen.getByText("1.5K")).toBeInTheDocument();
+    expect(screen.getByText("Views")).toBeInTheDocument();
     expect(screen.getByText(/42/)).toBeInTheDocument();
-    expect(screen.getByText(/4.1% engagement/)).toBeInTheDocument();
+    expect(screen.getByText(/4\.1%/)).toBeInTheDocument();
   });
 
   it("does not show metrics on draft post cards", async () => {

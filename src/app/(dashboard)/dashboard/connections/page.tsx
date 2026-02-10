@@ -251,7 +251,7 @@ function ConnectionsContent() {
 
 export default function ConnectionsPage() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       {/* ── Masthead ── */}
       <h1 className="text-3xl font-normal tracking-tight font-serif">
         Connections

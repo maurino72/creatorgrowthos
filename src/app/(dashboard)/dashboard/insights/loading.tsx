@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InsightsLoading() {
   return (
-    <div className="mx-auto max-w-3xl" data-testid="insights-loading">
+    <div className="w-full" data-testid="insights-loading">
       <Skeleton className="h-8 w-32" />
       <div className="h-px bg-editorial-rule mt-4 mb-8" />
       <div className="flex items-center gap-6 mb-6">

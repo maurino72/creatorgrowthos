@@ -1031,7 +1031,7 @@ export default function SettingsPage() {
   const prefs = data?.preferences ?? DEFAULT_PREFERENCES;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       {/* ── Masthead ── */}
       <h1 className="text-3xl font-normal tracking-tight font-serif">
         Settings

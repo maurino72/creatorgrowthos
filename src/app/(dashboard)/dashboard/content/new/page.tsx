@@ -138,7 +138,7 @@ export default function NewPostPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto w-full max-w-4xl">
       {/* ── Masthead ── */}
       <div className="flex items-end justify-between mb-4">
         <h1 className="text-3xl font-normal tracking-tight font-serif">

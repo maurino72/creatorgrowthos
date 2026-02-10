@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PlatformIcon } from "@/components/shared/platform-icon";
 import { formatNumber, formatEngagementRate, formatTimeAgo } from "@/lib/utils/format";
 import { STATUS_BADGE_STYLES } from "@/lib/ui/badge-styles";
+import { PencilSquareIcon, TrashIcon, ArrowPathIcon, PlusIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 const STATUS_TABS = [
   { label: "All", value: undefined },
@@ -45,7 +46,6 @@ function PostMetrics({ postId }: { postId: string }) {
 
   if (!metrics || metrics.length === 0) return null;
 
-  // Aggregate across all publications
   const totals = metrics.reduce(
     (acc: { impressions: number; likes: number; replies: number; reposts: number; engagementRate: number | null; observedAt: string | null }, m: { impressions?: number; likes?: number; replies?: number; reposts?: number; engagement_rate?: number | null; observed_at?: string }) => ({
       impressions: acc.impressions + (m.impressions ?? 0),
@@ -59,13 +59,28 @@ function PostMetrics({ postId }: { postId: string }) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/40 font-mono tabular-nums mt-1">
-      <span>{formatNumber(totals.impressions)} views</span>
-      <span>{totals.likes} likes · {totals.replies} replies · {totals.reposts} reposts</span>
-      <span>{formatEngagementRate(totals.engagementRate)} engagement</span>
+    <div className="flex items-center gap-4 pt-3 mt-3 border-t border-border/50">
+      <MetricPill label="Views" value={formatNumber(totals.impressions)} />
+      <MetricPill label="Likes" value={String(totals.likes)} />
+      <MetricPill label="Replies" value={String(totals.replies)} />
+      <MetricPill label="Reposts" value={String(totals.reposts)} />
+      <span className="ml-auto text-[11px] font-mono text-muted-foreground/50">
+        {formatEngagementRate(totals.engagementRate)} eng.
+      </span>
       {totals.observedAt && (
-        <span>Updated {formatTimeAgo(totals.observedAt)}</span>
+        <span className="text-[10px] text-muted-foreground/30">
+          {formatTimeAgo(totals.observedAt)}
+        </span>
       )}
+    </div>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[11px] font-mono tabular-nums text-foreground/80">{value}</span>
+      <span className="text-[10px] text-muted-foreground/40">{label}</span>
     </div>
   );
 }
@@ -91,72 +106,62 @@ function PostCard({
   const publishPost = usePublishPost();
 
   const preview =
-    post.body.length > 100 ? post.body.slice(0, 100) + "..." : post.body;
+    post.body.length > 140 ? post.body.slice(0, 140) + "..." : post.body;
+
+  const isScheduled = !!post.scheduled_at && post.status === "scheduled";
+  const dateText = post.published_at
+    ? `Published ${formatTimeAgo(post.published_at)}`
+    : post.scheduled_at
+      ? new Date(post.scheduled_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      : `Created ${formatTimeAgo(post.created_at)}`;
 
   return (
-    <div className="group py-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-serif leading-snug">{preview}</p>
-
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <StatusBadge status={post.status} />
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              {post.post_publications.map((pub) => (
-                <PlatformIcon key={pub.platform} platform={pub.platform} />
-              ))}
-            </div>
-            {post.scheduled_at && (
-              <span className="text-[11px] text-muted-foreground/40">
-                Scheduled{" "}
-                {new Date(post.scheduled_at).toLocaleString()}
-              </span>
-            )}
-            {post.published_at && (
-              <span className="text-[11px] text-muted-foreground/40">
-                Published{" "}
-                {new Date(post.published_at).toLocaleString()}
-              </span>
-            )}
-          </div>
-
-          {post.intent && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/50">
-                {post.intent}
-              </span>
-              {post.topics?.map((topic) => (
-                <span
-                  key={topic}
-                  className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30"
-                >
-                  {topic}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {post.status === "published" && (
-            <PostMetrics postId={post.id} />
-          )}
+    <div
+      className="group rounded-lg border border-border/60 bg-card/50 p-5 transition-all hover:border-border hover:bg-card hover:shadow-sm cursor-pointer"
+      onClick={() => router.push(
+        post.status === "published"
+          ? `/dashboard/content/${post.id}/edit`
+          : `/dashboard/content/${post.id}/edit`
+      )}
+    >
+      {/* ── Top row: status + platforms + date + actions ── */}
+      <div className="flex items-center gap-2 mb-3">
+        <StatusBadge status={post.status} />
+        <div className="flex items-center gap-1.5 text-muted-foreground/60">
+          {post.post_publications.map((pub) => (
+            <PlatformIcon key={pub.platform} platform={pub.platform} size={13} />
+          ))}
         </div>
-
-        <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {isScheduled ? (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-info-muted px-2 py-0.5 text-[11px] text-info">
+            <ClockIcon className="size-3" />
+            {dateText}
+          </span>
+        ) : (
+          <span className="ml-auto text-[11px] text-muted-foreground/40">{dateText}</span>
+        )}
+        {/* ── Actions ── */}
+        <div
+          className="flex items-center gap-0.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
           {post.status !== "published" && (
             <Button
               variant="ghost"
-              size="xs"
+              size="icon-xs"
+              aria-label="Edit post"
               onClick={() =>
                 router.push(`/dashboard/content/${post.id}/edit`)
               }
             >
-              Edit
+              <PencilSquareIcon className="size-3.5 text-primary" />
             </Button>
           )}
           {post.status === "failed" && (
             <Button
               variant="ghost"
-              size="xs"
+              size="icon-xs"
+              aria-label="Retry publish"
               onClick={() =>
                 publishPost.mutate(post.id, {
                   onSuccess: () => toast.success("Post published!"),
@@ -165,12 +170,14 @@ function PostCard({
               }
               loading={publishPost.isPending}
             >
-              Retry
+              <ArrowPathIcon className="size-3.5 text-warning" />
             </Button>
           )}
           <Button
             variant="ghost"
-            size="xs"
+            size="icon-xs"
+            aria-label="Delete post"
+            className="hover:bg-destructive/10"
             onClick={() => {
               if (window.confirm("Delete this post?")) {
                 deletePost.mutate(post.id, {
@@ -181,24 +188,62 @@ function PostCard({
             }}
             loading={deletePost.isPending}
           >
-            Delete
+            <TrashIcon className="size-3.5 text-destructive" />
           </Button>
         </div>
       </div>
+
+      {/* ── Body ── */}
+      <p className="text-[15px] leading-relaxed text-foreground/90">{preview}</p>
+
+      {/* ── Classification tags ── */}
+      {(post.intent || (post.topics && post.topics.length > 0)) && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          {post.intent && (
+            <span className="rounded-md bg-primary/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-primary/70">
+              {post.intent.replace(/_/g, " ")}
+            </span>
+          )}
+          {post.content_type && (
+            <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/60">
+              {post.content_type.replace(/_/g, " ")}
+            </span>
+          )}
+          {post.topics?.map((topic) => (
+            <span
+              key={topic}
+              className="rounded-md bg-muted/50 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40"
+            >
+              {topic}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── Metrics (published only) ── */}
+      {post.status === "published" && (
+        <PostMetrics postId={post.id} />
+      )}
+
     </div>
   );
 }
 
 function PostSkeleton() {
   return (
-    <div data-testid="post-skeleton" className="py-4">
+    <div data-testid="post-skeleton" className="rounded-lg border border-border/40 bg-card/30 p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-3.5 w-3.5 rounded-full" />
+        <Skeleton className="ml-auto h-3 w-24" />
+      </div>
       <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-4 w-4 rounded-full" />
-        </div>
+      </div>
+      <div className="flex items-center gap-1.5 mt-3">
+        <Skeleton className="h-4 w-14 rounded-md" />
+        <Skeleton className="h-4 w-12 rounded-md" />
       </div>
     </div>
   );
@@ -220,23 +265,23 @@ function ContentPageInner() {
   const emptyKey = activeTab ?? "all";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       {/* ── Masthead ── */}
       <div className="flex items-end justify-between">
         <h1 className="text-3xl font-normal tracking-tight font-serif">
           Content
         </h1>
-        <Link
-          href="/dashboard/content/new"
-          className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 hover:text-foreground transition-colors pb-1"
-        >
-          New Post
-        </Link>
+        <Button asChild variant="coral" size="sm">
+          <Link href="/dashboard/content/new">
+            <PlusIcon className="size-4" />
+            New Post
+          </Link>
+        </Button>
       </div>
       <div className="h-px bg-editorial-rule mt-4 mb-8" />
 
       {/* ── Status Tabs ── */}
-      <div className="flex items-center gap-6 mb-8">
+      <div className="flex items-center gap-6 mb-6">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.label}
@@ -256,40 +301,35 @@ function ContentPageInner() {
       {/* ── Content ── */}
       <div data-testid="tab-content" className={isPending ? "opacity-70 transition-opacity" : "transition-opacity"}>
       {isLoading ? (
-        <div>
+        <div className="grid gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i}>
-              <PostSkeleton />
-              {i < 2 && <div className="h-px bg-editorial-rule-subtle" />}
-            </div>
+            <PostSkeleton key={i} />
           ))}
         </div>
       ) : posts && posts.length > 0 ? (
-        <div>
+        <div className="grid gap-3">
           {posts.map((post: {
             id: string;
             body: string;
             status: string;
+            intent?: string | null;
+            content_type?: string | null;
+            topics?: string[] | null;
             scheduled_at?: string | null;
             published_at?: string | null;
             created_at: string;
             post_publications: { platform: string; status: string }[];
-          }, idx: number) => (
-            <div key={post.id}>
-              <PostCard post={post} />
-              {idx < posts.length - 1 && (
-                <div className="h-px bg-editorial-rule-subtle" />
-              )}
-            </div>
+          }) => (
+            <PostCard key={post.id} post={post} />
           ))}
         </div>
       ) : (
-        <div className="py-16 text-center">
+        <div className="rounded-lg border border-dashed border-border/60 py-16 text-center">
           <p className="text-sm text-muted-foreground/60">
             {EMPTY_MESSAGES[emptyKey]}
           </p>
           {emptyKey === "all" && (
-            <Button asChild className="mt-4" size="sm">
+            <Button asChild className="mt-4" size="sm" variant="coral">
               <Link href="/dashboard/content/new">Create Post</Link>
             </Button>
           )}

@@ -144,7 +144,7 @@ function DashboardContent() {
   const hasPostsButNoMetrics = !hasData && posts && posts.length > 0;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       {/* ── Masthead ── */}
       <h1 className="text-3xl font-normal tracking-tight font-serif">
         Dashboard

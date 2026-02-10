@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EditPostLoading() {
   return (
-    <div className="mx-auto max-w-2xl" data-testid="edit-post-loading">
+    <div className="mx-auto w-full max-w-4xl" data-testid="edit-post-loading">
       <Skeleton className="h-8 w-32" />
       <div className="h-px bg-editorial-rule mt-4 mb-10" />
       <Skeleton className="h-40 w-full" />

@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ConnectionsLoading() {
   return (
-    <div className="mx-auto max-w-3xl" data-testid="connections-loading">
+    <div className="w-full" data-testid="connections-loading">
       <Skeleton className="h-8 w-40" />
       <div className="h-px bg-editorial-rule mt-4 mb-8" />
       {Array.from({ length: 3 }).map((_, i) => (

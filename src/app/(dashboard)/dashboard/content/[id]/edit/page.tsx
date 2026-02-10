@@ -382,7 +382,7 @@ export default function EditPostPage() {
 
   if (postLoading) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto w-full max-w-4xl">
         <Skeleton className="h-8 w-48" />
         <div className="h-px bg-editorial-rule mt-4 mb-8" />
         <div className="space-y-4">
@@ -396,7 +396,7 @@ export default function EditPostPage() {
 
   if (!post) {
     return (
-      <div className="mx-auto max-w-2xl py-16 text-center">
+      <div className="mx-auto w-full max-w-4xl py-16 text-center">
         <p className="text-sm text-muted-foreground">Post not found.</p>
         <Button asChild className="mt-4" size="sm" variant="outline">
           <Link href="/dashboard/content">Back to Content</Link>
@@ -406,7 +406,7 @@ export default function EditPostPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto w-full max-w-4xl">
       {/* ── Masthead ── */}
       <div className="flex items-end justify-between mb-4">
         <h1 className="text-3xl font-normal tracking-tight font-serif">

@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsLoading() {
   return (
-    <div className="mx-auto max-w-3xl" data-testid="settings-loading">
+    <div className="w-full" data-testid="settings-loading">
       <Skeleton className="h-8 w-32" />
       <Skeleton className="mt-2 h-4 w-64" />
       <div className="h-px bg-editorial-rule mt-4 mb-8" />

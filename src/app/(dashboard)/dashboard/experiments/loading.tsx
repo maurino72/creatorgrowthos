@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ExperimentsLoading() {
   return (
-    <div className="mx-auto max-w-3xl" data-testid="experiments-loading">
+    <div className="w-full" data-testid="experiments-loading">
       <Skeleton className="h-8 w-40" />
       <div className="h-px bg-editorial-rule mt-4 mb-8" />
       <div className="flex items-center gap-6 mb-8">
