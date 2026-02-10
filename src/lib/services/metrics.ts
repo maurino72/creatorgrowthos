@@ -195,6 +195,74 @@ export async function getDashboardMetrics(
   };
 }
 
+export interface DailyMetricPoint {
+  date: string;
+  impressions: number;
+  likes: number;
+  replies: number;
+  reposts: number;
+  engagement: number;
+}
+
+export async function getMetricsTimeSeries(
+  userId: string,
+  days: number,
+  platform?: string,
+): Promise<DailyMetricPoint[]> {
+  const supabase = createAdminClient();
+
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  let query = supabase
+    .from("metric_events")
+    .select("impressions, likes, replies, reposts, engagement_rate, observed_at, post_publications!inner(published_at)")
+    .eq("user_id", userId)
+    .gte("post_publications.published_at", since);
+
+  if (platform) {
+    query = query.eq("post_publications.platform", platform as Database["public"]["Enums"]["platform_type"]);
+  }
+
+  const { data, error } = await query.order("observed_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const events = data ?? [];
+  if (events.length === 0) return [];
+
+  // Group by date (YYYY-MM-DD)
+  const byDate = new Map<string, DailyMetricPoint>();
+
+  for (const event of events) {
+    const date = event.observed_at.slice(0, 10);
+    const existing = byDate.get(date);
+
+    const impressions = event.impressions ?? 0;
+    const likes = event.likes ?? 0;
+    const replies = event.replies ?? 0;
+    const reposts = event.reposts ?? 0;
+
+    if (existing) {
+      existing.impressions += impressions;
+      existing.likes += likes;
+      existing.replies += replies;
+      existing.reposts += reposts;
+      existing.engagement += likes + replies + reposts;
+    } else {
+      byDate.set(date, {
+        date,
+        impressions,
+        likes,
+        replies,
+        reposts,
+        engagement: likes + replies + reposts,
+      });
+    }
+  }
+
+  return Array.from(byDate.values());
+}
+
 export async function getTopPosts(
   userId: string,
   days: number,

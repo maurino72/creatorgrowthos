@@ -21,7 +21,9 @@ export async function POST(request: Request, context: RouteContext) {
     const results = await publishPost(user.id, id);
 
     // Send Inngest events for metrics collection etc. (fire-and-forget)
-    sendPostPublishResults(id, user.id, results).catch(() => {});
+    sendPostPublishResults(id, user.id, results).catch((err) =>
+      console.error("[inngest] Failed to send publish results:", err),
+    );
 
     return NextResponse.json({ results });
   } catch (error) {

@@ -14,6 +14,8 @@ export const metricKeys = {
     ["metrics", "dashboard", days, ...(platform ? [platform] : [])] as const,
   topPosts: (days: number, limit: number, platform?: string) =>
     ["metrics", "topPosts", days, limit, ...(platform ? [platform] : [])] as const,
+  timeSeries: (days: number, platform?: string) =>
+    ["metrics", "timeSeries", days, ...(platform ? [platform] : [])] as const,
 };
 
 async function fetchPostMetrics(postId: string) {
@@ -86,6 +88,25 @@ export function useTopPosts(days: number, limit: number, platform?: string) {
   return useQuery({
     queryKey: metricKeys.topPosts(days, limit, platform),
     queryFn: () => fetchTopPosts(days, limit, platform),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+async function fetchMetricsTimeSeries(days: number, platform?: string) {
+  const params = new URLSearchParams({ days: String(days) });
+  if (platform) params.set("platform", platform);
+  const response = await fetch(`/api/dashboard/metrics/timeseries?${params}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch metrics time series");
+  }
+  const data = await response.json();
+  return data.series;
+}
+
+export function useMetricsTimeSeries(days: number, platform?: string) {
+  return useQuery({
+    queryKey: metricKeys.timeSeries(days, platform),
+    queryFn: () => fetchMetricsTimeSeries(days, platform),
     staleTime: 10 * 60 * 1000,
   });
 }

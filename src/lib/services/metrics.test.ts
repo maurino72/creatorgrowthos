@@ -10,6 +10,7 @@ import {
   getMetricsForPost,
   getLatestMetricsForPost,
   getDashboardMetrics,
+  getMetricsTimeSeries,
   getTopPosts,
   getPostsNeedingMetricUpdates,
 } from "./metrics";
@@ -311,6 +312,90 @@ describe("metrics service", () => {
 
       await expect(
         getDashboardMetrics(TEST_USER_ID, 7),
+      ).rejects.toThrow("Query failed");
+    });
+  });
+
+  describe("getMetricsTimeSeries", () => {
+    it("returns daily aggregated metrics grouped by date", async () => {
+      const { from, chain } = mockSupabase();
+      const mockData = [
+        {
+          post_publication_id: "pub-1",
+          impressions: 100,
+          likes: 10,
+          replies: 3,
+          reposts: 5,
+          engagement_rate: 0.18,
+          observed_at: "2025-01-15T10:00:00Z",
+          post_publications: { published_at: "2025-01-14T08:00:00Z" },
+        },
+        {
+          post_publication_id: "pub-2",
+          impressions: 200,
+          likes: 20,
+          replies: 7,
+          reposts: 10,
+          engagement_rate: 0.185,
+          observed_at: "2025-01-15T14:00:00Z",
+          post_publications: { published_at: "2025-01-14T08:00:00Z" },
+        },
+        {
+          post_publication_id: "pub-1",
+          impressions: 50,
+          likes: 5,
+          replies: 1,
+          reposts: 2,
+          engagement_rate: 0.16,
+          observed_at: "2025-01-16T10:00:00Z",
+          post_publications: { published_at: "2025-01-14T08:00:00Z" },
+        },
+      ];
+      chain.order.mockResolvedValue({ data: mockData, error: null });
+
+      const result = await getMetricsTimeSeries(TEST_USER_ID, 7);
+
+      expect(from).toHaveBeenCalledWith("metric_events");
+      expect(result).toHaveLength(2);
+      // First day: two events aggregated
+      expect(result[0].date).toBe("2025-01-15");
+      expect(result[0].impressions).toBe(300);
+      expect(result[0].likes).toBe(30);
+      expect(result[0].replies).toBe(10);
+      expect(result[0].reposts).toBe(15);
+      expect(result[0].engagement).toBe(55);
+      // Second day: one event
+      expect(result[1].date).toBe("2025-01-16");
+      expect(result[1].impressions).toBe(50);
+    });
+
+    it("returns empty array when no data", async () => {
+      const { chain } = mockSupabase();
+      chain.order.mockResolvedValue({ data: [], error: null });
+
+      const result = await getMetricsTimeSeries(TEST_USER_ID, 7);
+
+      expect(result).toEqual([]);
+    });
+
+    it("filters by platform when provided", async () => {
+      const { chain } = mockSupabase();
+      chain.order.mockResolvedValue({ data: [], error: null });
+
+      await getMetricsTimeSeries(TEST_USER_ID, 7, "twitter");
+
+      expect(chain.eq).toHaveBeenCalledWith("post_publications.platform", "twitter");
+    });
+
+    it("throws on query error", async () => {
+      const { chain } = mockSupabase();
+      chain.order.mockResolvedValue({
+        data: null,
+        error: { message: "Query failed" },
+      });
+
+      await expect(
+        getMetricsTimeSeries(TEST_USER_ID, 7),
       ).rejects.toThrow("Query failed");
     });
   });

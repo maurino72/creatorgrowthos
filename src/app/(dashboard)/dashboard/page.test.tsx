@@ -17,13 +17,27 @@ vi.mock("@/lib/queries/connections", () => ({
   connectionKeys: { all: ["connections"] },
 }));
 
+vi.mock("recharts", () => ({
+  AreaChart: ({ children }: { children: React.ReactNode }) => <div data-testid="area-chart">{children}</div>,
+  Area: () => null,
+  BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,
+  Bar: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  CartesianGrid: () => null,
+  Tooltip: () => null,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
 vi.mock("@/lib/queries/metrics", () => ({
   useDashboardMetrics: vi.fn(),
   useTopPosts: vi.fn(),
+  useMetricsTimeSeries: vi.fn(),
   metricKeys: {
     all: ["metrics"],
     dashboard: (days: number) => ["metrics", "dashboard", days],
     topPosts: (days: number, limit: number) => ["metrics", "topPosts", days, limit],
+    timeSeries: (days: number) => ["metrics", "timeSeries", days],
   },
 }));
 
@@ -55,7 +69,7 @@ vi.mock("@/lib/queries/insights", () => ({
   },
 }));
 
-import { useDashboardMetrics, useTopPosts } from "@/lib/queries/metrics";
+import { useDashboardMetrics, useTopPosts, useMetricsTimeSeries } from "@/lib/queries/metrics";
 import { usePosts } from "@/lib/queries/posts";
 import { useInsights } from "@/lib/queries/insights";
 
@@ -78,6 +92,11 @@ async function importPage() {
 describe("Dashboard page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no time-series data
+    vi.mocked(useMetricsTimeSeries).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as never);
   });
 
   afterEach(() => {
@@ -454,5 +473,78 @@ describe("Dashboard page", () => {
       "href",
       "/dashboard/insights",
     );
+  });
+
+  it("shows charts when time-series data is available", async () => {
+    vi.mocked(useDashboardMetrics).mockReturnValue({
+      data: {
+        totalImpressions: 5000,
+        totalLikes: 100,
+        totalReplies: 20,
+        totalReposts: 30,
+        totalEngagement: 150,
+        averageEngagementRate: 0.03,
+        postCount: 5,
+      },
+      isLoading: false,
+    } as never);
+    vi.mocked(useTopPosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    mockDefaultInsights();
+    vi.mocked(useMetricsTimeSeries).mockReturnValue({
+      data: [
+        { date: "2025-01-15", impressions: 300, likes: 30, replies: 10, reposts: 15, engagement: 55 },
+        { date: "2025-01-16", impressions: 150, likes: 12, replies: 4, reposts: 6, engagement: 22 },
+      ],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByTestId("metrics-charts")).toBeInTheDocument();
+    expect(screen.getByTestId("area-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
+  });
+
+  it("does not show charts when time-series has less than 2 data points", async () => {
+    vi.mocked(useDashboardMetrics).mockReturnValue({
+      data: {
+        totalImpressions: 5000,
+        totalLikes: 100,
+        totalReplies: 20,
+        totalReposts: 30,
+        totalEngagement: 150,
+        averageEngagementRate: 0.03,
+        postCount: 5,
+      },
+      isLoading: false,
+    } as never);
+    vi.mocked(useTopPosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+    mockDefaultInsights();
+    vi.mocked(useMetricsTimeSeries).mockReturnValue({
+      data: [
+        { date: "2025-01-15", impressions: 300, likes: 30, replies: 10, reposts: 15, engagement: 55 },
+      ],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.queryByTestId("metrics-charts")).not.toBeInTheDocument();
   });
 });
