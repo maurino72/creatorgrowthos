@@ -148,6 +148,38 @@ describe("publish-scheduled-post", () => {
     expect(result).toEqual({ cancelled: true, reason: "Post is no longer scheduled" });
   });
 
+  it("publishes when scheduled_at matches but format differs (Z vs +00:00)", async () => {
+    const step = createMockStep();
+    // Event has .000Z format, DB returns +00:00 format — same time, different string
+    const event = createMockEvent({ scheduledAt: "2025-06-01T15:00:00.000Z" });
+
+    const chain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { id: "post-123", status: "scheduled", scheduled_at: "2025-06-01T15:00:00+00:00" },
+        error: null,
+      }),
+    };
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: vi.fn().mockReturnValue(chain),
+    } as unknown as ReturnType<typeof createAdminClient>);
+
+    vi.mocked(publishPost).mockResolvedValue([
+      {
+        platform: "twitter",
+        success: true,
+        platformPostId: "tw-456",
+      },
+    ]);
+
+    const handler = publishScheduledPost["fn"];
+    const result = await handler({ event, step, logger: createMockLogger() } as unknown as Parameters<typeof handler>[0]);
+
+    expect(publishPost).toHaveBeenCalled();
+    expect(result).toEqual({ published: true, results: expect.any(Array) });
+  });
+
   it("aborts if scheduled_at was changed", async () => {
     const step = createMockStep();
     const event = createMockEvent();
