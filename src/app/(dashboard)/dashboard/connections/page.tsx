@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { useConnections, useDisconnect } from "@/lib/queries/connections";
 import type { ConnectionData } from "@/lib/queries/connections";
 import type { PlatformType } from "@/lib/adapters/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { STATUS_BADGE_STYLES } from "@/lib/ui/badge-styles";
@@ -23,8 +22,8 @@ const PLATFORMS: {
     comingSoon: false,
     icon: (
       <svg
-        width="20"
-        height="20"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="currentColor"
         aria-hidden="true"
@@ -39,8 +38,8 @@ const PLATFORMS: {
     comingSoon: true,
     icon: (
       <svg
-        width="20"
-        height="20"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="currentColor"
         aria-hidden="true"
@@ -55,8 +54,8 @@ const PLATFORMS: {
     comingSoon: true,
     icon: (
       <svg
-        width="20"
-        height="20"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="currentColor"
         aria-hidden="true"
@@ -87,7 +86,7 @@ function ConnectionStatusBadge({ status }: { status: string | null }) {
   );
 }
 
-function ConnectionCard({
+function ConnectionEntry({
   platform,
   connection,
 }: {
@@ -98,24 +97,20 @@ function ConnectionCard({
 
   if (platform.comingSoon) {
     return (
-      <Card className="opacity-60">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              {platform.icon}
-            </div>
-            <div>
-              <CardTitle className="text-base">{platform.name}</CardTitle>
-              <span className="text-xs text-muted-foreground">Coming Soon</span>
-            </div>
+      <div className="flex items-center justify-between py-5 opacity-50">
+        <div className="flex items-center gap-4">
+          <span className="text-foreground/60">{platform.icon}</span>
+          <div>
+            <p className="text-[15px] font-serif">{platform.name}</p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30 mt-0.5">
+              Coming Soon
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" size="sm" disabled>
-            Connect
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+        <Button variant="outline" size="xs" disabled>
+          Connect
+        </Button>
+      </div>
     );
   }
 
@@ -126,100 +121,79 @@ function ConnectionCard({
 
   if (!isConnected) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              {platform.icon}
-            </div>
-            <div>
-              <CardTitle className="text-base">{platform.name}</CardTitle>
-              <span className="text-xs text-muted-foreground">
-                Not connected
-              </span>
-            </div>
+      <div className="flex items-center justify-between py-5">
+        <div className="flex items-center gap-4">
+          <span className="text-foreground/60">{platform.icon}</span>
+          <div>
+            <p className="text-[15px] font-serif">{platform.name}</p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30 mt-0.5">
+              Not connected
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="default" size="sm">
-            <a href={`/api/connections/${platform.id}`}>Connect</a>
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+        <Button asChild variant="default" size="xs">
+          <a href={`/api/connections/${platform.id}`}>Connect</a>
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-            {platform.icon}
+    <div className="flex items-center justify-between py-5">
+      <div className="flex items-center gap-4">
+        <span className="text-foreground/60">{platform.icon}</span>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-[15px] font-serif">{platform.name}</p>
+            <ConnectionStatusBadge status={connection.status} />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">{platform.name}</CardTitle>
-              <ConnectionStatusBadge status={connection.status} />
-            </div>
-            <span className="text-xs text-muted-foreground">
-              @{connection.platform_username}
-            </span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-2">
-          {needsReconnect ? (
-            <Button asChild variant="default" size="sm">
-              <a href={`/api/connections/${platform.id}`}>Reconnect</a>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (window.confirm(`Disconnect your ${platform.name} account?`)) {
-                  disconnect.mutate(platform.id, {
-                    onSuccess: () =>
-                      toast.success(`${platform.name} disconnected.`),
-                    onError: () =>
-                      toast.error(`Failed to disconnect ${platform.name}.`),
-                  });
-                }
-              }}
-              disabled={disconnect.isPending}
-            >
-              Disconnect
-            </Button>
-          )}
-        </div>
-        {connection.connected_at && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Connected{" "}
-            {new Date(connection.connected_at).toLocaleDateString()}
+          <p className="text-[11px] text-muted-foreground/40 mt-0.5">
+            <span>@{connection.platform_username}</span>
+            {connection.connected_at && (
+              <> &middot; Connected {new Date(connection.connected_at).toLocaleDateString()}</>
+            )}
           </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {needsReconnect ? (
+          <Button asChild variant="default" size="xs">
+            <a href={`/api/connections/${platform.id}`}>Reconnect</a>
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => {
+              if (window.confirm(`Disconnect your ${platform.name} account?`)) {
+                disconnect.mutate(platform.id, {
+                  onSuccess: () =>
+                    toast.success(`${platform.name} disconnected.`),
+                  onError: () =>
+                    toast.error(`Failed to disconnect ${platform.name}.`),
+                });
+              }
+            }}
+            disabled={disconnect.isPending}
+          >
+            Disconnect
+          </Button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 function ConnectionSkeleton() {
   return (
-    <Card data-testid="connection-skeleton">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-8 w-20" />
-      </CardContent>
-    </Card>
+    <div data-testid="connection-skeleton" className="flex items-center gap-4 py-5">
+      <Skeleton className="h-8 w-8 rounded" />
+      <div className="space-y-2 flex-1">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+      <Skeleton className="h-7 w-20" />
+    </div>
   );
 }
 
@@ -250,19 +224,26 @@ function ConnectionsContent() {
   }, [searchParams, router]);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div>
       {isLoading
         ? Array.from({ length: 3 }).map((_, i) => (
-            <ConnectionSkeleton key={i} />
+            <div key={i}>
+              <ConnectionSkeleton />
+              {i < 2 && <div className="h-px bg-editorial-rule-subtle" />}
+            </div>
           ))
-        : PLATFORMS.map((platform) => (
-            <ConnectionCard
-              key={platform.id}
-              platform={platform}
-              connection={connections?.find(
-                (c) => c.platform === platform.id,
+        : PLATFORMS.map((platform, idx) => (
+            <div key={platform.id}>
+              <ConnectionEntry
+                platform={platform}
+                connection={connections?.find(
+                  (c) => c.platform === platform.id,
+                )}
+              />
+              {idx < PLATFORMS.length - 1 && (
+                <div className="h-px bg-editorial-rule-subtle" />
               )}
-            />
+            </div>
           ))}
     </div>
   );
@@ -270,19 +251,21 @@ function ConnectionsContent() {
 
 export default function ConnectionsPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Connections</h1>
-        <p className="text-sm text-muted-foreground">
-          Connect your social media accounts to publish and track content.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      {/* ── Masthead ── */}
+      <h1 className="text-3xl font-normal tracking-tight font-serif">
+        Connections
+      </h1>
+      <div className="h-px bg-editorial-rule mt-4 mb-8" />
 
       <Suspense
         fallback={
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
             {Array.from({ length: 3 }).map((_, i) => (
-              <ConnectionSkeleton key={i} />
+              <div key={i}>
+                <ConnectionSkeleton />
+                {i < 2 && <div className="h-px bg-editorial-rule-subtle" />}
+              </div>
             ))}
           </div>
         }

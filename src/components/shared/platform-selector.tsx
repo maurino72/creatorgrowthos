@@ -25,7 +25,7 @@ export function PlatformSelector() {
     return (
       <Link
         href="/dashboard/connections"
-        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
       >
         <svg
           width="18"
@@ -57,7 +57,7 @@ export function PlatformSelector() {
               <PlatformIcon platform={platform} size={16} />
             </span>
           )}
-          <span className="flex-1 truncate text-left text-[13px] font-semibold text-sidebar-foreground">
+          <span className="flex-1 truncate text-left text-[13px] font-serif text-sidebar-foreground">
             {selectedLabel}
           </span>
           <svg
@@ -84,11 +84,11 @@ export function PlatformSelector() {
           >
             <PlatformIcon platform={conn.platform} size={16} />
             <div className="flex flex-col">
-              <span className="text-sm font-medium">
+              <span className="text-sm font-serif">
                 {PLATFORM_LABELS[conn.platform] ?? conn.platform}
               </span>
               {conn.platform_username && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground/50">
                   @{conn.platform_username}
                 </span>
               )}

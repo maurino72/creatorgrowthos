@@ -13,7 +13,7 @@ export default function DashboardLayout({
       <Suspense>
         <Sidebar />
       </Suspense>
-      <main className="relative z-10 flex-1 overflow-y-auto p-6 lg:p-8">
+      <main className="relative z-10 flex-1 overflow-y-auto px-6 py-8 lg:px-12 lg:py-10">
         {children}
       </main>
     </div>

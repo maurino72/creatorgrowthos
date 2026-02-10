@@ -32,7 +32,6 @@ function OnboardingContent() {
   const starterIdeas = useStarterIdeas();
   const { data: connections, refetch: refetchConnections } = useConnections();
 
-  // Determine initial step from server state or default to welcome
   const initialStep = onboardingState?.onboarding_step ?? "welcome";
   const [currentStep, setCurrentStep] = useState<string>(initialStep);
   const [profileData, setProfileData] = useState<QuickProfileInput>({
@@ -46,14 +45,12 @@ function OnboardingContent() {
   const [didImport, setDidImport] = useState(false);
   const hasCheckedConnected = useRef(false);
 
-  // Sync step from server state on first load
   useEffect(() => {
     if (onboardingState?.onboarding_step) {
       setCurrentStep(onboardingState.onboarding_step);
     }
   }, [onboardingState?.onboarding_step]);
 
-  // Check if returning from Twitter OAuth
   useEffect(() => {
     if (hasCheckedConnected.current) return;
     const connected = searchParams.get("connected");
@@ -64,7 +61,6 @@ function OnboardingContent() {
     }
   }, [searchParams, refetchConnections]);
 
-  // Auto-advance from connect step when connection detected
   const twitterConnection = connections?.find(
     (c: { platform: string }) => c.platform === "twitter",
   );
@@ -145,8 +141,8 @@ function OnboardingContent() {
         ))}
       </div>
 
-      {/* Step content card */}
-      <div className="w-full rounded-2xl border border-glass-border bg-glass-bg p-8 backdrop-blur-md">
+      {/* Step content */}
+      <div className="w-full rounded-2xl border border-input/60 bg-foreground/[0.02] p-8 backdrop-blur-md">
         {currentStep === "welcome" && (
           <WelcomeStep onContinue={() => goToStep("connect")} />
         )}
@@ -221,38 +217,40 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
       {/* Logo */}
-      <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl border border-input bg-secondary">
+      <div className="mb-8 flex h-12 w-12 items-center justify-center">
         <svg
-          width="24"
-          height="24"
+          width="28"
+          height="28"
           viewBox="0 0 20 20"
           fill="none"
-          className="text-foreground"
+          className="text-foreground/70"
         >
           <path
             d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm11 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
       </div>
 
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
+      <h1 className="mb-3 font-serif text-2xl font-normal tracking-tight text-foreground">
         Welcome to Creator Growth OS
       </h1>
-      <p className="mb-2 text-sm leading-relaxed text-muted-foreground">
+      <p className="mb-2 text-sm leading-relaxed text-muted-foreground/60">
         Most creator tools help you post. We help you learn.
       </p>
-      <p className="mb-8 max-w-sm text-sm leading-relaxed text-muted-foreground/60">
+      <p className="mb-8 max-w-sm text-sm leading-relaxed text-muted-foreground/40">
         Creator Growth OS tracks what you publish, observes what works,
         remembers patterns, and guides better decisions over time.
       </p>
 
+      <div className="mb-6 h-px w-full bg-editorial-rule" />
+
       <Button
         onClick={onContinue}
-        className="w-full cursor-pointer bg-primary py-6 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:bg-primary/90"
+        className="w-full cursor-pointer py-6 text-sm font-medium"
       >
         Get Started
       </Button>
@@ -269,43 +267,41 @@ function ConnectPlatformStep({
 }) {
   return (
     <div>
-      <h2 className="mb-1 text-lg font-semibold tracking-tight text-foreground">
+      <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
         Connect your platform
       </h2>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-6 text-sm text-muted-foreground/50">
         We&apos;ll track your content and performance
       </p>
 
       {/* Twitter card */}
       <div
         className={cn(
-          "rounded-xl border p-4 transition-all duration-500",
+          "border-b py-4 transition-all duration-500",
           isConnected
-            ? "border-emerald-500/30 bg-emerald-500/[0.06]"
-            : "border-input bg-muted",
+            ? "border-emerald-500/20"
+            : "border-editorial-rule-subtle",
         )}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="text-foreground"
-              >
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </div>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="text-foreground/60"
+            >
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
             <div>
-              <p className="text-sm font-medium text-foreground">Twitter / X</p>
+              <p className="text-[15px] font-serif text-foreground">Twitter / X</p>
               {isConnected && username ? (
                 <p className="text-xs text-emerald-400/80">
                   Connected as @{username}
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground/60">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30">
                   Post, track, and analyze
                 </p>
               )}
@@ -313,27 +309,25 @@ function ConnectPlatformStep({
           </div>
 
           {isConnected ? (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="text-emerald-400"
-              >
-                <path
-                  d="M3 8.5 6.5 12 13 4"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="text-emerald-400"
+            >
+              <path
+                d="M3 8.5 6.5 12 13 4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           ) : (
             <a
               href="/api/connections/twitter"
-              className="inline-flex h-9 items-center rounded-lg border border-input bg-secondary px-4 text-xs font-medium text-foreground transition-colors hover:bg-input"
+              className="inline-flex h-8 items-center rounded border border-input px-4 text-[11px] uppercase tracking-[0.1em] text-foreground/70 transition-colors hover:border-ring/30 hover:text-foreground"
             >
               Connect
             </a>
@@ -342,25 +336,23 @@ function ConnectPlatformStep({
       </div>
 
       {/* Coming soon */}
-      <div className="mt-3 space-y-2">
-        {["LinkedIn", "Threads"].map((name) => (
-          <div
-            key={name}
-            className="flex items-center justify-between rounded-xl border border-border bg-muted/50 p-4 opacity-40"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-secondary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{name}</p>
-                <p className="text-xs text-muted-foreground/60">Coming soon</p>
-              </div>
+      {["LinkedIn", "Threads"].map((name) => (
+        <div
+          key={name}
+          className="flex items-center justify-between border-b border-editorial-rule-subtle py-4 opacity-30"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-[18px] w-[18px]" />
+            <div>
+              <p className="text-[15px] font-serif text-foreground">{name}</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30">Coming soon</p>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
       {isConnected && (
-        <p className="mt-4 text-center text-xs text-muted-foreground/60 animate-pulse">
+        <p className="mt-4 text-center text-xs text-muted-foreground/40 animate-pulse">
           Continuing...
         </p>
       )}
@@ -387,16 +379,16 @@ function QuickProfileStep({
 }) {
   return (
     <div>
-      <h2 className="mb-1 text-lg font-semibold tracking-tight text-foreground">
+      <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
         Tell us about your content
       </h2>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-6 text-sm text-muted-foreground/50">
         This helps us give you personalized ideas (30 seconds)
       </p>
 
       {/* Niche dropdown */}
       <div className="mb-5">
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
           What&apos;s your niche?
         </label>
         <select
@@ -405,17 +397,17 @@ function QuickProfileStep({
             onChange({ ...data, primary_niche: e.target.value })
           }
           className={cn(
-            "w-full rounded-lg border bg-glass-bg px-3 py-2.5 text-sm text-foreground outline-none transition-colors",
+            "w-full rounded border bg-transparent px-3 py-2.5 text-sm text-foreground outline-none transition-colors",
             errors.niche
-              ? "border-destructive/50"
-              : "border-input focus:border-ring",
+              ? "border-red-500/50"
+              : "border-input focus:border-ring/50",
           )}
         >
-          <option value="" className="bg-popover">
+          <option value="" className="bg-background">
             Select a niche...
           </option>
           {NICHES.map((niche) => (
-            <option key={niche.value} value={niche.value} className="bg-popover">
+            <option key={niche.value} value={niche.value} className="bg-background">
               {niche.label} — {niche.hint}
             </option>
           ))}
@@ -426,7 +418,7 @@ function QuickProfileStep({
             placeholder="Enter your niche..."
             value={customNiche}
             onChange={(e) => onCustomNicheChange(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-input bg-glass-bg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-ring"
+            className="mt-2 w-full rounded border border-input bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-ring/50"
             maxLength={100}
           />
         )}
@@ -437,7 +429,7 @@ function QuickProfileStep({
 
       {/* Goal cards */}
       <div className="mb-5">
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
           What&apos;s your main goal?
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -449,14 +441,14 @@ function QuickProfileStep({
                 onChange({ ...data, primary_goal: goal.value })
               }
               className={cn(
-                "cursor-pointer rounded-lg border p-3 text-left transition-all duration-200",
+                "cursor-pointer rounded border p-3 text-left transition-all duration-200",
                 data.primary_goal === goal.value
-                  ? "border-ring bg-secondary"
-                  : "border-glass-border bg-muted hover:border-input hover:bg-glass-hover",
+                  ? "border-primary/30 bg-foreground/[0.04]"
+                  : "border-input/60 hover:border-input hover:bg-foreground/[0.02]",
               )}
             >
               <p className="text-sm font-medium text-foreground">{goal.label}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+              <p className="mt-0.5 text-[11px] text-muted-foreground/40">
                 {goal.description}
               </p>
             </button>
@@ -469,7 +461,7 @@ function QuickProfileStep({
 
       {/* Target audience */}
       <div className="mb-6">
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
           Who do you want to reach?
         </label>
         <input
@@ -480,10 +472,10 @@ function QuickProfileStep({
             onChange({ ...data, target_audience: e.target.value })
           }
           className={cn(
-            "w-full rounded-lg border bg-glass-bg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors",
+            "w-full rounded border bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors",
             errors.audience
-              ? "border-destructive/50"
-              : "border-input focus:border-ring",
+              ? "border-red-500/50"
+              : "border-input focus:border-ring/50",
           )}
           maxLength={100}
         />
@@ -491,9 +483,9 @@ function QuickProfileStep({
           {errors.audience ? (
             <p className="text-xs text-red-400">{errors.audience}</p>
           ) : (
-            <p className="text-xs text-muted-foreground/40">Be specific — who is your ideal reader?</p>
+            <p className="text-xs text-muted-foreground/30">Be specific — who is your ideal reader?</p>
           )}
-          <p className="text-xs text-muted-foreground/30">
+          <p className="text-xs font-mono tabular-nums text-muted-foreground/25">
             {data.target_audience.length}/100
           </p>
         </div>
@@ -502,7 +494,7 @@ function QuickProfileStep({
       <Button
         onClick={onSubmit}
         disabled={isSubmitting}
-        className="w-full cursor-pointer bg-primary py-6 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:bg-primary/90 disabled:opacity-50"
+        className="w-full cursor-pointer py-6 text-sm font-medium disabled:opacity-50"
       >
         {isSubmitting ? "Saving..." : "Continue"}
       </Button>
@@ -528,34 +520,32 @@ function ImportContentStep({
   if (didImport) {
     return (
       <div className="flex flex-col items-center text-center">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="text-emerald-400"
-          >
-            <path
-              d="M3 8.5 6.5 12 13 4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <h2 className="mb-1 text-lg font-semibold text-foreground">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="mb-4 text-emerald-400"
+        >
+          <path
+            d="M3 8.5 6.5 12 13 4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
           Imported {importedCount} posts
         </h2>
-        <p className="mb-6 text-sm text-muted-foreground">
+        <p className="mb-6 text-sm text-muted-foreground/50">
           {importedCount >= 20
             ? "You're ready for insights!"
             : `${20 - importedCount} more posts until insights unlock.`}
         </p>
         <Button
           onClick={onContinue}
-          className="w-full cursor-pointer bg-primary py-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          className="w-full cursor-pointer py-6 text-sm font-medium"
         >
           Continue
         </Button>
@@ -566,26 +556,26 @@ function ImportContentStep({
   if (isImporting) {
     return (
       <div className="flex flex-col items-center text-center py-4">
-        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-border border-t-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Importing your posts...</p>
-        <p className="mt-1 text-xs text-muted-foreground/40">This may take a moment</p>
+        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-input border-t-muted-foreground" />
+        <p className="text-sm text-muted-foreground/60">Importing your posts...</p>
+        <p className="mt-1 text-xs text-muted-foreground/30">This may take a moment</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="mb-1 text-lg font-semibold tracking-tight text-foreground">
+      <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
         Import your existing posts
       </h2>
-      <p className="mb-1 text-sm text-muted-foreground">
+      <p className="mb-1 text-sm text-muted-foreground/50">
         Unlock insights faster by importing your Twitter history
       </p>
-      <p className="mb-6 text-xs text-muted-foreground/40">
+      <p className="mb-6 text-xs text-muted-foreground/30">
         Import 50+ posts to get personalized insights from day one
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-0">
         {[
           { count: 50, label: "Last 50 posts", time: "~10 seconds" },
           { count: 100, label: "Last 100 posts", time: "~20 seconds" },
@@ -595,18 +585,18 @@ function ImportContentStep({
             key={option.count}
             type="button"
             onClick={() => onImport(option.count)}
-            className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-glass-border bg-muted p-4 text-left transition-all hover:border-input hover:bg-glass-hover"
+            className="group flex w-full cursor-pointer items-center justify-between border-b border-editorial-rule-subtle py-4 text-left transition-all hover:bg-foreground/[0.02]"
           >
             <div>
-              <p className="text-sm font-medium text-foreground">{option.label}</p>
-              <p className="text-xs text-muted-foreground/40">{option.time}</p>
+              <p className="text-[15px] font-serif text-foreground">{option.label}</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30">{option.time}</p>
             </div>
             <svg
-              width="16"
-              height="16"
+              width="14"
+              height="14"
               viewBox="0 0 16 16"
               fill="none"
-              className="text-muted-foreground/40"
+              className="text-muted-foreground/20 transition-colors group-hover:text-muted-foreground/50"
             >
               <path
                 d="M6 4l4 4-4 4"
@@ -623,7 +613,7 @@ function ImportContentStep({
       <button
         type="button"
         onClick={onSkip}
-        className="mt-4 w-full cursor-pointer text-center text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+        className="mt-4 w-full cursor-pointer text-center text-[11px] uppercase tracking-[0.1em] text-muted-foreground/40 transition-colors hover:text-muted-foreground"
       >
         Skip for now
       </button>
@@ -638,44 +628,18 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
     {
       title: "Dashboard",
       description: "Your command center. See performance at a glance.",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="2" width="6" height="6" rx="1" />
-          <rect x="10" y="2" width="6" height="6" rx="1" />
-          <rect x="2" y="10" width="6" height="6" rx="1" />
-          <rect x="10" y="10" width="6" height="6" rx="1" />
-        </svg>
-      ),
     },
     {
       title: "Content",
       description: "Create, schedule, and manage all your posts.",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 5h12M3 9h8M3 13h10" />
-        </svg>
-      ),
     },
     {
       title: "Insights",
       description: "Personalized insights unlock after 20 published posts.",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 2v4M9 12v4M2 9h4M12 9h4" />
-          <circle cx="9" cy="9" r="2" />
-        </svg>
-      ),
     },
     {
       title: "Connections",
       description: "Manage your connected platforms here.",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="5" cy="5" r="2" />
-          <circle cx="13" cy="13" r="2" />
-          <path d="M6.5 6.5 11.5 11.5" />
-        </svg>
-      ),
     },
   ];
 
@@ -683,21 +647,21 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
 
   return (
     <div>
-      <h2 className="mb-1 text-lg font-semibold tracking-tight text-foreground">
+      <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
         Quick tour
       </h2>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-6 text-sm text-muted-foreground/50">
         Here&apos;s what you&apos;ll find in your toolkit
       </p>
 
-      <div className="rounded-xl border border-input bg-glass-bg p-6">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
-          {current.icon}
-        </div>
-        <h3 className="mb-1 text-base font-semibold text-foreground">
+      <div className="border-y border-editorial-rule-subtle py-6">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-editorial-label mb-2">
+          {tourIndex + 1} / {stops.length}
+        </p>
+        <h3 className="mb-1 font-serif text-lg font-normal text-foreground">
           {current.title}
         </h3>
-        <p className="text-sm text-muted-foreground">{current.description}</p>
+        <p className="text-sm text-muted-foreground/50">{current.description}</p>
 
         {/* Tour dots */}
         <div className="mt-4 flex gap-1.5">
@@ -708,7 +672,7 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
               onClick={() => setTourIndex(i)}
               className={cn(
                 "h-1 rounded-full transition-all cursor-pointer",
-                i === tourIndex ? "w-5 bg-foreground/60" : "w-1 bg-border",
+                i === tourIndex ? "w-5 bg-foreground/60" : "w-1 bg-foreground/10",
               )}
             />
           ))}
@@ -720,7 +684,7 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
           <Button
             variant="outline"
             onClick={() => setTourIndex(tourIndex - 1)}
-            className="flex-1 cursor-pointer border-input bg-secondary text-sm text-foreground hover:bg-input"
+            className="flex-1 cursor-pointer border-input text-sm text-foreground hover:border-ring/30 hover:bg-foreground/[0.03]"
           >
             Back
           </Button>
@@ -728,14 +692,14 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
         {tourIndex < stops.length - 1 ? (
           <Button
             onClick={() => setTourIndex(tourIndex + 1)}
-            className="flex-1 cursor-pointer bg-primary py-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="flex-1 cursor-pointer py-5 text-sm font-medium"
           >
             Next
           </Button>
         ) : (
           <Button
             onClick={onContinue}
-            className="flex-1 cursor-pointer bg-primary py-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="flex-1 cursor-pointer py-5 text-sm font-medium"
           >
             Continue
           </Button>
@@ -745,7 +709,7 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
       <button
         type="button"
         onClick={onContinue}
-        className="mt-3 w-full cursor-pointer text-center text-xs text-muted-foreground/40 transition-colors hover:text-muted-foreground"
+        className="mt-3 w-full cursor-pointer text-center text-[11px] uppercase tracking-[0.1em] text-muted-foreground/30 transition-colors hover:text-muted-foreground"
       >
         Skip tour
       </button>
@@ -773,66 +737,66 @@ function ActivateStep({
   if (didImport) {
     return (
       <div className="flex flex-col items-center text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl border border-input bg-secondary">
+        <div className="mb-6 flex h-12 w-12 items-center justify-center">
           <svg
-            width="24"
-            height="24"
+            width="28"
+            height="28"
             viewBox="0 0 20 20"
             fill="none"
-            className="text-foreground"
+            className="text-foreground/70"
           >
             <path
               d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm11 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         </div>
-        <h2 className="mb-1 text-xl font-semibold text-foreground">
+        <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
           You&apos;re all set!
         </h2>
-        <p className="mb-6 text-sm text-muted-foreground">
+        <p className="mb-6 text-sm text-muted-foreground/50">
           We imported {importedCount} posts. Insights are being generated.
         </p>
 
         <div className="w-full space-y-2">
           <Button
             onClick={onComplete}
-            className="w-full cursor-pointer bg-primary py-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="w-full cursor-pointer py-6 text-sm font-medium"
           >
             View Dashboard
           </Button>
           <Button
             variant="outline"
             onClick={onCreatePost}
-            className="w-full cursor-pointer border-input bg-secondary py-6 text-sm text-foreground hover:bg-input"
+            className="w-full cursor-pointer border-input py-6 text-sm text-foreground hover:border-ring/30 hover:bg-foreground/[0.03]"
           >
             Create New Post
           </Button>
         </div>
 
-        {/* Info card */}
-        <div className="mt-6 w-full rounded-xl border border-glass-border bg-muted p-4 text-left">
-          <p className="mb-2 text-xs font-semibold text-muted-foreground">
+        {/* How it works */}
+        <div className="mt-8 w-full border-t border-editorial-rule-subtle pt-6 text-left">
+          <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-editorial-label">
             How Creator Growth OS works
           </p>
-          <div className="space-y-1.5 text-xs text-muted-foreground/60">
+          <div className="space-y-1.5 text-xs text-muted-foreground/40">
             <p>
-              <span className="text-muted-foreground">Post</span> — Create and publish
+              <span className="text-foreground/60">Post</span> — Create and publish
               content
             </p>
             <p>
-              <span className="text-muted-foreground">Observe</span> — We track
+              <span className="text-foreground/60">Observe</span> — We track
               performance automatically
             </p>
             <p>
-              <span className="text-muted-foreground">Learn</span> — Insights unlock
+              <span className="text-foreground/60">Learn</span> — Insights unlock
               after 20+ posts
             </p>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground/40">
+          <p className="mt-2 text-[11px] text-muted-foreground/25">
             The more you post, the smarter the system gets.
           </p>
         </div>
@@ -843,12 +807,12 @@ function ActivateStep({
   // No import — show AI ideas
   return (
     <div>
-      <h2 className="mb-1 text-lg font-semibold tracking-tight text-foreground">
+      <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
         {ideas && ideas.length > 0
           ? "Here are your first content ideas"
           : "You're all set!"}
       </h2>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-6 text-sm text-muted-foreground/50">
         {ideas && ideas.length > 0
           ? "Based on your profile, we've generated ideas to get you started"
           : "Start creating to unlock the full power of the system"}
@@ -856,30 +820,30 @@ function ActivateStep({
 
       {isLoadingIdeas && (
         <div className="mb-6 flex flex-col items-center py-4">
-          <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-border border-t-muted-foreground" />
-          <p className="text-xs text-muted-foreground">
+          <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-input border-t-muted-foreground" />
+          <p className="text-xs text-muted-foreground/50">
             Generating personalized ideas...
           </p>
         </div>
       )}
 
       {ideas && ideas.length > 0 && (
-        <div className="mb-6 space-y-2">
+        <div className="mb-6">
           {ideas.map((idea, i) => (
             <div
               key={i}
-              className="rounded-xl border border-glass-border bg-muted p-4"
+              className="border-b border-editorial-rule-subtle py-4"
             >
-              <p className="mb-1 text-sm font-medium text-foreground">
+              <p className="text-[15px] font-serif text-foreground">
                 {idea.idea}
               </p>
-              <p className="mb-3 text-xs text-muted-foreground/60">
+              <p className="mt-1 text-xs text-muted-foreground/40 italic">
                 &ldquo;{idea.hook}&rdquo;
               </p>
               <button
                 type="button"
                 onClick={() => onUseIdea(idea.hook)}
-                className="cursor-pointer text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="mt-2 cursor-pointer text-[11px] uppercase tracking-[0.1em] text-muted-foreground/50 transition-colors hover:text-foreground"
               >
                 Use this idea &rarr;
               </button>
@@ -891,39 +855,39 @@ function ActivateStep({
       <div className="space-y-2">
         <Button
           onClick={onComplete}
-          className="w-full cursor-pointer bg-primary py-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          className="w-full cursor-pointer py-6 text-sm font-medium"
         >
           {ideas && ideas.length > 0 ? "View Dashboard" : "Go to Dashboard"}
         </Button>
         <Button
           variant="outline"
           onClick={onCreatePost}
-          className="w-full cursor-pointer border-input bg-secondary py-6 text-sm text-foreground hover:bg-input"
+          className="w-full cursor-pointer border-input py-6 text-sm text-foreground hover:border-ring/30 hover:bg-foreground/[0.03]"
         >
           Create from scratch
         </Button>
       </div>
 
-      {/* Info card */}
-      <div className="mt-6 rounded-xl border border-glass-border bg-muted p-4">
-        <p className="mb-2 text-xs font-semibold text-muted-foreground">
+      {/* How it works */}
+      <div className="mt-8 border-t border-editorial-rule-subtle pt-6">
+        <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-editorial-label">
           How Creator Growth OS works
         </p>
-        <div className="space-y-1.5 text-xs text-muted-foreground/60">
+        <div className="space-y-1.5 text-xs text-muted-foreground/40">
           <p>
-            <span className="text-muted-foreground">Post</span> — Create and publish
+            <span className="text-foreground/60">Post</span> — Create and publish
             content
           </p>
           <p>
-            <span className="text-muted-foreground">Observe</span> — We track
+            <span className="text-foreground/60">Observe</span> — We track
             performance automatically
           </p>
           <p>
-            <span className="text-muted-foreground">Learn</span> — Insights unlock
+            <span className="text-foreground/60">Learn</span> — Insights unlock
             after 20+ posts
           </p>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground/40">
+        <p className="mt-2 text-[11px] text-muted-foreground/25">
           The more you post, the smarter the system gets.
         </p>
       </div>
@@ -943,9 +907,9 @@ export default function OnboardingPage() {
               <div key={i} className="h-1.5 w-1.5 rounded-full bg-input" />
             ))}
           </div>
-          <div className="w-full rounded-2xl border border-glass-border bg-glass-bg p-8 backdrop-blur-md">
+          <div className="w-full rounded-2xl border border-input/60 bg-foreground/[0.02] p-8 backdrop-blur-md">
             <div className="flex flex-col items-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-muted-foreground" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-input border-t-muted-foreground" />
             </div>
           </div>
         </div>

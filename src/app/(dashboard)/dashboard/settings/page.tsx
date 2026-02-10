@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,7 +56,7 @@ function SettingRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground/50">{description}</p>
         )}
       </div>
       <div className="shrink-0">{children}</div>
@@ -110,7 +109,7 @@ function SelectControl({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-8 rounded-md border border-input bg-transparent px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+      className="h-8 rounded border border-input bg-transparent px-2 text-xs outline-none focus:border-ring/50"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -121,7 +120,7 @@ function SelectControl({
   );
 }
 
-function SectionCard({
+function SectionBlock({
   title,
   description,
   children,
@@ -131,20 +130,19 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        )}
-        <div className="mt-4 divide-y divide-border">{children}</div>
-      </CardContent>
-    </Card>
+    <div>
+      <h2 className="text-xl font-normal tracking-tight font-serif">{title}</h2>
+      {description && (
+        <p className="mt-1 text-xs text-muted-foreground/40">{description}</p>
+      )}
+      <div className="h-px bg-editorial-rule mt-3 mb-1" />
+      <div className="divide-y divide-editorial-rule-subtle">{children}</div>
+    </div>
   );
 }
 
 function Divider() {
-  return <div className="my-2 border-t border-border" />;
+  return <div className="my-2 h-px bg-editorial-rule-subtle" />;
 }
 
 /* ─── Section Components ─── */
@@ -188,7 +186,7 @@ function ProfileSection({
     .toUpperCase();
 
   return (
-    <SectionCard title="Profile" description="Your personal information">
+    <SectionBlock title="Profile" description="Your personal information">
       {/* Avatar */}
       <div className="flex items-center gap-4 py-3.5">
         <Avatar className="h-14 w-14">
@@ -199,13 +197,13 @@ function ProfileSection({
         </Avatar>
         <div>
           <p className="text-sm font-medium">{name || "Your name"}</p>
-          <p className="text-xs text-muted-foreground">{profile.email}</p>
+          <p className="text-xs text-muted-foreground/40">{profile.email}</p>
         </div>
       </div>
 
       {/* Full name */}
       <div className="py-3.5">
-        <label className="mb-1.5 block text-sm font-medium">Full name</label>
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">Full name</label>
         <input
           type="text"
           value={name}
@@ -214,13 +212,13 @@ function ProfileSection({
             debouncedSave("full_name", e.target.value);
           }}
           maxLength={100}
-          className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+          className="h-9 w-full rounded border border-input bg-transparent px-3 text-sm outline-none focus:border-ring/50"
         />
       </div>
 
       {/* Bio */}
       <div className="py-3.5">
-        <label className="mb-1.5 block text-sm font-medium">Bio</label>
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">Bio</label>
         <textarea
           value={bio}
           onChange={(e) => {
@@ -230,16 +228,16 @@ function ProfileSection({
           maxLength={500}
           rows={3}
           placeholder="Tell us about yourself..."
-          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+          className="w-full rounded border border-input bg-transparent px-3 py-2 text-sm outline-none focus:border-ring/50 placeholder:text-muted-foreground/25"
         />
-        <p className="mt-1 text-right text-xs text-muted-foreground">
+        <p className="mt-1 text-right text-xs text-muted-foreground/30 font-mono tabular-nums">
           {bio.length}/500
         </p>
       </div>
 
       {/* Website */}
       <div className="py-3.5">
-        <label className="mb-1.5 block text-sm font-medium">Website</label>
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">Website</label>
         <input
           type="url"
           value={website}
@@ -248,7 +246,7 @@ function ProfileSection({
             debouncedSave("website", e.target.value);
           }}
           placeholder="https://yoursite.com"
-          className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+          className="h-9 w-full rounded border border-input bg-transparent px-3 text-sm outline-none focus:border-ring/50 placeholder:text-muted-foreground/25"
         />
       </div>
 
@@ -261,14 +259,14 @@ function ProfileSection({
             setTimezone(e.target.value);
             debouncedSave("timezone", e.target.value);
           }}
-          className="h-8 w-48 rounded-md border border-input bg-transparent px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+          className="h-8 w-48 rounded border border-input bg-transparent px-2 text-xs outline-none focus:border-ring/50"
         />
       </SettingRow>
 
       {isSaving && (
-        <p className="py-2 text-xs text-muted-foreground">Saving...</p>
+        <p className="py-2 text-xs text-muted-foreground/30">Saving...</p>
       )}
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -284,9 +282,9 @@ function AccountSection({
 
   return (
     <>
-      <SectionCard title="Account" description="Account management and security">
+      <SectionBlock title="Account" description="Account management and security">
         <SettingRow label="Email" description="Your account email (read-only)">
-          <span className="text-sm text-muted-foreground">{email ?? "—"}</span>
+          <span className="text-sm text-muted-foreground/50">{email ?? "—"}</span>
         </SettingRow>
 
         <SettingRow label="Authentication" description="Sign in via Google">
@@ -299,10 +297,10 @@ function AccountSection({
         <Divider />
 
         <div className="py-3.5">
-          <h3 className="text-sm font-semibold text-destructive">
+          <h3 className="text-[10px] uppercase tracking-[0.2em] text-destructive">
             Danger Zone
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground/40">
             Permanently delete your account and all associated data.
           </p>
           <Button
@@ -314,21 +312,21 @@ function AccountSection({
             Delete Account
           </Button>
         </div>
-      </SectionCard>
+      </SectionBlock>
 
       {/* Delete Account Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-destructive">
+            <h3 className="text-lg font-serif text-destructive">
               Delete Account
             </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground/50">
               This will permanently delete your account, all posts, metrics,
               connections, and AI data. This action cannot be undone.
             </p>
             <div className="mt-4">
-              <label className="mb-1.5 block text-sm font-medium">
+              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
                 Type <span className="font-mono font-bold">DELETE</span> to
                 confirm
               </label>
@@ -337,7 +335,7 @@ function AccountSection({
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 placeholder="DELETE"
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus:ring-1 focus:ring-destructive placeholder:text-muted-foreground"
+                className="h-9 w-full rounded border border-input bg-transparent px-3 text-sm outline-none focus:border-destructive placeholder:text-muted-foreground/25"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -378,7 +376,7 @@ function PlatformsSection() {
   );
 
   return (
-    <SectionCard
+    <SectionBlock
       title="Platforms"
       description="Manage your connected social media accounts"
     >
@@ -408,11 +406,11 @@ function PlatformsSection() {
           </SettingRow>
 
           <SettingRow label="LinkedIn" description="Coming soon">
-            <span className="text-xs text-muted-foreground">Coming soon</span>
+            <span className="text-xs text-muted-foreground/30">Coming soon</span>
           </SettingRow>
 
           <SettingRow label="Threads" description="Coming soon">
-            <span className="text-xs text-muted-foreground">Coming soon</span>
+            <span className="text-xs text-muted-foreground/30">Coming soon</span>
           </SettingRow>
         </>
       )}
@@ -420,12 +418,12 @@ function PlatformsSection() {
       <div className="pt-2">
         <Link
           href="/dashboard/connections"
-          className="text-xs font-medium text-primary hover:underline"
+          className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-foreground transition-colors"
         >
           Manage all connections &rarr;
         </Link>
       </div>
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -437,7 +435,7 @@ function PublishingSection({
   onUpdate: (settings: Record<string, unknown>) => void;
 }) {
   return (
-    <SectionCard
+    <SectionBlock
       title="Publishing"
       description="Default behaviors for creating and publishing content"
     >
@@ -470,7 +468,7 @@ function PublishingSection({
           onChange={(val) => onUpdate({ delete_confirmation: val })}
         />
       </SettingRow>
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -487,7 +485,7 @@ function AiSection({
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   return (
-    <SectionCard
+    <SectionBlock
       title="AI & Intelligence"
       description="Control how AI features behave"
     >
@@ -548,10 +546,10 @@ function AiSection({
       </SettingRow>
 
       <div className="py-3.5">
-        <label className="mb-1.5 block text-sm font-medium">
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
           Custom instructions
         </label>
-        <p className="mb-2 text-xs text-muted-foreground">
+        <p className="mb-2 text-xs text-muted-foreground/40">
           Give the AI specific guidance about your writing preferences
         </p>
         <textarea
@@ -567,13 +565,13 @@ function AiSection({
           rows={3}
           placeholder="e.g., Keep posts under 200 characters, use more data-driven arguments..."
           disabled={!prefs.enabled}
-          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-muted-foreground"
+          className="w-full rounded border border-input bg-transparent px-3 py-2 text-sm outline-none focus:border-ring/50 disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-muted-foreground/25"
         />
-        <p className="mt-1 text-right text-xs text-muted-foreground">
+        <p className="mt-1 text-right text-xs text-muted-foreground/30 font-mono tabular-nums">
           {customInstructions.length}/1000
         </p>
       </div>
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -585,11 +583,11 @@ function NotificationsSection({
   onUpdate: (settings: Record<string, unknown>) => void;
 }) {
   return (
-    <SectionCard
+    <SectionBlock
       title="Notifications"
       description="Control what notifications you receive"
     >
-      <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="pt-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
         Email
       </h3>
 
@@ -665,7 +663,7 @@ function NotificationsSection({
 
       <Divider />
 
-      <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="pt-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
         In-App
       </h3>
 
@@ -702,7 +700,7 @@ function NotificationsSection({
           disabled={!prefs.inapp_enabled}
         />
       </SettingRow>
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -716,9 +714,9 @@ function AppearanceSection({
   const { setTheme } = useTheme();
 
   return (
-    <SectionCard title="Appearance" description="Customize the look and feel">
+    <SectionBlock title="Appearance" description="Customize the look and feel">
       <SettingRow label="Theme" description="Choose your preferred theme">
-        <div className="flex rounded-lg border border-input p-0.5">
+        <div className="flex gap-1">
           {THEMES.map((theme) => (
             <button
               key={theme}
@@ -728,10 +726,10 @@ function AppearanceSection({
                 onUpdate({ theme });
               }}
               className={cn(
-                "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                "rounded px-3 py-1 text-[11px] uppercase tracking-[0.1em] transition-colors",
                 prefs.theme === theme
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground/40 hover:text-foreground",
               )}
             >
               {theme.charAt(0).toUpperCase() + theme.slice(1)}
@@ -756,7 +754,7 @@ function AppearanceSection({
           onChange={(val) => onUpdate({ show_metrics_inline: val })}
         />
       </SettingRow>
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -778,11 +776,11 @@ function DataPrivacySection({
 
   return (
     <>
-      <SectionCard
+      <SectionBlock
         title="Data & Privacy"
         description="Control your data and privacy settings"
       >
-        <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h3 className="pt-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
           Export
         </h3>
 
@@ -815,7 +813,7 @@ function DataPrivacySection({
 
         <Divider />
 
-        <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h3 className="pt-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
           Privacy
         </h3>
 
@@ -842,10 +840,10 @@ function DataPrivacySection({
         <Divider />
 
         <div className="py-3.5">
-          <h3 className="text-sm font-semibold text-destructive">
+          <h3 className="text-[10px] uppercase tracking-[0.2em] text-destructive">
             Danger Zone
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground/40">
             Permanently delete your account and all data.
           </p>
           <Button
@@ -857,19 +855,19 @@ function DataPrivacySection({
             Delete Account
           </Button>
         </div>
-      </SectionCard>
+      </SectionBlock>
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-destructive">
+            <h3 className="text-lg font-serif text-destructive">
               Delete Account
             </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground/50">
               This is irreversible. All your data will be permanently deleted.
             </p>
             <div className="mt-4">
-              <label className="mb-1.5 block text-sm font-medium">
+              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
                 Type <span className="font-mono font-bold">DELETE</span> to confirm
               </label>
               <input
@@ -877,7 +875,7 @@ function DataPrivacySection({
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 placeholder="DELETE"
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus:ring-1 focus:ring-destructive placeholder:text-muted-foreground"
+                className="h-9 w-full rounded border border-input bg-transparent px-3 text-sm outline-none focus:border-destructive placeholder:text-muted-foreground/25"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -912,16 +910,16 @@ function DataPrivacySection({
 
 function AboutSection() {
   return (
-    <SectionCard title="About" description="App information and support">
+    <SectionBlock title="About" description="App information and support">
       <SettingRow label="Version" description="Current application version">
-        <span className="text-xs font-mono text-muted-foreground">1.0.0</span>
+        <span className="text-xs font-mono text-muted-foreground/40">1.0.0</span>
       </SettingRow>
 
       <SettingRow
         label="Help & Support"
         description="Get help with Creator Growth OS"
       >
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground/40">
           support@creatorgrowthos.com
         </span>
       </SettingRow>
@@ -929,14 +927,14 @@ function AboutSection() {
       <Divider />
 
       <div className="py-3.5">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground/40">
           Built for creators who want to grow intentionally.
         </p>
-        <p className="mt-1 text-xs text-muted-foreground/60">
+        <p className="mt-1 text-xs text-muted-foreground/25">
           &copy; {new Date().getFullYear()} Creator Growth OS
         </p>
       </div>
-    </SectionCard>
+    </SectionBlock>
   );
 }
 
@@ -944,25 +942,24 @@ function AboutSection() {
 
 function SettingsSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i}>
-          <CardContent className="pt-6">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="mt-2 h-3 w-48" />
-            <div className="mt-6 space-y-4">
-              {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-3 w-40" />
-                  </div>
-                  <Skeleton className="h-5 w-9 rounded-full" />
+        <div key={i}>
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="mt-2 h-3 w-48" />
+          <div className="h-px bg-editorial-rule-subtle mt-3 mb-1" />
+          <div className="space-y-4 mt-4">
+            {Array.from({ length: 3 }).map((_, j) => (
+              <div key={j} className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-40" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <Skeleton className="h-5 w-9 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -1031,43 +1028,38 @@ export default function SettingsPage() {
     );
   }
 
-  // Merge preferences with defaults for display
   const prefs = data?.preferences ?? DEFAULT_PREFERENCES;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your account, preferences, and app behavior.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      {/* ── Masthead ── */}
+      <h1 className="text-3xl font-normal tracking-tight font-serif">
+        Settings
+      </h1>
+      <p className="text-sm text-muted-foreground/50 mt-2">
+        Manage your account, preferences, and app behavior.
+      </p>
+      <div className="h-px bg-editorial-rule mt-4 mb-8" />
 
-      <div className="flex gap-6">
+      <div className="flex gap-8">
         {/* Side navigation */}
-        <nav className="hidden w-48 shrink-0 lg:block">
+        <nav className="hidden w-40 shrink-0 lg:block">
           <div className="sticky top-6 space-y-0.5">
+            <p className="px-2.5 pb-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
+              Sections
+            </p>
             {SECTIONS.map((section) => (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                  "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-left text-[13px] transition-colors",
                   activeSection === section.id
-                    ? "bg-muted font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    ? "text-foreground border-l-2 border-foreground/60 pl-[8px]"
+                    : "text-muted-foreground/40 hover:text-foreground/80",
                 )}
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="shrink-0 opacity-60"
-                >
-                  <path d={section.icon} />
-                </svg>
                 {section.label}
               </button>
             ))}
@@ -1079,7 +1071,7 @@ export default function SettingsPage() {
           <select
             value={activeSection}
             onChange={(e) => setActiveSection(e.target.value as SectionId)}
-            className="mb-4 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none"
+            className="mb-6 h-9 w-full rounded border border-input bg-transparent px-3 text-sm outline-none"
           >
             {SECTIONS.map((section) => (
               <option key={section.id} value={section.id}>

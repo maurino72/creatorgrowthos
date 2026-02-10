@@ -11,7 +11,6 @@ import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queri
 import { useImproveContent } from "@/lib/queries/ai";
 import { useSignedUrls } from "@/lib/queries/media";
 import { ImageUploadZone, type ImageItem } from "@/components/image-upload-zone";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatEngagementRate, formatTimeAgo } from "@/lib/utils/format";
@@ -21,7 +20,13 @@ const CHAR_LIMIT = 280;
 function getCharColor(count: number): string {
   if (count > CHAR_LIMIT) return "text-red-500";
   if (count >= 260) return "text-yellow-500";
-  return "text-muted-foreground";
+  return "text-muted-foreground/50";
+}
+
+function getBarColor(count: number): string {
+  if (count > CHAR_LIMIT) return "#ef4444";
+  if (count >= 260) return "#eab308";
+  return "var(--foreground)";
 }
 
 interface MetricEvent {
@@ -38,10 +43,14 @@ interface MetricEvent {
 
 function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    <div>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+        {label}
+      </p>
+      <p className="mt-1.5 text-2xl font-light tracking-tight font-mono tabular-nums">
+        {value}
+      </p>
+      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground/40">{sub}</p>}
     </div>
   );
 }
@@ -49,26 +58,27 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
 function MetricsTimeline({ events }: { events: MetricEvent[] }) {
   if (!events || events.length === 0) return null;
 
-  // Sort oldest first for the timeline
   const sorted = [...events].sort(
     (a, b) => new Date(a.observed_at!).getTime() - new Date(b.observed_at!).getTime(),
   );
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Performance over time</p>
-      <div className="space-y-1.5">
+    <div>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-editorial-label mb-3">
+        Performance over time
+      </p>
+      <div className="space-y-0">
         {sorted.map((event) => (
           <div
             key={event.id}
-            className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs"
+            className="flex items-center justify-between py-2"
           >
-            <span className="text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground/40">
               {event.hours_since_publish != null
                 ? `${event.hours_since_publish}h after publish`
                 : formatTimeAgo(event.observed_at)}
             </span>
-            <div className="flex items-center gap-3 font-medium">
+            <div className="flex items-center gap-3 text-[11px] font-mono tabular-nums">
               <span>{formatNumber(event.impressions)} views</span>
               <span>{event.likes ?? 0} likes</span>
               <span>{event.replies ?? 0} replies</span>
@@ -88,22 +98,19 @@ function MetricsSection({ postId }: { postId: string }) {
 
   if (latestLoading) {
     return (
-      <Card>
-        <CardContent className="pt-5 space-y-4">
-          <Skeleton className="h-6 w-32" />
-          <div className="grid grid-cols-3 gap-3">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-32" />
+        <div className="grid grid-cols-3 gap-8">
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+        </div>
+      </div>
     );
   }
 
   const hasMetrics = latestMetrics && latestMetrics.length > 0;
 
-  // Aggregate latest metrics across publications
   const totals = hasMetrics
     ? (latestMetrics as MetricEvent[]).reduce(
         (acc, m) => ({
@@ -119,55 +126,59 @@ function MetricsSection({ postId }: { postId: string }) {
     : null;
 
   return (
-    <Card>
-      <CardContent className="pt-5 space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Performance</h2>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() =>
-              refreshMetrics.mutate(postId, {
-                onSuccess: () => toast.success("Metrics refreshed"),
-                onError: () => toast.error("Failed to refresh metrics"),
-              })
-            }
-            disabled={refreshMetrics.isPending}
-          >
-            Refresh
-          </Button>
-        </div>
+    <div>
+      <div className="flex items-end justify-between mb-1">
+        <h2 className="text-xl font-normal tracking-tight font-serif">
+          Performance
+        </h2>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() =>
+            refreshMetrics.mutate(postId, {
+              onSuccess: () => toast.success("Metrics refreshed"),
+              onError: () => toast.error("Failed to refresh metrics"),
+            })
+          }
+          disabled={refreshMetrics.isPending}
+        >
+          Refresh
+        </Button>
+      </div>
+      <div className="h-px bg-editorial-rule mb-6" />
 
-        {!hasMetrics ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            Metrics will appear soon after publishing.
-          </p>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-3">
-              <MetricCard
-                label="Impressions"
-                value={formatNumber(totals!.impressions)}
-                sub={totals!.observedAt ? `Updated ${formatTimeAgo(totals!.observedAt)}` : undefined}
-              />
-              <MetricCard
-                label="Engagement"
-                value={String(totals!.likes + totals!.replies + totals!.reposts)}
-                sub={`${totals!.likes} likes · ${totals!.replies} replies · ${totals!.reposts} reposts`}
-              />
-              <MetricCard
-                label="Engagement Rate"
-                value={formatEngagementRate(totals!.engagementRate)}
-              />
-            </div>
+      {!hasMetrics ? (
+        <p className="text-sm text-muted-foreground/50 py-4">
+          Metrics will appear soon after publishing.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-8 mb-8">
+            <MetricCard
+              label="Impressions"
+              value={formatNumber(totals!.impressions)}
+              sub={totals!.observedAt ? `Updated ${formatTimeAgo(totals!.observedAt)}` : undefined}
+            />
+            <MetricCard
+              label="Engagement"
+              value={String(totals!.likes + totals!.replies + totals!.reposts)}
+              sub={`${totals!.likes} likes · ${totals!.replies} replies · ${totals!.reposts} reposts`}
+            />
+            <MetricCard
+              label="Engagement Rate"
+              value={formatEngagementRate(totals!.engagementRate)}
+            />
+          </div>
 
-            {allMetrics && allMetrics.length > 1 && (
+          {allMetrics && allMetrics.length > 1 && (
+            <>
+              <div className="h-px bg-editorial-rule-subtle mb-6" />
               <MetricsTimeline events={allMetrics as MetricEvent[]} />
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+            </>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -189,67 +200,66 @@ function ClassificationSection({
   const hasClassification = classification.intent !== null;
 
   return (
-    <Card>
-      <CardContent className="pt-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight">Classification</h2>
-            {hasClassification && classification.ai_assisted && (
-              <span className="inline-flex items-center rounded-md bg-foreground/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
-                AI
-              </span>
-            )}
-          </div>
-          {!hasClassification && (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() =>
-                classifyPost.mutate(postId, {
-                  onSuccess: () => toast.success("Post classified"),
-                  onError: () => toast.error("Classification failed"),
-                })
-              }
-              disabled={classifyPost.isPending}
-            >
-              Classify
-            </Button>
+    <div>
+      <div className="flex items-end justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-normal tracking-tight font-serif">
+            Classification
+          </h2>
+          {hasClassification && classification.ai_assisted && (
+            <span className="text-[9px] uppercase tracking-[0.25em] text-muted-foreground/40">
+              AI
+            </span>
           )}
         </div>
+        {!hasClassification && (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() =>
+              classifyPost.mutate(postId, {
+                onSuccess: () => toast.success("Post classified"),
+                onError: () => toast.error("Classification failed"),
+              })
+            }
+            disabled={classifyPost.isPending}
+          >
+            Classify
+          </Button>
+        )}
+      </div>
+      <div className="h-px bg-editorial-rule mb-6" />
 
-        {!hasClassification ? (
-          <p className="text-sm text-muted-foreground py-2 text-center">
-            Not yet classified. Click Classify to analyze this post with AI.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground w-16">Intent</span>
-              <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                {classification.intent}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground w-16">Type</span>
-              <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                {classification.content_type}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground w-16">Topics</span>
+      {!hasClassification ? (
+        <p className="text-sm text-muted-foreground/50 py-2">
+          Not yet classified. Click Classify to analyze this post with AI.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-editorial-label w-14">Intent</span>
+            <span className="text-sm">{classification.intent}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-editorial-label w-14">Type</span>
+            <span className="text-sm">{classification.content_type}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-editorial-label w-14">Topics</span>
+            <div className="flex items-center gap-2">
               {classification.topics.map((topic) => (
                 <span
                   key={topic}
-                  className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
+                  className="text-sm text-muted-foreground/70"
                 >
                   {topic}
                 </span>
               ))}
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -372,15 +382,14 @@ export default function EditPostPage() {
 
   if (postLoading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-2xl">
         <Skeleton className="h-8 w-48" />
-        <Card>
-          <CardContent className="pt-5 space-y-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-32" />
-          </CardContent>
-        </Card>
+        <div className="h-px bg-editorial-rule mt-4 mb-8" />
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-32" />
+        </div>
       </div>
     );
   }
@@ -397,218 +406,263 @@ export default function EditPostPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Edit Post</h1>
-          <p className="text-sm text-muted-foreground">
-            {isReadOnly
-              ? "This post is published and cannot be edited."
-              : "Update your post content and settings."}
-          </p>
+    <div className="mx-auto max-w-2xl">
+      {/* ── Masthead ── */}
+      <div className="flex items-end justify-between mb-4">
+        <h1 className="text-3xl font-normal tracking-tight font-serif">
+          Edit Post
+        </h1>
+        <Link
+          href="/dashboard/content"
+          className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 hover:text-foreground transition-colors pb-1"
+        >
+          Cancel
+        </Link>
+      </div>
+
+      {isReadOnly && (
+        <p className="text-xs text-muted-foreground/40 mb-2">
+          This post is published and cannot be edited.
+        </p>
+      )}
+
+      <div className="h-px bg-editorial-rule mb-10" />
+
+      {/* ── Writing Surface ── */}
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="What's on your mind?"
+        rows={6}
+        disabled={isReadOnly}
+        className="w-full resize-none bg-transparent border-0 text-[19px] leading-[1.85] placeholder:text-muted-foreground/25 focus:outline-none px-0 min-h-[180px] font-serif disabled:cursor-not-allowed disabled:opacity-50"
+      />
+
+      {/* ── Character Gauge ── */}
+      <div className="flex items-center gap-4 mt-3 mb-8">
+        <div className="flex-1 h-px bg-foreground/8 relative overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 transition-all duration-500 ease-out"
+            style={{
+              width: `${Math.min((charCount / CHAR_LIMIT) * 100, 100)}%`,
+              backgroundColor: getBarColor(charCount),
+              opacity: charCount > 0 ? 0.5 : 0,
+            }}
+          />
         </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/dashboard/content">Cancel</Link>
+        <span
+          className={`text-[11px] font-mono tabular-nums shrink-0 ${getCharColor(charCount)}`}
+        >
+          {charCount} / {CHAR_LIMIT}
+        </span>
+      </div>
+
+      {/* ── Image Upload ── */}
+      {!isReadOnly && (
+        <div className="mb-8">
+          <ImageUploadZone
+            images={images}
+            onChange={setImages}
+            disabled={updatePost.isPending}
+          />
+        </div>
+      )}
+
+      {isReadOnly && images.length > 0 && (
+        <div className="mb-8">
+          <ImageUploadZone
+            images={images}
+            onChange={() => {}}
+            disabled
+          />
+        </div>
+      )}
+
+      {/* ── Platforms ── */}
+      {!isReadOnly && (
+        <div className="mb-8">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-3">
+            Platforms
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {activeConnections.map((conn) => (
+              <label
+                key={conn.platform}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-3 py-1.5 text-sm transition-all duration-200 select-none ${
+                  selectedPlatforms.includes(conn.platform)
+                    ? "border-primary/40 text-foreground"
+                    : "border-input text-muted-foreground/50 hover:border-input hover:text-foreground/80"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedPlatforms.includes(conn.platform)}
+                  onChange={() => togglePlatform(conn.platform)}
+                  className="sr-only"
+                />
+                {selectedPlatforms.includes(conn.platform) && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 7l3 3 5-5" />
+                  </svg>
+                )}
+                <span className="capitalize">{conn.platform}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Schedule ── */}
+      {!isReadOnly && (
+        <div className="mb-10">
+          <label className="flex items-center gap-2.5 text-sm cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={scheduleEnabled}
+              onChange={(e) => setScheduleEnabled(e.target.checked)}
+              className="rounded border-input"
+            />
+            <span className="text-muted-foreground/60 group-hover:text-foreground transition-colors font-medium">
+              Schedule for later
+            </span>
+          </label>
+
+          {scheduleEnabled && (
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="mt-3 ml-7 rounded border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-ring/50"
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── Action Bar ── */}
+      <div className="h-px bg-foreground/20" />
+      <div className="flex items-center gap-4 pt-6 pb-2">
+        {!isReadOnly && (
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!canSubmit}
+          >
+            Save Changes
+          </Button>
+        )}
+
+        {post.status === "failed" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRetry}
+            disabled={publishPost.isPending}
+          >
+            Retry Publish
+          </Button>
+        )}
+
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleDelete}
+          disabled={deletePost.isPending}
+        >
+          Delete
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="pt-5 space-y-5">
-          {/* Text Area */}
-          <div className="space-y-2">
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="What's on your mind?"
-              rows={5}
-              disabled={isReadOnly}
-              className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <div className="flex justify-end">
-              <span className={`text-xs font-medium ${getCharColor(charCount)}`}>
-                {charCount} / {CHAR_LIMIT}
-              </span>
-            </div>
+      {/* ── AI Improvement ── */}
+      {!isReadOnly && (
+        <div className="mt-12">
+          <div className="flex items-end justify-between mb-1">
+            <h2 className="text-xl font-normal tracking-tight font-serif">
+              AI Improvement
+            </h2>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() =>
+                improveContent.mutate(body, {
+                  onError: (err: Error) => toast.error(err.message),
+                })
+              }
+              disabled={improveContent.isPending || !body.trim()}
+            >
+              {improveContent.isPending ? "Improving..." : "Improve"}
+            </Button>
           </div>
+          <div className="h-px bg-editorial-rule mb-6" />
 
-          {/* Image Upload */}
-          {!isReadOnly && (
-            <ImageUploadZone
-              images={images}
-              onChange={setImages}
-              disabled={updatePost.isPending}
-            />
-          )}
+          {improveContent.isSuccess && improveContent.data && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground/60 leading-relaxed">
+                {(improveContent.data as { overall_assessment: string }).overall_assessment}
+              </p>
 
-          {/* Read-only image display */}
-          {isReadOnly && images.length > 0 && (
-            <ImageUploadZone
-              images={images}
-              onChange={() => {}}
-              disabled
-            />
-          )}
-
-          {/* Platform Selector */}
-          {!isReadOnly && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Platforms</label>
-              <div className="flex flex-wrap gap-2">
-                {activeConnections.map((conn) => (
-                  <label
-                    key={conn.platform}
-                    className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                      selectedPlatforms.includes(conn.platform)
-                        ? "border-foreground bg-foreground/5"
-                        : "border-border hover:border-foreground/30"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedPlatforms.includes(conn.platform)}
-                      onChange={() => togglePlatform(conn.platform)}
-                      className="sr-only"
-                    />
-                    <span className="capitalize">{conn.platform}</span>
-                  </label>
+              <div className="space-y-3">
+                {((improveContent.data as { improvements: { type: string; suggestion: string; example: string }[] }).improvements).map((imp, idx) => (
+                  <div key={idx} className="py-3">
+                    <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 mb-1">
+                      {imp.type}
+                    </p>
+                    <p className="text-sm text-foreground/90">{imp.suggestion}</p>
+                    <p className="text-sm italic text-muted-foreground/50 mt-1 font-serif">
+                      {imp.example}
+                    </p>
+                    {idx < ((improveContent.data as { improvements: { type: string }[] }).improvements.length - 1) && (
+                      <div className="h-px bg-editorial-rule-subtle mt-3" />
+                    )}
+                  </div>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* Schedule Toggle */}
-          {!isReadOnly && (
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={scheduleEnabled}
-                  onChange={(e) => setScheduleEnabled(e.target.checked)}
-                  className="rounded border-input"
-                />
-                <span className="font-medium">Schedule for later</span>
-              </label>
-
-              {scheduleEnabled && (
-                <input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
+              {(improveContent.data as { improved_version?: string }).improved_version && (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => {
+                    setBody((improveContent.data as { improved_version: string }).improved_version);
+                    toast.success("Improved version applied");
+                  }}
+                >
+                  Apply Improved Version
+                </Button>
               )}
             </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 border-t border-border pt-4">
-            {!isReadOnly && (
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={!canSubmit}
-              >
-                Save Changes
-              </Button>
-            )}
-
-            {post.status === "failed" && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleRetry}
-                disabled={publishPost.isPending}
-              >
-                Retry Publish
-              </Button>
-            )}
-
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deletePost.isPending}
-            >
-              Delete
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Improve Section */}
-      {!isReadOnly && (
-        <Card className="border-dashed">
-          <CardContent className="pt-4 pb-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-foreground/80">AI Improvement</h2>
-              <Button
-                variant="outline"
-                size="xs"
-                onClick={() =>
-                  improveContent.mutate(body, {
-                    onError: (err: Error) => toast.error(err.message),
-                  })
-                }
-                disabled={improveContent.isPending || !body.trim()}
-              >
-                {improveContent.isPending ? "Improving..." : "Improve"}
-              </Button>
-            </div>
-
-            {improveContent.isSuccess && improveContent.data && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {(improveContent.data as { overall_assessment: string }).overall_assessment}
-                </p>
-
-                <div className="space-y-2">
-                  {((improveContent.data as { improvements: { type: string; suggestion: string; example: string }[] }).improvements).map((imp, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-md border border-border/60 bg-muted/30 p-2.5 space-y-1"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium uppercase">
-                          {imp.type}
-                        </span>
-                      </div>
-                      <p className="text-xs text-foreground/90">{imp.suggestion}</p>
-                      <p className="text-xs italic text-muted-foreground">{imp.example}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {(improveContent.data as { improved_version?: string }).improved_version && (
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    onClick={() => {
-                      setBody((improveContent.data as { improved_version: string }).improved_version);
-                      toast.success("Improved version applied");
-                    }}
-                  >
-                    Apply Improved Version
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        </div>
       )}
 
-      <ClassificationSection
-        postId={postId}
-        classification={{
-          intent: post.intent ?? null,
-          content_type: post.content_type ?? null,
-          topics: post.topics ?? [],
-          ai_assisted: post.ai_assisted ?? false,
-        }}
-      />
+      {/* ── Classification ── */}
+      <div className="mt-12">
+        <ClassificationSection
+          postId={postId}
+          classification={{
+            intent: post.intent ?? null,
+            content_type: post.content_type ?? null,
+            topics: post.topics ?? [],
+            ai_assisted: post.ai_assisted ?? false,
+          }}
+        />
+      </div>
 
+      {/* ── Metrics ── */}
       {post.status === "published" && (
-        <MetricsSection postId={postId} />
+        <div className="mt-12">
+          <MetricsSection postId={postId} />
+        </div>
       )}
     </div>
   );

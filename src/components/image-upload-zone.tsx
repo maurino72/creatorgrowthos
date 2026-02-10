@@ -165,8 +165,8 @@ export function ImageUploadZone({
               key={item.id}
               className={`group relative aspect-square overflow-hidden rounded-lg border transition-all ${
                 item.uploading
-                  ? "animate-pulse border-dashed border-foreground/20"
-                  : "border-border hover:border-foreground/30"
+                  ? "animate-pulse border-dashed border-input"
+                  : "border-border hover:border-input"
               } ${
                 dragReorderIndex === index
                   ? "opacity-50 scale-95"
@@ -252,8 +252,8 @@ export function ImageUploadZone({
           }}
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
             dragOver
-              ? "border-foreground/40 bg-foreground/5"
-              : "border-border hover:border-foreground/20 hover:bg-muted/30"
+              ? "border-primary/40 bg-primary/5"
+              : "border-border hover:border-input hover:bg-muted/30"
           }`}
         >
           <svg

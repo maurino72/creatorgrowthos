@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { usePosts, useDeletePost, usePublishPost } from "@/lib/queries/posts";
 import { useLatestMetrics } from "@/lib/queries/metrics";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PlatformIcon } from "@/components/shared/platform-icon";
@@ -60,7 +59,7 @@ function PostMetrics({ postId }: { postId: string }) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/40 font-mono tabular-nums mt-1">
       <span>{formatNumber(totals.impressions)} views</span>
       <span>{totals.likes} likes · {totals.replies} replies · {totals.reposts} reposts</span>
       <span>{formatEngagementRate(totals.engagementRate)} engagement</span>
@@ -95,114 +94,113 @@ function PostCard({
     post.body.length > 100 ? post.body.slice(0, 100) + "..." : post.body;
 
   return (
-    <Card className="group transition-colors hover:border-foreground/20">
-      <CardContent className="pt-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="text-sm leading-relaxed">{preview}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge status={post.status} />
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                {post.post_publications.map((pub) => (
-                  <PlatformIcon key={pub.platform} platform={pub.platform} />
-                ))}
-              </div>
-              {post.scheduled_at && (
-                <span className="text-xs text-muted-foreground">
-                  Scheduled{" "}
-                  {new Date(post.scheduled_at).toLocaleString()}
-                </span>
-              )}
-              {post.published_at && (
-                <span className="text-xs text-muted-foreground">
-                  Published{" "}
-                  {new Date(post.published_at).toLocaleString()}
-                </span>
-              )}
+    <div className="group py-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-serif leading-snug">{preview}</p>
+
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <StatusBadge status={post.status} />
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              {post.post_publications.map((pub) => (
+                <PlatformIcon key={pub.platform} platform={pub.platform} />
+              ))}
             </div>
-            {post.intent && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium">
-                  {post.intent}
-                </span>
-                {post.topics?.map((topic) => (
-                  <span
-                    key={topic}
-                    className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
-                  >
-                    {topic}
-                  </span>
-                ))}
-              </div>
+            {post.scheduled_at && (
+              <span className="text-[11px] text-muted-foreground/40">
+                Scheduled{" "}
+                {new Date(post.scheduled_at).toLocaleString()}
+              </span>
             )}
-            {post.status === "published" && (
-              <PostMetrics postId={post.id} />
+            {post.published_at && (
+              <span className="text-[11px] text-muted-foreground/40">
+                Published{" "}
+                {new Date(post.published_at).toLocaleString()}
+              </span>
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
-            {post.status !== "published" && (
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() =>
-                  router.push(`/dashboard/content/${post.id}/edit`)
-                }
-              >
-                Edit
-              </Button>
-            )}
-            {post.status === "failed" && (
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() =>
-                  publishPost.mutate(post.id, {
-                    onSuccess: () => toast.success("Post published!"),
-                    onError: () => toast.error("Retry failed"),
-                  })
-                }
-                disabled={publishPost.isPending}
-              >
-                Retry
-              </Button>
-            )}
+          {post.intent && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/50">
+                {post.intent}
+              </span>
+              {post.topics?.map((topic) => (
+                <span
+                  key={topic}
+                  className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30"
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {post.status === "published" && (
+            <PostMetrics postId={post.id} />
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {post.status !== "published" && (
             <Button
               variant="ghost"
               size="xs"
-              onClick={() => {
-                if (window.confirm("Delete this post?")) {
-                  deletePost.mutate(post.id, {
-                    onSuccess: () => toast.success("Post deleted"),
-                    onError: () => toast.error("Failed to delete post"),
-                  });
-                }
-              }}
-              disabled={deletePost.isPending}
+              onClick={() =>
+                router.push(`/dashboard/content/${post.id}/edit`)
+              }
             >
-              Delete
+              Edit
             </Button>
-          </div>
+          )}
+          {post.status === "failed" && (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() =>
+                publishPost.mutate(post.id, {
+                  onSuccess: () => toast.success("Post published!"),
+                  onError: () => toast.error("Retry failed"),
+                })
+              }
+              disabled={publishPost.isPending}
+            >
+              Retry
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              if (window.confirm("Delete this post?")) {
+                deletePost.mutate(post.id, {
+                  onSuccess: () => toast.success("Post deleted"),
+                  onError: () => toast.error("Failed to delete post"),
+                });
+              }
+            }}
+            disabled={deletePost.isPending}
+          >
+            Delete
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 function PostSkeleton() {
   return (
-    <Card data-testid="post-skeleton">
-      <CardContent className="pt-5">
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-4 w-4 rounded-full" />
-          </div>
+    <div data-testid="post-skeleton" className="py-4">
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-4 w-4 rounded-full" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -221,30 +219,32 @@ function ContentPageInner() {
   const emptyKey = activeTab ?? "all";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Content</h1>
-          <p className="text-sm text-muted-foreground">
-            Create, schedule, and manage your posts.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/dashboard/content/new">New Post</Link>
-        </Button>
+    <div className="mx-auto max-w-3xl">
+      {/* ── Masthead ── */}
+      <div className="flex items-end justify-between">
+        <h1 className="text-3xl font-normal tracking-tight font-serif">
+          Content
+        </h1>
+        <Link
+          href="/dashboard/content/new"
+          className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 hover:text-foreground transition-colors pb-1"
+        >
+          New Post
+        </Link>
       </div>
+      <div className="h-px bg-editorial-rule mt-4 mb-8" />
 
-      {/* Status Tabs */}
-      <div className="flex items-center gap-1 border-b border-border pb-px">
+      {/* ── Status Tabs ── */}
+      <div className="flex items-center gap-6 mb-8">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.label}
             type="button"
             onClick={() => setActiveTab(tab.value)}
-            className={`rounded-t-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors border-b ${
               activeTab === tab.value
-                ? "border-b-2 border-foreground text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-foreground border-foreground/60"
+                : "text-muted-foreground/40 border-transparent hover:text-foreground/70"
             }`}
           >
             {tab.label}
@@ -252,15 +252,18 @@ function ContentPageInner() {
         ))}
       </div>
 
-      {/* Content */}
+      {/* ── Content ── */}
       {isLoading ? (
-        <div className="space-y-3">
+        <div>
           {Array.from({ length: 3 }).map((_, i) => (
-            <PostSkeleton key={i} />
+            <div key={i}>
+              <PostSkeleton />
+              {i < 2 && <div className="h-px bg-editorial-rule-subtle" />}
+            </div>
           ))}
         </div>
       ) : posts && posts.length > 0 ? (
-        <div className="space-y-3">
+        <div>
           {posts.map((post: {
             id: string;
             body: string;
@@ -269,28 +272,18 @@ function ContentPageInner() {
             published_at?: string | null;
             created_at: string;
             post_publications: { platform: string; status: string }[];
-          }) => (
-            <PostCard key={post.id} post={post} />
+          }, idx: number) => (
+            <div key={post.id}>
+              <PostCard post={post} />
+              {idx < posts.length - 1 && (
+                <div className="h-px bg-editorial-rule-subtle" />
+              )}
+            </div>
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="rounded-full bg-muted p-4">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-muted-foreground"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </div>
-          <p className="mt-4 text-sm font-medium">
+        <div className="py-16 text-center">
+          <p className="text-sm text-muted-foreground/60">
             {EMPTY_MESSAGES[emptyKey]}
           </p>
           {emptyKey === "all" && (

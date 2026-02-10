@@ -12,14 +12,9 @@ import {
   useDismissInsight,
   useMarkInsightActed,
 } from "@/lib/queries/insights";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatEngagementRate } from "@/lib/utils/format";
-import {
-  INSIGHT_TYPE_BADGE_STYLES,
-  CONFIDENCE_STYLES,
-} from "@/lib/ui/badge-styles";
 
 const PERIOD_OPTIONS = [
   { label: "7 days", value: 7 },
@@ -37,20 +32,19 @@ function MetricCard({
   sub?: string;
 }) {
   return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {label}
-        </p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
-        {sub && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
-        )}
-      </CardContent>
-    </Card>
+    <div>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+        {label}
+      </p>
+      <p className="mt-1.5 text-2xl font-light tracking-tight font-mono tabular-nums">
+        {value}
+      </p>
+      {sub && (
+        <p className="mt-1 text-[11px] text-muted-foreground/40">{sub}</p>
+      )}
+    </div>
   );
 }
-
 
 interface InsightItem {
   id: string;
@@ -63,60 +57,55 @@ interface InsightItem {
   status: string;
 }
 
-function InsightCard({ insight }: { insight: InsightItem }) {
+function InsightEntry({ insight }: { insight: InsightItem }) {
   const dismissInsight = useDismissInsight();
   const markActed = useMarkInsightActed();
 
+  const typeLabel = insight.type.replace(/_/g, " ");
+
   return (
-    <Card className="transition-colors hover:border-foreground/20">
-      <CardContent className="pt-5 space-y-2">
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${INSIGHT_TYPE_BADGE_STYLES[insight.type]?.className ?? ""}`}
-          >
-            {INSIGHT_TYPE_BADGE_STYLES[insight.type]?.label ?? insight.type}
-          </span>
-          <span className={`text-[11px] font-medium ${CONFIDENCE_STYLES[insight.confidence]?.className ?? ""}`}>
-            {insight.confidence} confidence
-          </span>
-        </div>
-        <p className="text-sm font-medium leading-snug">{insight.headline}</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {insight.detail}
-        </p>
-        <p className="text-xs font-medium text-foreground/80">
-          {insight.action}
-        </p>
-        <div className="flex items-center gap-1 pt-1">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() =>
-              markActed.mutate(insight.id, {
-                onSuccess: () => toast.success("Marked as acted on"),
-                onError: () => toast.error("Failed to update"),
-              })
-            }
-            disabled={markActed.isPending}
-          >
-            Acted on
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() =>
-              dismissInsight.mutate(insight.id, {
-                onSuccess: () => toast.success("Insight dismissed"),
-                onError: () => toast.error("Failed to dismiss"),
-              })
-            }
-            disabled={dismissInsight.isPending}
-          >
-            Dismiss
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="group py-4">
+      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40">
+        {typeLabel} &middot; {insight.confidence} confidence
+      </p>
+      <p className="text-[15px] font-serif leading-snug mt-1.5">
+        {insight.headline}
+      </p>
+      <p className="text-xs text-muted-foreground/50 leading-relaxed mt-1.5">
+        {insight.detail}
+      </p>
+      <p className="text-xs text-foreground/60 mt-1">
+        {insight.action}
+      </p>
+      <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() =>
+            markActed.mutate(insight.id, {
+              onSuccess: () => toast.success("Marked as acted on"),
+              onError: () => toast.error("Failed to update"),
+            })
+          }
+          disabled={markActed.isPending}
+        >
+          Acted on
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() =>
+            dismissInsight.mutate(insight.id, {
+              onSuccess: () => toast.success("Insight dismissed"),
+              onError: () => toast.error("Failed to dismiss"),
+            })
+          }
+          disabled={dismissInsight.isPending}
+        >
+          Dismiss
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -136,40 +125,42 @@ interface TopPostEvent {
 
 function DashboardContent() {
   const [days, setDays] = useState(7);
-  const { platform, hasConnections } = usePlatform();
+  const { platform } = usePlatform();
   const platformFilter = platform ?? undefined;
   const { data: metrics, isLoading: metricsLoading } =
     useDashboardMetrics(days, platformFilter);
-  const { data: topPosts, isLoading: topLoading } = useTopPosts(days, 5, platformFilter);
-  const { data: posts } = usePosts(platformFilter ? { platform: platformFilter } : undefined);
-  const { data: insights, isLoading: insightsLoading } = useInsights({ limit: 3 });
+  const { data: topPosts, isLoading: topLoading } =
+    useTopPosts(days, 5, platformFilter);
+  const { data: posts } = usePosts(
+    platformFilter ? { platform: platformFilter } : undefined,
+  );
+  const { data: insights, isLoading: insightsLoading } = useInsights({
+    limit: 3,
+  });
   const generateInsights = useGenerateInsights();
 
   const hasData = metrics && metrics.postCount > 0;
   const hasPostsButNoMetrics = !hasData && posts && posts.length > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Your content performance at a glance.
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      {/* ── Masthead ── */}
+      <h1 className="text-3xl font-normal tracking-tight font-serif">
+        Dashboard
+      </h1>
+      <div className="h-px bg-editorial-rule mt-4 mb-8" />
 
-      {/* Period Selector */}
-      <div className="flex items-center gap-1">
+      {/* ── Period Selector ── */}
+      <div className="flex items-center gap-6 mb-8">
         {PERIOD_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => setDays(opt.value)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors border-b ${
               days === opt.value
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "text-foreground border-foreground/60"
+                : "text-muted-foreground/40 border-transparent hover:text-foreground/70"
             }`}
           >
             {opt.label}
@@ -177,143 +168,114 @@ function DashboardContent() {
         ))}
       </div>
 
-      {/* Metrics Summary */}
+      {/* ── Metrics Summary ── */}
       {metricsLoading ? (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-8 mb-10">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="pt-5 space-y-2">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-7 w-14" />
+            </div>
           ))}
         </div>
       ) : hasData ? (
-        <div className="grid grid-cols-4 gap-4">
-          <MetricCard
-            label="Total Impressions"
-            value={formatNumber(metrics.totalImpressions)}
-            sub={`Across ${metrics.postCount} posts`}
-          />
-          <MetricCard
-            label="Total Engagement"
-            value={String(metrics.totalEngagement)}
-            sub={`${metrics.totalLikes} likes · ${metrics.totalReplies} replies · ${metrics.totalReposts} reposts`}
-          />
-          <MetricCard
-            label="Avg. Engagement Rate"
-            value={formatEngagementRate(metrics.averageEngagementRate)}
-          />
-          <MetricCard label="Posts" value={String(metrics.postCount)} />
-        </div>
+        <>
+          <div className="grid grid-cols-4 gap-8 mb-10">
+            <MetricCard
+              label="Total Impressions"
+              value={formatNumber(metrics.totalImpressions)}
+              sub={`Across ${metrics.postCount} posts`}
+            />
+            <MetricCard
+              label="Total Engagement"
+              value={String(metrics.totalEngagement)}
+              sub={`${metrics.totalLikes} likes · ${metrics.totalReplies} replies · ${metrics.totalReposts} reposts`}
+            />
+            <MetricCard
+              label="Avg. Engagement Rate"
+              value={formatEngagementRate(metrics.averageEngagementRate)}
+            />
+            <MetricCard label="Posts" value={String(metrics.postCount)} />
+          </div>
+          <div className="h-px bg-editorial-rule-subtle mb-10" />
+        </>
       ) : hasPostsButNoMetrics ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-muted p-4 mb-4">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-muted-foreground"
-              >
-                <path d="M3 3v18h18" />
-                <path d="M7 16l4-4 4 4 5-6" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium">
-              Metrics are being collected for your posts.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Check back soon — data usually appears within a few minutes.
-            </p>
-            <Button asChild className="mt-4" size="sm" variant="outline">
-              <Link href="/dashboard/content">View Posts</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="mb-10">
+          <p className="text-sm text-muted-foreground/60">
+            Metrics are being collected for your posts.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground/40">
+            Check back soon — data usually appears within a few minutes.
+          </p>
+          <Button asChild className="mt-4" size="sm" variant="outline">
+            <Link href="/dashboard/content">View Posts</Link>
+          </Button>
+          <div className="h-px bg-editorial-rule-subtle mt-8" />
+        </div>
       ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-muted p-4 mb-4">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-muted-foreground"
-              >
-                <path d="M3 3v18h18" />
-                <path d="M7 16l4-4 4 4 5-6" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium">
-              Publish your first post to see metrics here.
-            </p>
-            <Button asChild className="mt-4" size="sm">
-              <Link href="/dashboard/content/new">Create Post</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="mb-10">
+          <p className="text-sm text-muted-foreground/60">
+            Publish your first post to see metrics here.
+          </p>
+          <Button asChild className="mt-4" size="sm">
+            <Link href="/dashboard/content/new">Create Post</Link>
+          </Button>
+          <div className="h-px bg-editorial-rule-subtle mt-8" />
+        </div>
       )}
 
-      {/* Top Posts */}
+      {/* ── Top Posts ── */}
       {!topLoading && topPosts && topPosts.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight">
+        <div className="mb-10">
+          <h2 className="text-xl font-normal tracking-tight font-serif mb-4">
             Top performing posts
           </h2>
-          <div className="space-y-2">
-            {(topPosts as TopPostEvent[]).map((event, idx) => {
-              const body =
-                event.post_publications?.posts?.body ?? "Untitled post";
-              const preview =
-                body.length > 80 ? body.slice(0, 80) + "..." : body;
-              const engagement =
-                (event.likes ?? 0) +
-                (event.replies ?? 0) +
-                (event.reposts ?? 0);
+          {(topPosts as TopPostEvent[]).map((event, idx) => {
+            const body =
+              event.post_publications?.posts?.body ?? "Untitled post";
+            const preview =
+              body.length > 80 ? body.slice(0, 80) + "..." : body;
+            const engagement =
+              (event.likes ?? 0) +
+              (event.replies ?? 0) +
+              (event.reposts ?? 0);
 
-              return (
-                <Card key={event.id}>
-                  <CardContent className="flex items-center gap-4 py-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                      {idx + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">{preview}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatNumber(event.impressions)} views ·{" "}
-                        {engagement} engagements ·{" "}
-                        {formatEngagementRate(event.engagement_rate)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+            return (
+              <div key={event.id}>
+                <div className="flex items-start gap-4 py-3">
+                  <span className="text-[11px] font-mono text-muted-foreground/30 pt-0.5 tabular-nums">
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-serif">{preview}</p>
+                    <p className="text-[11px] text-muted-foreground/40 font-mono tabular-nums mt-1">
+                      {formatNumber(event.impressions)} views &middot;{" "}
+                      {engagement} engagements &middot;{" "}
+                      {formatEngagementRate(event.engagement_rate)}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-px bg-editorial-rule-subtle" />
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Insights */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Insights</h2>
-          <div className="flex items-center gap-2">
+      {/* ── Insights ── */}
+      <div>
+        <div className="flex items-end justify-between mb-1">
+          <h2 className="text-xl font-normal tracking-tight font-serif">
+            Insights
+          </h2>
+          <div className="flex items-center gap-3">
             {insights && insights.length > 0 && (
-              <Button asChild variant="ghost" size="xs">
-                <Link href="/dashboard/insights">View all</Link>
-              </Button>
+              <Link
+                href="/dashboard/insights"
+                className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-foreground transition-colors"
+              >
+                View all
+              </Link>
             )}
             <Button
               variant="outline"
@@ -326,37 +288,41 @@ function DashboardContent() {
               }
               disabled={generateInsights.isPending}
             >
-              {generateInsights.isPending ? "Generating..." : "Generate Insights"}
+              {generateInsights.isPending
+                ? "Generating..."
+                : "Generate Insights"}
             </Button>
           </div>
         </div>
+        <div className="h-px bg-editorial-rule mb-1" />
 
         {insightsLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-4 py-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="pt-5 space-y-2">
-                  <Skeleton className="h-4 w-20 rounded-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-full" />
-                </CardContent>
-              </Card>
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-2.5 w-32" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+              </div>
             ))}
           </div>
         ) : insights && insights.length > 0 ? (
-          <div className="space-y-2">
-            {(insights as InsightItem[]).slice(0, 3).map((insight) => (
-              <InsightCard key={insight.id} insight={insight} />
+          <div>
+            {(insights as InsightItem[]).slice(0, 3).map((insight, idx) => (
+              <div key={insight.id}>
+                <InsightEntry insight={insight} />
+                {idx < Math.min(insights.length, 3) - 1 && (
+                  <div className="h-px bg-editorial-rule-subtle" />
+                )}
+              </div>
             ))}
           </div>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                No insights yet. Generate insights from your posting history.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="py-8">
+            <p className="text-sm text-muted-foreground/50">
+              No insights yet. Generate insights from your posting history.
+            </p>
+          </div>
         )}
       </div>
     </div>

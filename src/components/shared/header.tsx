@@ -42,10 +42,10 @@ export function Header() {
     .toUpperCase();
 
   return (
-    <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-border px-5">
+    <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-editorial-rule px-5">
       {/* Mobile brand */}
       <div className="flex items-center gap-2 lg:hidden">
-        <span className="text-sm font-semibold tracking-tight">Growth OS</span>
+        <span className="text-sm font-serif tracking-tight">Growth OS</span>
       </div>
 
       {/* Page title area (empty for now) */}
@@ -54,9 +54,9 @@ export function Header() {
       {/* User menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent">
+          <button className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-foreground/[0.04]">
             <span className="hidden text-right text-xs lg:block">
-              <span className="block font-medium text-foreground">
+              <span className="block font-medium text-foreground/80">
                 {displayName}
               </span>
             </span>

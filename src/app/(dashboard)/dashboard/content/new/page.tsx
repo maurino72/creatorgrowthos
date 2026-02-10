@@ -7,8 +7,10 @@ import { toast } from "sonner";
 import { useCreatePost } from "@/lib/queries/posts";
 import { useConnections } from "@/lib/queries/connections";
 import { useGenerateIdeas } from "@/lib/queries/ai";
-import { ImageUploadZone, type ImageItem } from "@/components/image-upload-zone";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  ImageUploadZone,
+  type ImageItem,
+} from "@/components/image-upload-zone";
 import { Button } from "@/components/ui/button";
 
 const CHAR_LIMIT = 280;
@@ -16,14 +18,19 @@ const CHAR_LIMIT = 280;
 function getCharColor(count: number): string {
   if (count > CHAR_LIMIT) return "text-red-500";
   if (count >= 260) return "text-yellow-500";
-  return "text-muted-foreground";
+  return "text-muted-foreground/50";
+}
+
+function getBarColor(count: number): string {
+  if (count > CHAR_LIMIT) return "#ef4444";
+  if (count >= 260) return "#eab308";
+  return "var(--foreground)";
 }
 
 export default function NewPostPage() {
   const router = useRouter();
   const createPost = useCreatePost();
   const { data: connections, isLoading: connectionsLoading } = useConnections();
-
   const generateIdeas = useGenerateIdeas();
 
   const [body, setBody] = useState("");
@@ -32,11 +39,12 @@ export default function NewPostPage() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
 
   const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
   const hasUploading = images.some((i) => i.uploading);
-
-  const activeConnections = connections?.filter((c) => c.status === "active") ?? [];
+  const activeConnections =
+    connections?.filter((c) => c.status === "active") ?? [];
   const charCount = body.length;
   const isOverLimit = charCount > CHAR_LIMIT;
   const canSubmit =
@@ -45,6 +53,10 @@ export default function NewPostPage() {
     selectedPlatforms.length > 0 &&
     !createPost.isPending &&
     !hasUploading;
+
+  const showMedia = mediaOpen || images.length > 0;
+  const showIdeas =
+    (ideasOpen || generateIdeas.isSuccess) && generateIdeas.data;
 
   function togglePlatform(platform: string) {
     setSelectedPlatforms((prev) =>
@@ -84,7 +96,6 @@ export default function NewPostPage() {
       },
       {
         onSuccess: (post) => {
-          // After creating, trigger publish via the publish endpoint
           fetch(`/api/posts/${post.id}/publish`, { method: "POST" })
             .then((res) => {
               if (res.ok) {
@@ -116,7 +127,9 @@ export default function NewPostPage() {
       },
       {
         onSuccess: () => {
-          toast.success(`Post scheduled for ${new Date(scheduledAt).toLocaleString()}`);
+          toast.success(
+            `Post scheduled for ${new Date(scheduledAt).toLocaleString()}`,
+          );
           router.push("/dashboard/content");
         },
         onError: () => toast.error("Failed to schedule post"),
@@ -125,234 +138,320 @@ export default function NewPostPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">New Post</h1>
-          <p className="text-sm text-muted-foreground">
-            Compose and publish to your connected platforms.
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/dashboard/content">Cancel</Link>
-        </Button>
+    <div className="mx-auto max-w-2xl">
+      {/* ── Masthead ── */}
+      <div className="flex items-end justify-between mb-4">
+        <h1 className="text-3xl font-normal tracking-tight font-serif">
+          New Post
+        </h1>
+        <Link
+          href="/dashboard/content"
+          className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 hover:text-foreground transition-colors pb-1"
+        >
+          Cancel
+        </Link>
       </div>
 
-      {/* Ideation Panel */}
-      <Card className="border-dashed">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setIdeasOpen(!ideasOpen)}
-              className="flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`transition-transform ${ideasOpen ? "rotate-90" : ""}`}
-              >
-                <path d="M6 4l4 4-4 4" />
-              </svg>
-              Content Ideas
-            </button>
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => {
-                generateIdeas.mutate(undefined, {
-                  onSuccess: () => {
-                    setIdeasOpen(true);
-                    toast.success("Ideas generated!");
-                  },
-                  onError: (err: Error) => toast.error(err.message),
-                });
-              }}
-              disabled={generateIdeas.isPending}
-            >
-              {generateIdeas.isPending ? "Generating..." : "Get Ideas"}
-            </Button>
-          </div>
+      {/* Editorial rule */}
+      <div className="h-px bg-foreground/25 mb-10" />
 
-          {(ideasOpen || generateIdeas.isSuccess) && generateIdeas.data && (
-            <div className="mt-3 space-y-2">
-              {(generateIdeas.data as { headline: string; format: string; intent: string; topic: string; rationale: string; suggested_hook: string; confidence: string }[]).map((idea, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1 flex-1">
-                      <p className="text-sm font-medium leading-snug">
-                        {idea.headline}
-                      </p>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium">
-                          {idea.format}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium">
-                          {idea.intent}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium">
-                          {idea.topic}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => {
-                        setBody(idea.suggested_hook);
-                        setIdeasOpen(false);
-                      }}
-                    >
-                      Use This Idea
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {idea.rationale}
-                  </p>
-                  <p className="text-xs italic text-foreground/60">
-                    {idea.suggested_hook}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* ── Writing Surface ── */}
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="What's on your mind?"
+        rows={8}
+        className="w-full resize-none bg-transparent border-0 text-[19px] leading-[1.85] placeholder:text-muted-foreground/25 focus:outline-none px-0 min-h-[240px] font-serif"
+      />
 
-      {/* Editor */}
-      <Card>
-        <CardContent className="pt-5 space-y-5">
-          {/* Text Area */}
-          <div className="space-y-2">
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="What's on your mind?"
-              rows={5}
-              className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-            <div className="flex justify-end">
-              <span className={`text-xs font-medium ${getCharColor(charCount)}`}>
-                {charCount} / {CHAR_LIMIT}
-              </span>
-            </div>
-          </div>
+      {/* ── Character Gauge ── */}
+      <div className="flex items-center gap-4 mt-3 mb-10">
+        <div className="flex-1 h-px bg-foreground/8 relative overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 transition-all duration-500 ease-out"
+            style={{
+              width: `${Math.min((charCount / CHAR_LIMIT) * 100, 100)}%`,
+              backgroundColor: getBarColor(charCount),
+              opacity: charCount > 0 ? 0.5 : 0,
+            }}
+          />
+        </div>
+        <span
+          className={`text-[11px] font-mono tabular-nums shrink-0 ${getCharColor(charCount)}`}
+        >
+          {charCount} / {CHAR_LIMIT}
+        </span>
+      </div>
 
-          {/* Image Upload */}
+      {/* ── Toolbar ── */}
+      <div className="flex items-center gap-8 mb-8">
+        <button
+          type="button"
+          onClick={() => setMediaOpen(!mediaOpen)}
+          className={`flex items-center gap-2 transition-colors ${
+            showMedia
+              ? "text-foreground"
+              : "text-muted-foreground/50 hover:text-foreground"
+          }`}
+          aria-label="Toggle images"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="2" y="2" width="14" height="14" rx="2" />
+            <circle cx="6.5" cy="6.5" r="1.5" />
+            <path d="M16 12l-3.5-3.5L5 16" />
+          </svg>
+          <span className="text-[10px] uppercase tracking-[0.2em]">Media</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIdeasOpen(!ideasOpen)}
+          className={`flex items-center gap-2 transition-colors ${
+            ideasOpen
+              ? "text-foreground"
+              : "text-muted-foreground/50 hover:text-foreground"
+          }`}
+          aria-label="Toggle ideas"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M7 15h4M9 2a5 5 0 0 1 3 9v1.5a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5V11A5 5 0 0 1 9 2z" />
+          </svg>
+          <span className="text-[10px] uppercase tracking-[0.2em]">Ideas</span>
+        </button>
+
+        <div className="ml-auto">
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => {
+              generateIdeas.mutate(undefined, {
+                onSuccess: () => {
+                  setIdeasOpen(true);
+                  toast.success("Ideas generated!");
+                },
+                onError: (err: Error) => toast.error(err.message),
+              });
+            }}
+            disabled={generateIdeas.isPending}
+          >
+            {generateIdeas.isPending ? "Generating..." : "Get Ideas"}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Expandable: Images ── */}
+      {showMedia && (
+        <div className="mb-8">
           <ImageUploadZone
             images={images}
             onChange={setImages}
             disabled={createPost.isPending}
           />
+          <div className="h-px bg-foreground/8 mt-6" />
+        </div>
+      )}
 
-          {/* Platform Selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Platforms</label>
-            {!connectionsLoading && activeConnections.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border p-3">
-                <p className="text-sm text-muted-foreground">
-                  No platforms connected.{" "}
-                  <Link
-                    href="/dashboard/connections"
-                    className="font-medium text-foreground underline underline-offset-4"
-                  >
-                    Connect a platform
-                  </Link>{" "}
-                  to start publishing.
-                </p>
+      {/* ── Expandable: Ideas ── */}
+      {showIdeas && (
+        <div className="mb-8 space-y-4">
+          {(
+            generateIdeas.data as {
+              headline: string;
+              format: string;
+              intent: string;
+              topic: string;
+              rationale: string;
+              suggested_hook: string;
+              confidence: string;
+            }[]
+          ).map((idea, idx) => (
+            <div key={idx} className="group">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2 flex-1">
+                  <p className="text-[15px] font-normal leading-snug font-serif">
+                    {idea.headline}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/50">
+                    {idea.format} &middot; {idea.intent} &middot; {idea.topic}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  onClick={() => {
+                    setBody(idea.suggested_hook);
+                    setIdeasOpen(false);
+                  }}
+                >
+                  Use This Idea
+                </Button>
               </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {activeConnections.map((conn) => (
-                  <label
-                    key={conn.platform}
-                    className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                      selectedPlatforms.includes(conn.platform)
-                        ? "border-foreground bg-foreground/5"
-                        : "border-border hover:border-foreground/30"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedPlatforms.includes(conn.platform)}
-                      onChange={() => togglePlatform(conn.platform)}
-                      className="sr-only"
-                      aria-label={conn.platform.charAt(0).toUpperCase() + conn.platform.slice(1)}
-                    />
-                    <span className="capitalize">{conn.platform}</span>
-                    <span className="text-xs text-muted-foreground">
-                      @{conn.platform_username}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+              <p className="text-xs text-muted-foreground/60 leading-relaxed mt-2">
+                {idea.rationale}
+              </p>
+              <p className="text-[13px] italic text-foreground/40 mt-1.5 font-serif">
+                {idea.suggested_hook}
+              </p>
+              {idx <
+                ((
+                  generateIdeas.data as {
+                    headline: string;
+                  }[]
+                ).length ?? 0) -
+                  1 && <div className="h-px bg-foreground/6 mt-4" />}
+            </div>
+          ))}
+          <div className="h-px bg-foreground/8" />
+        </div>
+      )}
 
-          {/* Schedule Toggle */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={scheduleEnabled}
-                onChange={(e) => setScheduleEnabled(e.target.checked)}
-                className="rounded border-input"
-                aria-label="Schedule for later"
-              />
-              <span className="font-medium">Schedule for later</span>
-            </label>
-
-            {scheduleEnabled && (
-              <input
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 border-t border-border pt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveDraft}
-              disabled={!body.trim() || selectedPlatforms.length === 0 || createPost.isPending}
+      {/* ── Platforms ── */}
+      <div className="mb-8">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-3">
+          Platforms
+        </p>
+        {!connectionsLoading && activeConnections.length === 0 ? (
+          <p className="text-sm text-muted-foreground/60">
+            No platforms connected.{" "}
+            <Link
+              href="/dashboard/connections"
+              className="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground transition-colors"
             >
-              Save Draft
-            </Button>
-
-            {scheduleEnabled ? (
-              <Button
-                size="sm"
-                onClick={handleSchedule}
-                disabled={!canSubmit || !scheduledAt}
+              Connect a platform
+            </Link>{" "}
+            to start publishing.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {activeConnections.map((conn) => (
+              <label
+                key={conn.platform}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-3 py-1.5 text-sm transition-all duration-200 select-none ${
+                  selectedPlatforms.includes(conn.platform)
+                    ? "border-primary/40 text-foreground"
+                    : "border-input text-muted-foreground/50 hover:border-input hover:text-foreground/80"
+                }`}
               >
-                Schedule
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handlePublishNow}
-                disabled={!canSubmit}
-              >
-                Publish Now
-              </Button>
-            )}
+                <input
+                  type="checkbox"
+                  checked={selectedPlatforms.includes(conn.platform)}
+                  onChange={() => togglePlatform(conn.platform)}
+                  className="sr-only"
+                  aria-label={
+                    conn.platform.charAt(0).toUpperCase() +
+                    conn.platform.slice(1)
+                  }
+                />
+                {selectedPlatforms.includes(conn.platform) && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 7l3 3 5-5" />
+                  </svg>
+                )}
+                <span className="capitalize">{conn.platform}</span>
+                <span className="text-[11px] text-muted-foreground/30">
+                  @{conn.platform_username}
+                </span>
+              </label>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
+
+      {/* ── Schedule ── */}
+      <div className="mb-10">
+        <label className="flex items-center gap-2.5 text-sm cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={scheduleEnabled}
+            onChange={(e) => setScheduleEnabled(e.target.checked)}
+            className="rounded border-input"
+            aria-label="Schedule for later"
+          />
+          <span className="text-muted-foreground/60 group-hover:text-foreground transition-colors">
+            Schedule for later
+          </span>
+        </label>
+
+        {scheduleEnabled && (
+          <input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            min={new Date().toISOString().slice(0, 16)}
+            className="mt-3 ml-7 rounded border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-ring/50"
+          />
+        )}
+      </div>
+
+      {/* ── Folio Actions ── */}
+      <div className="h-px bg-foreground/20" />
+      <div className="flex items-center gap-4 pt-6 pb-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSaveDraft}
+          disabled={
+            !body.trim() ||
+            selectedPlatforms.length === 0 ||
+            createPost.isPending
+          }
+        >
+          Save Draft
+        </Button>
+
+        {scheduleEnabled ? (
+          <Button
+            size="sm"
+            onClick={handleSchedule}
+            disabled={!canSubmit || !scheduledAt}
+          >
+            Schedule
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            onClick={handlePublishNow}
+            disabled={!canSubmit}
+          >
+            Publish Now
+          </Button>
+        )}
+
+        <span
+          className={`ml-auto text-[11px] font-mono tabular-nums ${getCharColor(charCount)}`}
+        >
+          {charCount}
+        </span>
+      </div>
     </div>
   );
 }
