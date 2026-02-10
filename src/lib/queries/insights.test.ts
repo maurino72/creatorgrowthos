@@ -100,6 +100,61 @@ describe("useDismissInsight", () => {
       method: "PATCH",
     });
   });
+
+  it("optimistically sets insight status to dismissed", async () => {
+    const { QueryClient: QC, QueryClientProvider: QCP } = await import("@tanstack/react-query");
+    const { insightKeys, useDismissInsight } = await import("./insights");
+
+    const queryClient = new QC({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const insights = [
+      { id: "i1", status: "active", headline: "Test" },
+      { id: "i2", status: "active", headline: "Other" },
+    ];
+    queryClient.setQueryData(insightKeys.all, insights);
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ insight: { id: "i1", status: "dismissed" } }),
+    } as Response);
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QCP, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useDismissInsight(), { wrapper: Wrapper });
+    result.current.mutate("i1");
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(insightKeys.all) as typeof insights;
+      expect(cached?.find((i) => i.id === "i1")?.status).toBe("dismissed");
+    });
+  });
+
+  it("rolls back on error", async () => {
+    const { QueryClient: QC, QueryClientProvider: QCP } = await import("@tanstack/react-query");
+    const { insightKeys, useDismissInsight } = await import("./insights");
+
+    const queryClient = new QC({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const insights = [{ id: "i1", status: "active", headline: "Test" }];
+    queryClient.setQueryData(insightKeys.all, insights);
+
+    vi.mocked(global.fetch).mockResolvedValue({ ok: false } as Response);
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QCP, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useDismissInsight(), { wrapper: Wrapper });
+    result.current.mutate("i1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const cached = queryClient.getQueryData(insightKeys.all) as typeof insights;
+    expect(cached?.[0]?.status).toBe("active");
+  });
 });
 
 describe("useMarkInsightActed", () => {
@@ -119,6 +174,34 @@ describe("useMarkInsightActed", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(global.fetch).toHaveBeenCalledWith("/api/insights/i1/acted", {
       method: "PATCH",
+    });
+  });
+
+  it("optimistically sets insight status to acted_on", async () => {
+    const { QueryClient: QC, QueryClientProvider: QCP } = await import("@tanstack/react-query");
+    const { insightKeys, useMarkInsightActed } = await import("./insights");
+
+    const queryClient = new QC({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const insights = [{ id: "i1", status: "active", headline: "Test" }];
+    queryClient.setQueryData(insightKeys.all, insights);
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ insight: { id: "i1", status: "acted_on" } }),
+    } as Response);
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QCP, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useMarkInsightActed(), { wrapper: Wrapper });
+    result.current.mutate("i1");
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(insightKeys.all) as typeof insights;
+      expect(cached?.find((i) => i.id === "i1")?.status).toBe("acted_on");
     });
   });
 });

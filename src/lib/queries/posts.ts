@@ -119,7 +119,22 @@ export function useDeletePost() {
       }
       return (await response.json());
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: postKeys.all });
+      const previous = queryClient.getQueryData(postKeys.all);
+      queryClient.setQueriesData(
+        { queryKey: postKeys.all },
+        (old: { id: string }[] | undefined) =>
+          old ? old.filter((p) => p.id !== id) : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(postKeys.all, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.all });
     },
   });

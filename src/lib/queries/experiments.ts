@@ -73,7 +73,26 @@ export function useAcceptExperiment() {
       }
       return (await response.json()).experiment;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: experimentKeys.all });
+      const previous = queryClient.getQueryData(experimentKeys.all);
+      queryClient.setQueriesData(
+        { queryKey: experimentKeys.all },
+        (old: { id: string; status: string }[] | undefined) =>
+          old
+            ? old.map((e) =>
+                e.id === id ? { ...e, status: "accepted" } : e,
+              )
+            : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(experimentKeys.all, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: experimentKeys.all });
     },
   });
@@ -92,7 +111,26 @@ export function useDismissExperiment() {
       }
       return (await response.json()).experiment;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: experimentKeys.all });
+      const previous = queryClient.getQueryData(experimentKeys.all);
+      queryClient.setQueriesData(
+        { queryKey: experimentKeys.all },
+        (old: { id: string; status: string }[] | undefined) =>
+          old
+            ? old.map((e) =>
+                e.id === id ? { ...e, status: "dismissed" } : e,
+              )
+            : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(experimentKeys.all, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: experimentKeys.all });
     },
   });

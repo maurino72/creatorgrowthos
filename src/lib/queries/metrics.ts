@@ -70,7 +70,7 @@ export function useLatestMetrics(postId: string) {
   return useQuery({
     queryKey: metricKeys.latest(postId),
     queryFn: () => fetchLatestMetrics(postId),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useTransition, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -163,7 +163,7 @@ function PostCard({
                   onError: () => toast.error("Retry failed"),
                 })
               }
-              disabled={publishPost.isPending}
+              loading={publishPost.isPending}
             >
               Retry
             </Button>
@@ -179,7 +179,7 @@ function PostCard({
                 });
               }
             }}
-            disabled={deletePost.isPending}
+            loading={deletePost.isPending}
           >
             Delete
           </Button>
@@ -206,6 +206,7 @@ function PostSkeleton() {
 
 function ContentPageInner() {
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
   const { platform } = usePlatform();
   const platformFilter = platform ?? undefined;
   const filters: Record<string, string | undefined> = {};
@@ -240,7 +241,7 @@ function ContentPageInner() {
           <button
             key={tab.label}
             type="button"
-            onClick={() => setActiveTab(tab.value)}
+            onClick={() => startTransition(() => setActiveTab(tab.value))}
             className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors border-b ${
               activeTab === tab.value
                 ? "text-foreground border-foreground/60"
@@ -253,6 +254,7 @@ function ContentPageInner() {
       </div>
 
       {/* ── Content ── */}
+      <div data-testid="tab-content" className={isPending ? "opacity-70 transition-opacity" : "transition-opacity"}>
       {isLoading ? (
         <div>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -293,6 +295,7 @@ function ContentPageInner() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

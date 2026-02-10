@@ -77,7 +77,24 @@ export function useDismissInsight() {
       }
       return (await response.json()).insight;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: insightKeys.all });
+      const previous = queryClient.getQueryData(insightKeys.all);
+      queryClient.setQueriesData(
+        { queryKey: insightKeys.all },
+        (old: { id: string; status: string }[] | undefined) =>
+          old
+            ? old.map((i) => (i.id === id ? { ...i, status: "dismissed" } : i))
+            : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(insightKeys.all, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: insightKeys.all });
     },
   });
@@ -96,7 +113,26 @@ export function useMarkInsightActed() {
       }
       return (await response.json()).insight;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: insightKeys.all });
+      const previous = queryClient.getQueryData(insightKeys.all);
+      queryClient.setQueriesData(
+        { queryKey: insightKeys.all },
+        (old: { id: string; status: string }[] | undefined) =>
+          old
+            ? old.map((i) =>
+                i.id === id ? { ...i, status: "acted_on" } : i,
+              )
+            : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(insightKeys.all, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: insightKeys.all });
     },
   });

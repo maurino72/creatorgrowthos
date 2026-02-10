@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useTransition, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { usePlatform } from "@/lib/hooks/use-platform";
@@ -87,7 +87,7 @@ function InsightEntry({ insight }: { insight: InsightItem }) {
               onError: () => toast.error("Failed to update"),
             })
           }
-          disabled={markActed.isPending}
+          loading={markActed.isPending}
         >
           Acted on
         </Button>
@@ -100,7 +100,7 @@ function InsightEntry({ insight }: { insight: InsightItem }) {
               onError: () => toast.error("Failed to dismiss"),
             })
           }
-          disabled={dismissInsight.isPending}
+          loading={dismissInsight.isPending}
         >
           Dismiss
         </Button>
@@ -125,6 +125,7 @@ interface TopPostEvent {
 
 function DashboardContent() {
   const [days, setDays] = useState(7);
+  const [isPending, startTransition] = useTransition();
   const { platform } = usePlatform();
   const platformFilter = platform ?? undefined;
   const { data: metrics, isLoading: metricsLoading } =
@@ -156,7 +157,7 @@ function DashboardContent() {
           <button
             key={opt.value}
             type="button"
-            onClick={() => setDays(opt.value)}
+            onClick={() => startTransition(() => setDays(opt.value))}
             className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors border-b ${
               days === opt.value
                 ? "text-foreground border-foreground/60"
@@ -169,6 +170,7 @@ function DashboardContent() {
       </div>
 
       {/* ── Metrics Summary ── */}
+      <div data-testid="tab-content" className={isPending ? "opacity-70 transition-opacity" : "transition-opacity"}>
       {metricsLoading ? (
         <div className="grid grid-cols-4 gap-8 mb-10">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -286,11 +288,9 @@ function DashboardContent() {
                   onError: (err: Error) => toast.error(err.message),
                 })
               }
-              disabled={generateInsights.isPending}
+              loading={generateInsights.isPending}
             >
-              {generateInsights.isPending
-                ? "Generating..."
-                : "Generate Insights"}
+              Generate Insights
             </Button>
           </div>
         </div>
@@ -324,6 +324,7 @@ function DashboardContent() {
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

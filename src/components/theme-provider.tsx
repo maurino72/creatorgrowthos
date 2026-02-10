@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useSettings } from "@/lib/queries/settings";
 
 type Theme = "light" | "dark" | "system";
 
@@ -46,22 +45,6 @@ function getInitialTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
-  const { data: settings } = useSettings();
-
-  // Sync from DB preference on first load (only if no localStorage override)
-  // Only apply explicit user choices (light/dark) from DB — "system" is the old
-  // default that existing users may have, and we don't want it to override our
-  // new dark-first default.
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return; // localStorage takes priority
-
-    const dbTheme = settings?.preferences?.appearance?.theme;
-    if (dbTheme === "light" || dbTheme === "dark") {
-      setThemeState(dbTheme);
-    }
-  }, [settings]);
-
   // Apply theme to DOM whenever it changes
   useEffect(() => {
     applyTheme(resolveTheme(theme));
@@ -80,9 +63,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
+    document.documentElement.classList.add("theme-transitioning");
     setThemeState(newTheme);
     localStorage.setItem(STORAGE_KEY, newTheme);
     applyTheme(resolveTheme(newTheme));
+    setTimeout(() => {
+      document.documentElement.classList.remove("theme-transitioning");
+    }, 250);
   };
 
   return (

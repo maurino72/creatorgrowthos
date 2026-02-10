@@ -2,12 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { ThemeProvider, useTheme } from "./theme-provider";
 
-// Mock useSettings from react-query
-vi.mock("@/lib/queries/settings", () => ({
-  useSettings: vi.fn(() => ({ data: null, isLoading: false })),
-  settingsKeys: { all: ["settings"] },
-}));
-
 function TestConsumer() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   return (
@@ -185,12 +179,8 @@ describe("ThemeProvider", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
-  it("uses DB preference when available", async () => {
-    const { useSettings } = await import("@/lib/queries/settings");
-    vi.mocked(useSettings).mockReturnValue({
-      data: { preferences: { appearance: { theme: "light" } } },
-      isLoading: false,
-    } as ReturnType<typeof useSettings>);
+  it("adds theme-transitioning class during theme switch and removes after timeout", () => {
+    vi.useFakeTimers();
 
     render(
       <ThemeProvider>
@@ -198,42 +188,23 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId("theme").textContent).toBe("light");
+    act(() => {
+      screen.getByText("Set Light").click();
+    });
+
+    expect(
+      document.documentElement.classList.contains("theme-transitioning"),
+    ).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(
+      document.documentElement.classList.contains("theme-transitioning"),
+    ).toBe(false);
+
+    vi.useRealTimers();
   });
 
-  it("ignores 'system' from DB to preserve dark-first default", async () => {
-    const { useSettings } = await import("@/lib/queries/settings");
-    vi.mocked(useSettings).mockReturnValue({
-      data: { preferences: { appearance: { theme: "system" } } },
-      isLoading: false,
-    } as ReturnType<typeof useSettings>);
-
-    render(
-      <ThemeProvider>
-        <TestConsumer />
-      </ThemeProvider>,
-    );
-
-    // Should stay dark, not switch to system
-    expect(screen.getByTestId("theme").textContent).toBe("dark");
-  });
-
-  it("prioritizes localStorage over DB preference for instant hydration", async () => {
-    localStorage.setItem("theme-preference", "dark");
-
-    const { useSettings } = await import("@/lib/queries/settings");
-    vi.mocked(useSettings).mockReturnValue({
-      data: { preferences: { appearance: { theme: "light" } } },
-      isLoading: false,
-    } as ReturnType<typeof useSettings>);
-
-    render(
-      <ThemeProvider>
-        <TestConsumer />
-      </ThemeProvider>,
-    );
-
-    // localStorage wins for instant hydration
-    expect(screen.getByTestId("theme").textContent).toBe("dark");
-  });
 });

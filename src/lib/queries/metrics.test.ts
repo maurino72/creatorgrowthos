@@ -121,6 +121,25 @@ describe("useLatestMetrics", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(fetchSpy).toHaveBeenCalledWith("/api/posts/post-1/metrics/latest");
   });
+
+  it("uses 5-minute staleTime to reduce redundant fetches", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ metrics: [] }), { status: 200 }),
+    );
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+    const { result } = renderHook(() => useLatestMetrics("post-1"), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const queryState = queryClient.getQueryCache().find({ queryKey: metricKeys.latest("post-1") });
+    expect(queryState?.options.staleTime).toBe(5 * 60 * 1000);
+  });
 });
 
 describe("useDashboardMetrics", () => {

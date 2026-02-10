@@ -1,14 +1,14 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useConnections } from "@/lib/queries/connections";
 import type { ConnectionData } from "@/lib/queries/connections";
 
 export function usePlatform() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const { data: connections, isLoading } = useConnections();
+  const [localPlatform, setLocalPlatform] = useState<string | null>(null);
 
   const activeConnections = (connections ?? []).filter(
     (c: ConnectionData) => c.status === "active",
@@ -20,18 +20,19 @@ export function usePlatform() {
     paramPlatform &&
     activeConnections.some((c: ConnectionData) => c.platform === paramPlatform);
 
-  const platform = isValidParam
+  const derivedPlatform = isValidParam
     ? paramPlatform
     : activeConnections.length > 0
       ? activeConnections[0].platform
       : null;
 
+  // Local override takes precedence over URL param / derived
+  const platform = localPlatform ?? derivedPlatform;
+
   const hasConnections = activeConnections.length > 0;
 
   function setPlatform(newPlatform: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("platform", newPlatform);
-    router.replace(`${pathname}?${params.toString()}`);
+    setLocalPlatform(newPlatform);
   }
 
   return {

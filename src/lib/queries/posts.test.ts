@@ -226,6 +226,61 @@ describe("useDeletePost", () => {
       method: "DELETE",
     });
   });
+
+  it("optimistically removes post from cache", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const posts = [
+      { id: "post-1", body: "Hello", status: "draft" },
+      { id: "post-2", body: "World", status: "draft" },
+    ];
+    queryClient.setQueryData(postKeys.all, posts);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true }), { status: 200 }),
+    );
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useDeletePost(), { wrapper: Wrapper });
+    result.current.mutate("post-1");
+
+    // Optimistic: post-1 removed immediately
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(postKeys.all) as typeof posts;
+      expect(cached).toHaveLength(1);
+      expect(cached[0].id).toBe("post-2");
+    });
+  });
+
+  it("rolls back cache on error", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const posts = [
+      { id: "post-1", body: "Hello", status: "draft" },
+      { id: "post-2", body: "World", status: "draft" },
+    ];
+    queryClient.setQueryData(postKeys.all, posts);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "fail" }), { status: 500 }),
+    );
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useDeletePost(), { wrapper: Wrapper });
+    result.current.mutate("post-1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const cached = queryClient.getQueryData(postKeys.all) as typeof posts;
+    expect(cached).toHaveLength(2);
+  });
 });
 
 describe("usePublishPost", () => {

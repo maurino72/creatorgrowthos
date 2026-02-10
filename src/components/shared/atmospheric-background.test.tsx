@@ -53,4 +53,15 @@ describe("AtmosphericBackground", () => {
     const container = screen.getByTestId("atmospheric-bg");
     expect(container.className).toContain("pointer-events-none");
   });
+
+  it("applies GPU compositing styles to blob elements", () => {
+    render(<AtmosphericBackground intensity="full" />);
+
+    const blobs = screen.getAllByTestId("atmospheric-blob");
+    expect(blobs).toHaveLength(3);
+    for (const blob of blobs) {
+      expect(blob.style.willChange).toBe("transform");
+      expect(blob.style.transform).toBe("translateZ(0)");
+    }
+  });
 });

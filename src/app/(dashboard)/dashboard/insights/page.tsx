@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useTransition, Suspense } from "react";
 import { toast } from "sonner";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import {
@@ -100,7 +100,7 @@ function InsightEntry({
                 onError: () => toast.error("Failed to update"),
               })
             }
-            disabled={markActed.isPending}
+            loading={markActed.isPending}
           >
             Acted on
           </Button>
@@ -113,7 +113,7 @@ function InsightEntry({
                 onError: () => toast.error("Failed to dismiss"),
               })
             }
-            disabled={dismissInsight.isPending}
+            loading={dismissInsight.isPending}
           >
             Dismiss
           </Button>
@@ -137,6 +137,7 @@ function InsightSkeleton() {
 function InsightsPageInner() {
   const [activeStatus, setActiveStatus] = useState("active");
   const [activeType, setActiveType] = useState<string | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
   const { platform } = usePlatform();
   const platformFilter = platform ?? undefined;
 
@@ -164,9 +165,9 @@ function InsightsPageInner() {
               onError: (err: Error) => toast.error(err.message),
             })
           }
-          disabled={generateInsights.isPending}
+          loading={generateInsights.isPending}
         >
-          {generateInsights.isPending ? "Generating..." : "Generate Insights"}
+          Generate Insights
         </Button>
       </div>
       <div className="h-px bg-editorial-rule mt-4 mb-8" />
@@ -177,7 +178,7 @@ function InsightsPageInner() {
           <button
             key={tab.value}
             type="button"
-            onClick={() => setActiveStatus(tab.value)}
+            onClick={() => startTransition(() => setActiveStatus(tab.value))}
             className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors border-b ${
               activeStatus === tab.value
                 ? "text-foreground border-foreground/60"
@@ -195,7 +196,7 @@ function InsightsPageInner() {
           <button
             key={tab.label}
             type="button"
-            onClick={() => setActiveType(tab.value)}
+            onClick={() => startTransition(() => setActiveType(tab.value))}
             className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors ${
               activeType === tab.value
                 ? "text-foreground"
@@ -208,6 +209,7 @@ function InsightsPageInner() {
       </div>
 
       {/* ── Content ── */}
+      <div data-testid="tab-content" className={isPending ? "opacity-70 transition-opacity" : "transition-opacity"}>
       {isLoading ? (
         <div>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -236,6 +238,7 @@ function InsightsPageInner() {
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

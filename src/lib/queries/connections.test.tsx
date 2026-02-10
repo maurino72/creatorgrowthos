@@ -96,4 +96,57 @@ describe("useDisconnect", () => {
       expect.objectContaining({ method: "DELETE" }),
     );
   });
+
+  it("optimistically removes connection from cache", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const connections = [
+      { id: "c1", platform: "twitter", status: "active" },
+      { id: "c2", platform: "linkedin", status: "active" },
+    ];
+    queryClient.setQueryData(connectionKeys.all, connections);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true }), { status: 200 }),
+    );
+
+    const { result } = renderHook(() => useDisconnect(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      ),
+    });
+    result.current.mutate("twitter");
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(connectionKeys.all) as typeof connections;
+      expect(cached).toHaveLength(1);
+      expect(cached[0].platform).toBe("linkedin");
+    });
+  });
+
+  it("rolls back on disconnect error", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const connections = [
+      { id: "c1", platform: "twitter", status: "active" },
+    ];
+    queryClient.setQueryData(connectionKeys.all, connections);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "fail" }), { status: 500 }),
+    );
+
+    const { result } = renderHook(() => useDisconnect(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      ),
+    });
+    result.current.mutate("twitter");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const cached = queryClient.getQueryData(connectionKeys.all) as typeof connections;
+    expect(cached).toHaveLength(1);
+  });
 });

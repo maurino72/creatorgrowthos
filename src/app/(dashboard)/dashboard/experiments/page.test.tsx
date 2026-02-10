@@ -191,6 +191,18 @@ describe("Experiments page", () => {
     expect(dismissButtons.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("wraps content area with tab-content testid for transition feedback", async () => {
+    vi.mocked(useExperiments).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByTestId("tab-content")).toBeInTheDocument();
+  });
+
   it("shows type badges on experiment cards", async () => {
     vi.mocked(useExperiments).mockReturnValue({
       data: [

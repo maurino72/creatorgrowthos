@@ -3,7 +3,6 @@ import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-const mockReplace = vi.fn();
 const mockGet = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -11,8 +10,6 @@ vi.mock("next/navigation", () => ({
     get: mockGet,
     toString: () => "",
   }),
-  useRouter: () => ({ replace: mockReplace }),
-  usePathname: () => "/dashboard",
 }));
 
 vi.mock("@/lib/queries/connections", () => ({
@@ -139,7 +136,30 @@ describe("usePlatform", () => {
     expect(result.current.activeConnections).toHaveLength(1);
   });
 
-  it("setPlatform updates URL via router.replace", () => {
+  it("setPlatform updates local state without router.replace", () => {
+    vi.mocked(useConnections).mockReturnValue({
+      data: [
+        { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
+        { id: "2", platform: "linkedin", status: "active", platform_username: "bob" },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useConnections>);
+    mockGet.mockReturnValue(null);
+
+    const { result } = renderHook(() => usePlatform(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.platform).toBe("twitter");
+
+    act(() => {
+      result.current.setPlatform("linkedin");
+    });
+
+    expect(result.current.platform).toBe("linkedin");
+  });
+
+  it("setPlatform does not call router.replace", () => {
     vi.mocked(useConnections).mockReturnValue({
       data: [
         { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
@@ -156,6 +176,31 @@ describe("usePlatform", () => {
       result.current.setPlatform("linkedin");
     });
 
-    expect(mockReplace).toHaveBeenCalledWith("/dashboard?platform=linkedin");
+    // No router mock needed — the hook doesn't use useRouter anymore
+    // This test ensures no navigation side effects
+    expect(result.current.platform).toBe("linkedin");
+  });
+
+  it("uses URL param for initial value then local state for updates", () => {
+    vi.mocked(useConnections).mockReturnValue({
+      data: [
+        { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
+        { id: "2", platform: "linkedin", status: "active", platform_username: "bob" },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useConnections>);
+    mockGet.mockReturnValue("linkedin");
+
+    const { result } = renderHook(() => usePlatform(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.platform).toBe("linkedin");
+
+    act(() => {
+      result.current.setPlatform("twitter");
+    });
+
+    expect(result.current.platform).toBe("twitter");
   });
 });

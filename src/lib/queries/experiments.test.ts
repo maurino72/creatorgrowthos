@@ -99,6 +99,37 @@ describe("useAcceptExperiment", () => {
       { method: "PATCH" },
     );
   });
+
+  it("optimistically sets experiment status to accepted", async () => {
+    const { QueryClient: QC, QueryClientProvider: QCP } = await import("@tanstack/react-query");
+    const { experimentKeys, useAcceptExperiment } = await import("./experiments");
+
+    const queryClient = new QC({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const experiments = [
+      { id: "exp-1", status: "suggested", hypothesis: "Test" },
+      { id: "exp-2", status: "suggested", hypothesis: "Other" },
+    ];
+    queryClient.setQueryData(experimentKeys.all, experiments);
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ experiment: { id: "exp-1", status: "accepted" } }),
+    } as Response);
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QCP, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useAcceptExperiment(), { wrapper: Wrapper });
+    result.current.mutate("exp-1");
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(experimentKeys.all) as typeof experiments;
+      expect(cached?.find((e) => e.id === "exp-1")?.status).toBe("accepted");
+    });
+  });
 });
 
 describe("useDismissExperiment", () => {
@@ -120,5 +151,57 @@ describe("useDismissExperiment", () => {
       "/api/experiments/exp-1/dismiss",
       { method: "PATCH" },
     );
+  });
+
+  it("optimistically sets experiment status to dismissed", async () => {
+    const { QueryClient: QC, QueryClientProvider: QCP } = await import("@tanstack/react-query");
+    const { experimentKeys, useDismissExperiment } = await import("./experiments");
+
+    const queryClient = new QC({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const experiments = [{ id: "exp-1", status: "suggested", hypothesis: "Test" }];
+    queryClient.setQueryData(experimentKeys.all, experiments);
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ experiment: { id: "exp-1", status: "dismissed" } }),
+    } as Response);
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QCP, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useDismissExperiment(), { wrapper: Wrapper });
+    result.current.mutate("exp-1");
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(experimentKeys.all) as typeof experiments;
+      expect(cached?.find((e) => e.id === "exp-1")?.status).toBe("dismissed");
+    });
+  });
+
+  it("rolls back on error", async () => {
+    const { QueryClient: QC, QueryClientProvider: QCP } = await import("@tanstack/react-query");
+    const { experimentKeys, useDismissExperiment } = await import("./experiments");
+
+    const queryClient = new QC({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const experiments = [{ id: "exp-1", status: "suggested", hypothesis: "Test" }];
+    queryClient.setQueryData(experimentKeys.all, experiments);
+
+    vi.mocked(global.fetch).mockResolvedValue({ ok: false } as Response);
+
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QCP, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useDismissExperiment(), { wrapper: Wrapper });
+    result.current.mutate("exp-1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const cached = queryClient.getQueryData(experimentKeys.all) as typeof experiments;
+    expect(cached?.[0]?.status).toBe("suggested");
   });
 });

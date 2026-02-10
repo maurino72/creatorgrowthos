@@ -62,7 +62,22 @@ export function useDisconnect() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onMutate: async (platform) => {
+      await queryClient.cancelQueries({ queryKey: connectionKeys.all });
+      const previous = queryClient.getQueryData(connectionKeys.all);
+      queryClient.setQueriesData(
+        { queryKey: connectionKeys.all },
+        (old: ConnectionData[] | undefined) =>
+          old ? old.filter((c) => c.platform !== platform) : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _platform, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(connectionKeys.all, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: connectionKeys.all });
     },
   });

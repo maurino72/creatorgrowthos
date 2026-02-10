@@ -8,12 +8,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
-    auth: {
-      getUser: () => Promise.resolve({ data: { user: null } }),
-    },
-  }),
+vi.mock("@/lib/queries/user", () => ({
+  useCurrentUser: () => ({ data: null, isLoading: false }),
 }));
 
 vi.mock("@/lib/queries/connections", () => ({

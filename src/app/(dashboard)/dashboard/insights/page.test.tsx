@@ -221,6 +221,18 @@ describe("Insights page", () => {
     expect(screen.getByRole("button", { name: /anomaly/i })).toBeInTheDocument();
   });
 
+  it("wraps content area with tab-content testid for transition feedback", async () => {
+    vi.mocked(useInsights).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByTestId("tab-content")).toBeInTheDocument();
+  });
+
   it("shows dismiss and acted on buttons on insight cards", async () => {
     vi.mocked(useInsights).mockReturnValue({
       data: [

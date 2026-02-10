@@ -140,7 +140,7 @@ function MetricsSection({ postId }: { postId: string }) {
               onError: () => toast.error("Failed to refresh metrics"),
             })
           }
-          disabled={refreshMetrics.isPending}
+          loading={refreshMetrics.isPending}
         >
           Refresh
         </Button>
@@ -222,7 +222,7 @@ function ClassificationSection({
                 onError: () => toast.error("Classification failed"),
               })
             }
-            disabled={classifyPost.isPending}
+            loading={classifyPost.isPending}
           >
             Classify
           </Button>
@@ -568,7 +568,7 @@ export default function EditPostPage() {
             size="sm"
             variant="outline"
             onClick={handleRetry}
-            disabled={publishPost.isPending}
+            loading={publishPost.isPending}
           >
             Retry Publish
           </Button>
@@ -578,7 +578,7 @@ export default function EditPostPage() {
           variant="destructive"
           size="sm"
           onClick={handleDelete}
-          disabled={deletePost.isPending}
+          loading={deletePost.isPending}
         >
           Delete
         </Button>
@@ -599,9 +599,10 @@ export default function EditPostPage() {
                   onError: (err: Error) => toast.error(err.message),
                 })
               }
-              disabled={improveContent.isPending || !body.trim()}
+              loading={improveContent.isPending}
+              disabled={!body.trim()}
             >
-              {improveContent.isPending ? "Improving..." : "Improve"}
+              Improve
             </Button>
           </div>
           <div className="h-px bg-editorial-rule mb-6" />

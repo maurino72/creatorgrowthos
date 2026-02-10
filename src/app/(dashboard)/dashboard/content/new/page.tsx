@@ -250,9 +250,9 @@ export default function NewPostPage() {
                 onError: (err: Error) => toast.error(err.message),
               });
             }}
-            disabled={generateIdeas.isPending}
+            loading={generateIdeas.isPending}
           >
-            {generateIdeas.isPending ? "Generating..." : "Get Ideas"}
+            Get Ideas
           </Button>
         </div>
       </div>

@@ -281,6 +281,19 @@ describe("Content list page", () => {
     expect(screen.queryByText(/engagement/)).not.toBeInTheDocument();
   });
 
+  it("wraps content area with tab-content testid for transition feedback", async () => {
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByTestId("tab-content")).toBeInTheDocument();
+  });
+
   it("shows classification badges on post cards", async () => {
     vi.mocked(usePosts).mockReturnValue({
       data: [

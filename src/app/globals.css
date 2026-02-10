@@ -253,6 +253,18 @@
   --purple-soft: hsl(257 40% 15%);
 }
 
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+.theme-transitioning * {
+  transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

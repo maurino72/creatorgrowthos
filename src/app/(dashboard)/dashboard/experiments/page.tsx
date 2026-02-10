@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useTransition, Suspense } from "react";
 import { toast } from "sonner";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import {
@@ -74,7 +74,7 @@ function ExperimentEntry({
                 onError: () => toast.error("Failed to accept"),
               })
             }
-            disabled={acceptExperiment.isPending}
+            loading={acceptExperiment.isPending}
           >
             Accept
           </Button>
@@ -87,7 +87,7 @@ function ExperimentEntry({
                 onError: () => toast.error("Failed to dismiss"),
               })
             }
-            disabled={dismissExperiment.isPending}
+            loading={dismissExperiment.isPending}
           >
             Dismiss
           </Button>
@@ -110,6 +110,7 @@ function ExperimentSkeleton() {
 
 function ExperimentsPageInner() {
   const [activeStatus, setActiveStatus] = useState<string | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
   const { platform } = usePlatform();
   const platformFilter = platform ?? undefined;
 
@@ -134,9 +135,9 @@ function ExperimentsPageInner() {
               onError: (err: Error) => toast.error(err.message),
             })
           }
-          disabled={suggestExperiments.isPending}
+          loading={suggestExperiments.isPending}
         >
-          {suggestExperiments.isPending ? "Suggesting..." : "Suggest Experiments"}
+          Suggest Experiments
         </Button>
       </div>
       <div className="h-px bg-editorial-rule mt-4 mb-8" />
@@ -147,7 +148,7 @@ function ExperimentsPageInner() {
           <button
             key={tab.label}
             type="button"
-            onClick={() => setActiveStatus(tab.value)}
+            onClick={() => startTransition(() => setActiveStatus(tab.value))}
             className={`text-[11px] uppercase tracking-[0.15em] pb-1 transition-colors border-b ${
               activeStatus === tab.value
                 ? "text-foreground border-foreground/60"
@@ -160,6 +161,7 @@ function ExperimentsPageInner() {
       </div>
 
       {/* ── Content ── */}
+      <div data-testid="tab-content" className={isPending ? "opacity-70 transition-opacity" : "transition-opacity"}>
       {isLoading ? (
         <div>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -188,6 +190,7 @@ function ExperimentsPageInner() {
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

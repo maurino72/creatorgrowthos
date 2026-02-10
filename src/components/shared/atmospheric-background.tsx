@@ -20,13 +20,19 @@ export function AtmosphericBackground({
     >
       {/* Gradient mesh blobs */}
       <div
+        data-testid="atmospheric-blob"
         className={`absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-mesh-1 ${config.blob1} blur-[120px]`}
+        style={{ willChange: "transform", transform: "translateZ(0)" }}
       />
       <div
+        data-testid="atmospheric-blob"
         className={`absolute -right-1/4 top-1/3 h-[500px] w-[500px] rounded-full bg-mesh-2 ${config.blob2} blur-[100px]`}
+        style={{ willChange: "transform", transform: "translateZ(0)" }}
       />
       <div
+        data-testid="atmospheric-blob"
         className={`absolute -bottom-1/4 left-1/3 h-[400px] w-[400px] rounded-full bg-mesh-3 ${config.blob3} blur-[80px]`}
+        style={{ willChange: "transform", transform: "translateZ(0)" }}
       />
 
       {/* Grain overlay */}

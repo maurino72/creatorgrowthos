@@ -369,6 +369,27 @@ describe("Dashboard page", () => {
     expect(screen.getByRole("button", { name: /generate insights/i })).toBeInTheDocument();
   });
 
+  it("wraps content area with tab-content testid for transition feedback", async () => {
+    vi.mocked(useDashboardMetrics).mockReturnValue({
+      data: null,
+      isLoading: true,
+    } as never);
+    vi.mocked(useTopPosts).mockReturnValue({
+      data: null,
+      isLoading: true,
+    } as never);
+    vi.mocked(usePosts).mockReturnValue({
+      data: [],
+      isLoading: true,
+    } as never);
+    mockDefaultInsights();
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByTestId("tab-content")).toBeInTheDocument();
+  });
+
   it("shows view all insights link", async () => {
     vi.mocked(useDashboardMetrics).mockReturnValue({
       data: {

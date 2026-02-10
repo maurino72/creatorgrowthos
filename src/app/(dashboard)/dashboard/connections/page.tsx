@@ -174,7 +174,7 @@ function ConnectionEntry({
                 });
               }
             }}
-            disabled={disconnect.isPending}
+            loading={disconnect.isPending}
           >
             Disconnect
           </Button>
