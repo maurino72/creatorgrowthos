@@ -41,7 +41,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  type TooltipProps,
 } from "recharts";
 import type { DailyMetricPoint } from "@/lib/services/metrics";
 
@@ -58,7 +57,7 @@ const INSIGHT_TYPE_COLORS: Record<string, string> = {
   anomaly: "text-rose-400",
 };
 
-function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey?: string; color?: string; value?: number }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg">
