@@ -11,7 +11,7 @@ export const classifyPostFn = inngest.createFunction(
       period: "1m",
     },
   },
-  { event: "ai/classify.requested" },
+  [{ event: "ai/classify.requested" }, { event: "post/created" }],
   async ({ event, step }) => {
     const { postId, userId } = event.data;
 

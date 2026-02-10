@@ -19,7 +19,7 @@ export const improvementSuggestionSchema = z.object({
 export const improvementResponseSchema = z.object({
   overall_assessment: z.string().min(1),
   improvements: z.array(improvementSuggestionSchema).min(1),
-  improved_version: z.string().optional(),
+  improved_version: z.string().max(280).optional(),
 });
 
 export type ImprovementResponse = z.infer<typeof improvementResponseSchema>;

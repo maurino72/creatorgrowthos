@@ -404,6 +404,7 @@ Return ONLY valid JSON with this exact structure:
 
 - Suggest 1-5 improvements, ordered by impact
 - Each suggestion must be specific and actionable
+- The improved_version MUST NOT exceed 280 characters (this is the platform limit)
 - The improved_version should sound natural, not AI-generated
 - Reference the creator's style from their top performing posts when available
 - Do not include any explanation, markdown, or text outside the JSON object.`;
