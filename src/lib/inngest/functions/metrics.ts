@@ -50,7 +50,7 @@ export const fetchMetrics = inngest.createFunction(
     id: "fetch-metrics",
     retries: 5,
     concurrency: {
-      limit: 10,
+      limit: 5,
       key: "event.data.userId",
     },
     throttle: {
