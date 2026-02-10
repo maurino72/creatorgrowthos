@@ -40,7 +40,7 @@ export const publishScheduledPost = inngest.createFunction(
       return { cancelled: true, reason: "Post is no longer scheduled" };
     }
 
-    if (new Date(post.scheduled_at).getTime() !== new Date(scheduledAt).getTime()) {
+    if (!post.scheduled_at || new Date(post.scheduled_at).getTime() !== new Date(scheduledAt).getTime()) {
       logger.info("Schedule was changed, aborting", { postId, expected: scheduledAt, actual: post.scheduled_at });
       return { cancelled: true, reason: "Schedule was changed" };
     }
