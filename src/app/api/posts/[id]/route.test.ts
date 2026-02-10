@@ -10,8 +10,19 @@ vi.mock("@/lib/services/posts", () => ({
   deletePost: vi.fn(),
 }));
 
+vi.mock("@/lib/inngest/send", () => ({
+  sendPostUpdated: vi.fn().mockResolvedValue(undefined),
+  sendPostScheduled: vi.fn().mockResolvedValue(undefined),
+  sendPostScheduleCancelled: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { createClient } from "@/lib/supabase/server";
 import { getPostById, updatePost, deletePost } from "@/lib/services/posts";
+import {
+  sendPostUpdated,
+  sendPostScheduled,
+  sendPostScheduleCancelled,
+} from "@/lib/inngest/send";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -167,6 +178,79 @@ describe("PATCH /api/posts/:id", () => {
     });
     const response = await PATCH(request, makeParams("post-1"));
     expect(response.status).toBe(404);
+  });
+
+  it("sends cancel then schedule events when rescheduling a post", async () => {
+    mockAuth("user-123");
+    const mockUpdated = {
+      id: "post-1",
+      body: "Test",
+      status: "scheduled",
+      scheduled_at: "2099-12-01T10:00:00Z",
+    };
+    vi.mocked(updatePost).mockResolvedValue(mockUpdated as never);
+
+    const PATCH = await importPATCH();
+    const request = new Request("http://localhost:3000/api/posts/post-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduled_at: "2099-12-01T10:00:00Z" }),
+    });
+    const response = await PATCH(request, makeParams("post-1"));
+
+    expect(response.status).toBe(200);
+    expect(sendPostScheduleCancelled).toHaveBeenCalledWith("post-1", "user-123");
+    expect(sendPostScheduled).toHaveBeenCalledWith(
+      "post-1",
+      "user-123",
+      "2099-12-01T10:00:00Z",
+    );
+  });
+
+  it("sends only cancel event when scheduled_at is set to null", async () => {
+    mockAuth("user-123");
+    const mockUpdated = {
+      id: "post-1",
+      body: "Test",
+      status: "draft",
+      scheduled_at: null,
+    };
+    vi.mocked(updatePost).mockResolvedValue(mockUpdated as never);
+
+    const PATCH = await importPATCH();
+    const request = new Request("http://localhost:3000/api/posts/post-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduled_at: null }),
+    });
+    const response = await PATCH(request, makeParams("post-1"));
+
+    expect(response.status).toBe(200);
+    expect(sendPostScheduleCancelled).toHaveBeenCalledWith("post-1", "user-123");
+    expect(sendPostScheduled).not.toHaveBeenCalled();
+  });
+
+  it("sends updated event but no schedule events when only body changes", async () => {
+    mockAuth("user-123");
+    const mockUpdated = {
+      id: "post-1",
+      body: "New body",
+      status: "draft",
+    };
+    vi.mocked(updatePost).mockResolvedValue(mockUpdated as never);
+
+    const PATCH = await importPATCH();
+    const request = new Request("http://localhost:3000/api/posts/post-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: "New body" }),
+    });
+    const response = await PATCH(request, makeParams("post-1"));
+
+    expect(response.status).toBe(200);
+    expect(sendPostUpdated).toHaveBeenCalledWith("post-1", "user-123", ["body"]);
+    expect(sendPostScheduled).not.toHaveBeenCalled();
+    expect(sendPostScheduleCancelled).not.toHaveBeenCalled();
   });
 });
 

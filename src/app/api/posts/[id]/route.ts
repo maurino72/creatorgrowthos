@@ -61,11 +61,21 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     // Send Inngest events (fire-and-forget)
     const changedFields = Object.keys(parsed.data);
-    sendPostUpdated(id, user.id, changedFields).catch(() => {});
+    sendPostUpdated(id, user.id, changedFields).catch((err) =>
+      console.error("[inngest] Failed to send update:", err),
+    );
     if (parsed.data.scheduled_at) {
-      sendPostScheduled(id, user.id, parsed.data.scheduled_at).catch(() => {});
+      // Cancel any existing sleeping schedule function before creating a new one
+      sendPostScheduleCancelled(id, user.id).catch((err) =>
+        console.error("[inngest] Failed to cancel old schedule:", err),
+      );
+      sendPostScheduled(id, user.id, parsed.data.scheduled_at).catch((err) =>
+        console.error("[inngest] Failed to send schedule:", err),
+      );
     } else if (parsed.data.scheduled_at === null) {
-      sendPostScheduleCancelled(id, user.id).catch(() => {});
+      sendPostScheduleCancelled(id, user.id).catch((err) =>
+        console.error("[inngest] Failed to cancel schedule:", err),
+      );
     }
 
     return NextResponse.json({ post });

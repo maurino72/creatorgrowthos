@@ -21,6 +21,15 @@ function createMockStep() {
   };
 }
 
+function createMockLogger() {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+}
+
 function createMockEvent(overrides: Record<string, unknown> = {}) {
   return {
     name: "post/scheduled" as const,
@@ -51,12 +60,12 @@ describe("publish-scheduled-post", () => {
     const step = createMockStep();
     const event = createMockEvent();
 
-    // Mock: post still scheduled
+    // Mock: post still scheduled with matching scheduled_at
     const chain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
-        data: { id: "post-123", status: "scheduled" },
+        data: { id: "post-123", status: "scheduled", scheduled_at: "2025-06-01T15:00:00Z" },
         error: null,
       }),
     };
@@ -75,7 +84,7 @@ describe("publish-scheduled-post", () => {
 
     // Execute the function handler directly
     const handler = publishScheduledPost["fn"];
-    await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
+    await handler({ event, step, logger: createMockLogger() } as unknown as Parameters<typeof handler>[0]);
 
     // Should sleep until the scheduled time
     expect(step.sleepUntil).toHaveBeenCalledWith(
@@ -118,7 +127,7 @@ describe("publish-scheduled-post", () => {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { id: "post-123", status: "draft" },
+            data: { id: "post-123", status: "draft", scheduled_at: "2025-06-01T15:00:00Z" },
             error: null,
           }),
         };
@@ -131,25 +140,58 @@ describe("publish-scheduled-post", () => {
     });
 
     const handler = publishScheduledPost["fn"];
-    const result = await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
+    const logger = createMockLogger();
+    const result = await handler({ event, step, logger } as unknown as Parameters<typeof handler>[0]);
 
     // Should not call publishPost since the post is no longer scheduled
     expect(publishPost).not.toHaveBeenCalled();
     expect(result).toEqual({ cancelled: true, reason: "Post is no longer scheduled" });
   });
 
-  it("sends failure events when publish fails", async () => {
+  it("aborts if scheduled_at was changed", async () => {
     const step = createMockStep();
     const event = createMockEvent();
 
-    // Mock: post still scheduled
+    // Mock verify step: post is still "scheduled" but scheduled_at differs from event
     step.run.mockImplementation((id: string, fn: () => unknown) => {
       if (id === "verify-still-scheduled") {
         const chain = {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { id: "post-123", status: "scheduled" },
+            data: { id: "post-123", status: "scheduled", scheduled_at: "2025-06-02T10:00:00Z" },
+            error: null,
+          }),
+        };
+        vi.mocked(createAdminClient).mockReturnValue({
+          from: vi.fn().mockReturnValue(chain),
+        } as unknown as ReturnType<typeof createAdminClient>);
+        return fn();
+      }
+      return fn();
+    });
+
+    const handler = publishScheduledPost["fn"];
+    const logger = createMockLogger();
+    const result = await handler({ event, step, logger } as unknown as Parameters<typeof handler>[0]);
+
+    // Should not call publishPost since the schedule was changed
+    expect(publishPost).not.toHaveBeenCalled();
+    expect(result).toEqual({ cancelled: true, reason: "Schedule was changed" });
+  });
+
+  it("sends failure events when publish fails", async () => {
+    const step = createMockStep();
+    const event = createMockEvent();
+
+    // Mock: post still scheduled with matching scheduled_at
+    step.run.mockImplementation((id: string, fn: () => unknown) => {
+      if (id === "verify-still-scheduled") {
+        const chain = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: "post-123", status: "scheduled", scheduled_at: "2025-06-01T15:00:00Z" },
             error: null,
           }),
         };
@@ -170,7 +212,7 @@ describe("publish-scheduled-post", () => {
     ]);
 
     const handler = publishScheduledPost["fn"];
-    await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
+    await handler({ event, step, logger: createMockLogger() } as unknown as Parameters<typeof handler>[0]);
 
     expect(step.sendEvent).toHaveBeenCalledWith(
       "send-publish-results",

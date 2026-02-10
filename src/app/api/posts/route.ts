@@ -39,9 +39,13 @@ export async function POST(request: Request) {
   const post = await createPost(user.id, parsed.data);
 
   // Send Inngest events (fire-and-forget)
-  sendPostCreated(post.id, user.id).catch(() => {});
+  sendPostCreated(post.id, user.id).catch((err) =>
+    console.error("[inngest] Failed to send post created:", err),
+  );
   if (parsed.data.scheduled_at) {
-    sendPostScheduled(post.id, user.id, parsed.data.scheduled_at).catch(() => {});
+    sendPostScheduled(post.id, user.id, parsed.data.scheduled_at).catch((err) =>
+      console.error("[inngest] Failed to send schedule:", err),
+    );
   }
 
   return NextResponse.json({ post }, { status: 201 });

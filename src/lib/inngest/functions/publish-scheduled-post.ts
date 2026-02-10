@@ -15,18 +15,18 @@ export const publishScheduledPost = inngest.createFunction(
     ],
   },
   { event: "post/scheduled" },
-  async ({ event, step }) => {
+  async ({ event, step, logger }) => {
     const { postId, userId, scheduledAt } = event.data;
 
-    // Sleep until the scheduled publish time
+    logger.info("Sleeping until scheduled time", { postId, userId, scheduledAt });
     await step.sleepUntil("wait-until-scheduled", scheduledAt);
 
-    // Verify the post is still in "scheduled" status
+    logger.info("Woke up, verifying post still scheduled", { postId });
     const post = await step.run("verify-still-scheduled", async () => {
       const supabase = createAdminClient();
       const { data, error } = await supabase
         .from("posts")
-        .select("id, status")
+        .select("id, status, scheduled_at")
         .eq("id", postId)
         .eq("user_id", userId)
         .single();
@@ -36,15 +36,20 @@ export const publishScheduledPost = inngest.createFunction(
     });
 
     if (post.status !== "scheduled") {
+      logger.info("Post no longer scheduled, aborting", { postId, status: post.status });
       return { cancelled: true, reason: "Post is no longer scheduled" };
     }
 
-    // Publish the post
+    if (post.scheduled_at !== scheduledAt) {
+      logger.info("Schedule was changed, aborting", { postId, expected: scheduledAt, actual: post.scheduled_at });
+      return { cancelled: true, reason: "Schedule was changed" };
+    }
+
+    logger.info("Publishing post", { postId });
     const results = await step.run("publish-post", async () => {
       return publishPost(userId, postId);
     });
 
-    // Send events for each platform result
     const events = results.map((result) => {
       if (result.success) {
         return {
@@ -69,6 +74,10 @@ export const publishScheduledPost = inngest.createFunction(
     });
 
     await step.sendEvent("send-publish-results", events);
+
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
+    logger.info("Publish complete", { postId, succeeded, failed });
 
     return { published: true, results };
   },
