@@ -6,7 +6,7 @@ export const publishScheduledPost = inngest.createFunction(
   {
     id: "publish-scheduled-post",
     retries: 3,
-    concurrency: { limit: 10 },
+    concurrency: { limit: 5 },
     cancelOn: [
       {
         event: "post/schedule.cancelled",
