@@ -6,7 +6,25 @@ import {
 } from "@/lib/services/connections";
 import { decrypt } from "@/lib/utils/encryption";
 import { downloadImage, deleteImage } from "@/lib/services/media";
+import { formatTagsForPublish } from "@/lib/validators/tags";
 import type { PlatformType } from "@/lib/adapters/types";
+
+export function buildPublishText(
+  body: string,
+  tags: string[],
+  charLimit: number,
+): string {
+  if (tags.length === 0) return body;
+
+  let result = body;
+  for (const tag of tags) {
+    const suffix = ` #${tag}`;
+    if (result.length + suffix.length <= charLimit) {
+      result += suffix;
+    }
+  }
+  return result;
+}
 
 export interface PublishResult {
   platform: PlatformType;
@@ -76,7 +94,7 @@ export async function publishPost(
 
 async function publishToPlatform(
   userId: string,
-  post: { body: string; media_urls?: string[] | null },
+  post: { body: string; tags?: string[] | null; media_urls?: string[] | null },
   publication: { id: string; platform: string },
   platform: PlatformType,
   supabase: ReturnType<typeof createAdminClient>,
@@ -130,8 +148,9 @@ async function publishToPlatform(
       mediaIds.push(mediaId);
     }
 
+    const publishText = buildPublishText(post.body, post.tags ?? [], 280);
     const payload: { text: string; mediaIds?: string[] } = {
-      text: post.body,
+      text: publishText,
     };
     if (mediaIds.length > 0) {
       payload.mediaIds = mediaIds;

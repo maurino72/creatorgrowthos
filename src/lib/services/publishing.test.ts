@@ -30,7 +30,7 @@ import {
 } from "@/lib/services/connections";
 import { decrypt } from "@/lib/utils/encryption";
 import { downloadImage, deleteImage } from "@/lib/services/media";
-import { publishPost } from "./publishing";
+import { publishPost, buildPublishText } from "./publishing";
 
 const TEST_USER_ID = "user-123";
 const TEST_POST_ID = "post-1";
@@ -88,6 +88,42 @@ function mockConnection(overrides: Record<string, unknown> = {}) {
   vi.mocked(getConnectionByPlatform).mockResolvedValue(connection as never);
   return connection;
 }
+
+describe("buildPublishText", () => {
+  it("returns body alone when no tags", () => {
+    expect(buildPublishText("Hello world!", [], 280)).toBe("Hello world!");
+  });
+
+  it("appends tags when they fit within limit", () => {
+    expect(buildPublishText("Hello!", ["react", "nextjs"], 280)).toBe(
+      "Hello! #react #nextjs",
+    );
+  });
+
+  it("trims tags from the end when over limit", () => {
+    const body = "a".repeat(270);
+    // " #react" = 7 chars, total would be 277 — fits
+    // " #nextjs" = 8 more = 285 — doesn't fit
+    expect(buildPublishText(body, ["react", "nextjs"], 280)).toBe(
+      body + " #react",
+    );
+  });
+
+  it("drops all tags when body fills the limit", () => {
+    const body = "a".repeat(280);
+    expect(buildPublishText(body, ["react", "nextjs"], 280)).toBe(body);
+  });
+
+  it("handles body exactly at limit minus one tag", () => {
+    // body = 273 chars, " #react" = 7 chars, total = 280 — fits exactly
+    const body = "a".repeat(273);
+    expect(buildPublishText(body, ["react"], 280)).toBe(body + " #react");
+  });
+
+  it("handles empty body", () => {
+    expect(buildPublishText("", ["react"], 280)).toBe(" #react");
+  });
+});
 
 describe("publishing service", () => {
   beforeEach(() => {
@@ -435,6 +471,35 @@ describe("publishing service", () => {
       await publishPost(TEST_USER_ID, TEST_POST_ID);
 
       expect(deleteImage).toHaveBeenCalledWith("user-123/img1.jpg");
+    });
+
+    it("appends tags to tweet text when publishing", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter();
+      mockConnection();
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Hello world!",
+          status: "draft",
+          tags: ["react", "nextjs"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(results[0].success).toBe(true);
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Hello world! #react #nextjs",
+      });
     });
 
     it("does not upload media when post has no media_urls", async () => {

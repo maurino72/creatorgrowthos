@@ -6,11 +6,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useCreatePost } from "@/lib/queries/posts";
 import { useConnections } from "@/lib/queries/connections";
-import { useGenerateIdeas } from "@/lib/queries/ai";
+import { useGenerateIdeas, useSuggestHashtags } from "@/lib/queries/ai";
+import { computeTagsCharLength } from "@/lib/validators/tags";
 import {
   ImageUploadZone,
   type ImageItem,
 } from "@/components/image-upload-zone";
+import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
 
 const CHAR_LIMIT = 280;
@@ -33,7 +35,10 @@ export default function NewPostPage() {
   const { data: connections, isLoading: connectionsLoading } = useConnections();
   const generateIdeas = useGenerateIdeas();
 
+  const suggestHashtags = useSuggestHashtags();
+
   const [body, setBody] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -45,7 +50,7 @@ export default function NewPostPage() {
   const hasUploading = images.some((i) => i.uploading);
   const activeConnections =
     connections?.filter((c) => c.status === "active") ?? [];
-  const charCount = body.length;
+  const charCount = body.length + computeTagsCharLength(tags);
   const isOverLimit = charCount > CHAR_LIMIT;
   const canSubmit =
     body.trim().length > 0 &&
@@ -74,6 +79,7 @@ export default function NewPostPage() {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
+        ...(tags.length > 0 ? { tags } : {}),
       },
       {
         onSuccess: () => {
@@ -93,6 +99,7 @@ export default function NewPostPage() {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
+        ...(tags.length > 0 ? { tags } : {}),
       },
       {
         onSuccess: (post) => {
@@ -124,6 +131,7 @@ export default function NewPostPage() {
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         scheduled_at: new Date(scheduledAt).toISOString(),
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
+        ...(tags.length > 0 ? { tags } : {}),
       },
       {
         onSuccess: () => {
@@ -181,6 +189,37 @@ export default function NewPostPage() {
         >
           {charCount} / {CHAR_LIMIT}
         </span>
+      </div>
+
+      {/* ── Tags ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50">
+            Hashtags
+          </p>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              if (body.trim()) {
+                suggestHashtags.mutate(body, {
+                  onError: (err: Error) => toast.error(err.message),
+                });
+              }
+            }}
+            loading={suggestHashtags.isPending}
+            disabled={!body.trim()}
+          >
+            Suggest Hashtags
+          </Button>
+        </div>
+        <TagInput
+          tags={tags}
+          onChange={setTags}
+          bodyLength={body.length}
+          suggestions={suggestHashtags.data ?? undefined}
+          suggestLoading={suggestHashtags.isPending}
+        />
       </div>
 
       {/* ── Toolbar ── */}

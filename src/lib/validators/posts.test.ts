@@ -164,6 +164,53 @@ describe("createPostSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts tags as optional", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tags).toBeUndefined();
+    }
+  });
+
+  it("accepts valid tags array", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      tags: ["react", "nextjs"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts up to 5 tags", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      tags: ["a", "b", "c", "d", "e"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects more than 5 tags", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      tags: ["a", "b", "c", "d", "e", "f"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid tag format", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      tags: ["INVALID"],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("updatePostSchema", () => {
@@ -258,6 +305,30 @@ describe("updatePostSchema", () => {
     const paths = Array.from({ length: 5 }, (_, i) => `user-123/${i}.jpg`);
     const result = updatePostSchema.safeParse({
       media_urls: paths,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts tags update", () => {
+    const result = updatePostSchema.safeParse({
+      tags: ["react", "nextjs"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null tags to clear tags", () => {
+    const result = updatePostSchema.safeParse({
+      tags: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tags).toBeNull();
+    }
+  });
+
+  it("rejects invalid tags on update", () => {
+    const result = updatePostSchema.safeParse({
+      tags: ["INVALID"],
     });
     expect(result.success).toBe(false);
   });

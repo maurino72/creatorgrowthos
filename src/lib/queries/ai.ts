@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { HashtagSuggestion } from "@/lib/ai/hashtags";
 
 export function useGenerateIdeas() {
   return useMutation({
@@ -15,6 +16,23 @@ export function useGenerateIdeas() {
         throw new Error(body.error ?? "Failed to generate ideas");
       }
       return (await response.json()).ideas;
+    },
+  });
+}
+
+export function useSuggestHashtags() {
+  return useMutation({
+    mutationFn: async (content: string): Promise<HashtagSuggestion[]> => {
+      const response = await fetch("/api/ai/hashtags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to suggest hashtags");
+      }
+      return (await response.json()).suggestions;
     },
   });
 }

@@ -52,6 +52,12 @@ vi.mock("@/lib/queries/ai", () => ({
     data: null,
     isSuccess: false,
   })),
+  useSuggestHashtags: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    data: null,
+    isSuccess: false,
+  })),
 }));
 
 import { useCreatePost } from "@/lib/queries/posts";
@@ -87,7 +93,7 @@ describe("New post editor page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/new post/i)).toBeInTheDocument();
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/what's on your mind/i)).toBeInTheDocument();
   });
 
   it("shows character counter starting at 0", async () => {
@@ -101,7 +107,7 @@ describe("New post editor page", () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    const textarea = screen.getByRole("textbox");
+    const textarea = screen.getByPlaceholderText(/what's on your mind/i);
     fireEvent.change(textarea, { target: { value: "Hello" } });
 
     expect(screen.getByText("5 / 280")).toBeInTheDocument();
@@ -145,7 +151,7 @@ describe("New post editor page", () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    const textarea = screen.getByRole("textbox");
+    const textarea = screen.getByPlaceholderText(/what's on your mind/i);
     fireEvent.change(textarea, { target: { value: "a".repeat(281) } });
 
     expect(screen.getByRole("button", { name: /publish now/i })).toBeDisabled();
@@ -188,6 +194,36 @@ describe("New post editor page", () => {
 
     expect(screen.getByText("Behind-the-scenes of AI tool building")).toBeInTheDocument();
     expect(screen.getByText(/I just built an AI tool/)).toBeInTheDocument();
+  });
+
+  it("renders tag input section", async () => {
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByPlaceholderText(/add tag/i)).toBeInTheDocument();
+  });
+
+  it("shows Suggest Hashtags button", async () => {
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByRole("button", { name: /suggest hashtags/i })).toBeInTheDocument();
+  });
+
+  it("includes tags in char counter calculation", async () => {
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    const textarea = screen.getByPlaceholderText(/what's on your mind/i);
+    fireEvent.change(textarea, { target: { value: "Hello" } });
+
+    // Add a tag via the input
+    const tagInput = screen.getByPlaceholderText(/add tag/i);
+    fireEvent.change(tagInput, { target: { value: "react" } });
+    fireEvent.keyDown(tagInput, { key: "Enter" });
+
+    // 5 (body) + 7 (" #react") = 12
+    expect(screen.getByText("12 / 280")).toBeInTheDocument();
   });
 
   it("shows Use This Idea button on idea cards", async () => {

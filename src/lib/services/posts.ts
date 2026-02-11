@@ -7,6 +7,7 @@ export interface CreatePostData {
   platforms: PlatformType[];
   scheduled_at?: string;
   media_urls?: string[];
+  tags?: string[];
 }
 
 export interface UpdatePostData {
@@ -14,6 +15,7 @@ export interface UpdatePostData {
   platforms?: PlatformType[];
   scheduled_at?: string | null;
   media_urls?: string[] | null;
+  tags?: string[] | null;
 }
 
 export interface GetPostsOptions {
@@ -21,6 +23,7 @@ export interface GetPostsOptions {
   intent?: string;
   content_type?: string;
   topic?: string;
+  tag?: string;
   platform?: string;
   limit?: number;
   offset?: number;
@@ -38,6 +41,7 @@ export async function createPost(userId: string, data: CreatePostData) {
       status,
       scheduled_at: data.scheduled_at ?? null,
       media_urls: data.media_urls ?? [],
+      tags: data.tags ?? [],
     })
     .select("*")
     .single();
@@ -66,7 +70,7 @@ export async function getPostsForUser(
   options: GetPostsOptions = {},
 ) {
   const supabase = createAdminClient();
-  const { status, intent, content_type, topic, platform, limit = 20, offset = 0 } = options;
+  const { status, intent, content_type, topic, tag, platform, limit = 20, offset = 0 } = options;
 
   const selectClause = platform
     ? "*, post_publications!inner(*)"
@@ -94,6 +98,9 @@ export async function getPostsForUser(
   }
   if (topic) {
     query = query.contains("topics", [topic]);
+  }
+  if (tag) {
+    query = query.contains("tags", [tag]);
   }
 
   const { data, error } = await query.range(offset, offset + limit - 1);
@@ -137,6 +144,10 @@ export async function updatePost(
 
   if (data.media_urls !== undefined) {
     updates.media_urls = data.media_urls ?? [];
+  }
+
+  if (data.tags !== undefined) {
+    updates.tags = data.tags ?? [];
   }
 
   // Handle status transitions based on scheduled_at

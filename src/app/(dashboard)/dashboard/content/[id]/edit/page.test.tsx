@@ -49,6 +49,12 @@ vi.mock("@/lib/queries/ai", () => ({
     data: null,
     isSuccess: false,
   })),
+  useSuggestHashtags: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    data: null,
+    isSuccess: false,
+  })),
 }));
 
 import { usePost } from "@/lib/queries/posts";
@@ -400,6 +406,54 @@ describe("Edit post page — improve section", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.queryByRole("button", { name: /improve/i })).not.toBeInTheDocument();
+  });
+
+  it("pre-populates tags from post data", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "My tagged post",
+        status: "draft",
+        tags: ["react", "nextjs"],
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "pending" }],
+      },
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("#react")).toBeInTheDocument();
+    expect(screen.getByText("#nextjs")).toBeInTheDocument();
+  });
+
+  it("shows tags as read-only for published posts", async () => {
+    vi.mocked(usePost).mockReturnValue({
+      data: {
+        id: "post-1",
+        body: "Published post",
+        status: "published",
+        tags: ["react"],
+        published_at: "2024-06-01T12:00:00Z",
+        created_at: "2024-06-01T10:00:00Z",
+        post_publications: [{ platform: "twitter", status: "published" }],
+      },
+      isLoading: false,
+    } as never);
+
+    vi.mocked(useLatestMetrics).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    // Tag should be shown
+    expect(screen.getByText("#react")).toBeInTheDocument();
+    // Input should be disabled
+    expect(screen.getByPlaceholderText(/add tag/i)).toBeDisabled();
   });
 
   it("shows improvement suggestions when available", async () => {

@@ -549,6 +549,74 @@ Return ONLY valid JSON — an array of 1 to 3 experiment objects with this exact
 - Vary experiment types when possible
 - Do not include any explanation, markdown, or text outside the JSON array.`;
 
+// --- Hashtag Suggestions prompt ---
+
+export const SUGGEST_HASHTAGS_TEMPLATE = "suggest_hashtags";
+export const SUGGEST_HASHTAGS_VERSION = "1.0";
+
+const HASHTAGS_SYSTEM_PROMPT = `You are a social media hashtag strategist. Your job is to suggest specific, niche hashtags that will boost discoverability and engagement for a given post.${CREATOR_PROFILE_INSTRUCTION}
+
+## Your Role
+
+- Suggest 3-5 hashtags that are specific to the content
+- Prefer niche hashtags over generic ones (#BuildInPublic > #coding)
+- Consider the creator's niche and audience when suggesting
+- Return lowercase, hyphenated tags (no # prefix)
+
+## Relevance Levels
+
+- **high**: Directly related to the core topic of the post
+- **medium**: Related to the broader theme or audience
+- **low**: Tangentially related, good for discoverability
+
+## Response Format
+
+Return ONLY valid JSON — an array of 3 to 5 objects with this exact structure:
+
+[
+  {
+    "tag": "<lowercase-hyphenated-tag>",
+    "relevance": "<one of: high, medium, low>"
+  }
+]
+
+## Rules
+
+- Tags must be lowercase, alphanumeric with optional hyphens
+- No spaces, no # prefix, no special characters
+- Prefer specific niche tags over generic ones
+- Vary relevance levels across suggestions
+- Do not include any explanation, markdown, or text outside the JSON array.`;
+
+export interface HashtagsPromptResult {
+  system: string;
+  user: string;
+  fullPrompt: string;
+}
+
+export function buildSuggestHashtagsPrompt(
+  content: string,
+  creatorProfile?: CreatorProfileContext,
+): HashtagsPromptResult {
+  const userParts: string[] = [];
+
+  if (creatorProfile) {
+    userParts.push(formatCreatorProfile(creatorProfile));
+    userParts.push("");
+  }
+
+  userParts.push("## Post Content");
+  userParts.push(content);
+
+  const user = userParts.join("\n");
+
+  return {
+    system: HASHTAGS_SYSTEM_PROMPT,
+    user,
+    fullPrompt: `${HASHTAGS_SYSTEM_PROMPT}\n\n${user}`,
+  };
+}
+
 export interface ExperimentsPromptResult {
   system: string;
   user: string;

@@ -275,6 +275,7 @@ export type Database = {
           published_at: string | null
           scheduled_at: string | null
           status: Database["public"]["Enums"]["post_status"] | null
+          tags: string[]
           topics: string[] | null
           updated_at: string | null
           user_id: string
@@ -292,6 +293,7 @@ export type Database = {
           published_at?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
+          tags?: string[]
           topics?: string[] | null
           updated_at?: string | null
           user_id: string
@@ -309,6 +311,7 @@ export type Database = {
           published_at?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
+          tags?: string[]
           topics?: string[] | null
           updated_at?: string | null
           user_id?: string

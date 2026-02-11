@@ -25,6 +25,7 @@ function mockSupabase() {
     neq: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    contains: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
     single: vi.fn().mockReturnThis(),
@@ -124,6 +125,49 @@ describe("posts service", () => {
       expect(from).toHaveBeenCalledWith("post_publications");
     });
 
+    it("stores tags when provided", async () => {
+      const { chain } = mockSupabase();
+      const mockPost = {
+        id: "post-4",
+        user_id: TEST_USER_ID,
+        body: "Tagged post",
+        status: "draft",
+        tags: ["react", "nextjs"],
+      };
+
+      chain.single.mockResolvedValue({ data: mockPost, error: null });
+
+      await createPost(TEST_USER_ID, {
+        body: "Tagged post",
+        platforms: ["twitter"],
+        tags: ["react", "nextjs"],
+      });
+
+      const insertCall = chain.insert.mock.calls[0][0];
+      expect(insertCall.tags).toEqual(["react", "nextjs"]);
+    });
+
+    it("defaults tags to empty array when not provided", async () => {
+      const { chain } = mockSupabase();
+      const mockPost = {
+        id: "post-5",
+        user_id: TEST_USER_ID,
+        body: "No tags",
+        status: "draft",
+        tags: [],
+      };
+
+      chain.single.mockResolvedValue({ data: mockPost, error: null });
+
+      await createPost(TEST_USER_ID, {
+        body: "No tags",
+        platforms: ["twitter"],
+      });
+
+      const insertCall = chain.insert.mock.calls[0][0];
+      expect(insertCall.tags).toEqual([]);
+    });
+
     it("throws on database error during post creation", async () => {
       const { chain } = mockSupabase();
       chain.single.mockResolvedValue({
@@ -211,6 +255,15 @@ describe("posts service", () => {
       await getPostsForUser(TEST_USER_ID);
 
       expect(chain.select).toHaveBeenCalledWith("*, post_publications(*)");
+    });
+
+    it("filters by tag when provided", async () => {
+      const { chain } = mockSupabase();
+      chain.range.mockResolvedValue({ data: [], error: null });
+
+      await getPostsForUser(TEST_USER_ID, { tag: "react" });
+
+      expect(chain.contains).toHaveBeenCalledWith("tags", ["react"]);
     });
 
     it("throws on database error", async () => {
@@ -389,6 +442,56 @@ describe("posts service", () => {
       });
 
       expect(result.status).toBe("draft");
+    });
+
+    it("updates tags on a draft post", async () => {
+      const { chain } = mockSupabase();
+      const existingPost = {
+        id: "post-1",
+        body: "Hello",
+        status: "draft",
+        tags: ["old"],
+        post_publications: [],
+      };
+
+      chain.single
+        .mockResolvedValueOnce({ data: existingPost, error: null })
+        .mockResolvedValueOnce({
+          data: { ...existingPost, tags: ["new", "tags"] },
+          error: null,
+        });
+
+      const result = await updatePost(TEST_USER_ID, "post-1", {
+        tags: ["new", "tags"],
+      });
+
+      const updateCall = chain.update.mock.calls[0][0];
+      expect(updateCall.tags).toEqual(["new", "tags"]);
+    });
+
+    it("clears tags when set to null", async () => {
+      const { chain } = mockSupabase();
+      const existingPost = {
+        id: "post-1",
+        body: "Hello",
+        status: "draft",
+        tags: ["react"],
+        post_publications: [],
+      };
+
+      chain.single
+        .mockResolvedValueOnce({ data: existingPost, error: null })
+        .mockResolvedValueOnce({
+          data: { ...existingPost, tags: [] },
+          error: null,
+        });
+
+      await updatePost(TEST_USER_ID, "post-1", {
+        tags: null,
+      });
+
+      const updateCall = chain.update.mock.calls[0][0];
+      expect(updateCall.tags).toEqual([]);
     });
 
     it("changes failed status to draft when editing", async () => {
