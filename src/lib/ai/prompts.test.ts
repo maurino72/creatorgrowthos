@@ -12,6 +12,9 @@ import {
   IMPROVE_CONTENT_TEMPLATE,
   IMPROVE_CONTENT_VERSION,
   buildImprovePrompt,
+  buildExperimentsPrompt,
+  formatCreatorProfile,
+  type CreatorProfileContext,
 } from "./prompts";
 import { INTENTS, CONTENT_TYPES } from "./taxonomy";
 import type { InsightContext } from "@/lib/services/aggregation";
@@ -334,5 +337,158 @@ describe("buildImprovePrompt", () => {
   it("works with empty top posts", () => {
     const r = buildImprovePrompt(content, []);
     expect(r.user).toMatch(/no previous posts/i);
+  });
+});
+
+describe("formatCreatorProfile", () => {
+  const profile: CreatorProfileContext = {
+    niches: ["tech_software", "marketing"],
+    goals: ["build_authority", "grow_audience"],
+    targetAudience: "Early-stage SaaS founders",
+  };
+
+  it("includes niches with human-readable labels", () => {
+    const result = formatCreatorProfile(profile);
+    expect(result).toContain("Tech / Software");
+    expect(result).toContain("Marketing");
+  });
+
+  it("includes goals with human-readable labels", () => {
+    const result = formatCreatorProfile(profile);
+    expect(result).toContain("Build authority");
+    expect(result).toContain("Grow audience");
+  });
+
+  it("includes target audience", () => {
+    const result = formatCreatorProfile(profile);
+    expect(result).toContain("Early-stage SaaS founders");
+  });
+
+  it("has Creator Profile heading", () => {
+    const result = formatCreatorProfile(profile);
+    expect(result).toContain("## Creator Profile");
+  });
+
+  it("handles custom niche values gracefully", () => {
+    const result = formatCreatorProfile({
+      niches: ["Quantum Computing"],
+      goals: ["build_authority"],
+      targetAudience: null,
+    });
+    expect(result).toContain("Quantum Computing");
+  });
+
+  it("omits target audience when null", () => {
+    const result = formatCreatorProfile({
+      niches: ["tech_software"],
+      goals: ["build_authority"],
+      targetAudience: null,
+    });
+    expect(result).not.toContain("Target audience");
+  });
+
+  it("handles null/undefined niches and goals gracefully", () => {
+    const result = formatCreatorProfile({
+      niches: null as unknown as string[],
+      goals: undefined as unknown as string[],
+      targetAudience: "SaaS founders",
+    });
+    expect(result).toContain("Target audience: SaaS founders");
+    expect(result).not.toContain("Niches");
+    expect(result).not.toContain("Goals");
+  });
+
+  it("returns empty string when all fields are empty/null", () => {
+    const result = formatCreatorProfile({
+      niches: null as unknown as string[],
+      goals: null as unknown as string[],
+      targetAudience: null,
+    });
+    expect(result).toBe("");
+  });
+});
+
+describe("prompt builders with creator profile", () => {
+  const profile: CreatorProfileContext = {
+    niches: ["tech_software"],
+    goals: ["build_authority"],
+    targetAudience: "SaaS founders",
+  };
+
+  const insightContext: InsightContext = {
+    creatorSummary: {
+      totalPosts: 25,
+      postsWithMetrics: 20,
+      platforms: ["twitter"],
+      earliestPost: "2024-01-01T00:00:00Z",
+      latestPost: "2024-06-01T00:00:00Z",
+    },
+    byIntent: {
+      educate: { avgImpressions: 2400, avgEngagement: 60, avgEngagementRate: 0.042, count: 10 },
+    },
+    byTopic: {
+      ai: { avgImpressions: 3000, avgEngagement: 80, avgEngagementRate: 0.05, count: 12 },
+    },
+    byContentType: {
+      single: { avgImpressions: 1200, avgEngagement: 30, avgEngagementRate: 0.025, count: 15 },
+    },
+    recentTrend: {
+      currentPeriod: { postCount: 12, avgImpressions: 2000, avgEngagement: 50, avgEngagementRate: 0.035 },
+      previousPeriod: { postCount: 13, avgImpressions: 1800, avgEngagement: 45, avgEngagementRate: 0.03 },
+    },
+    outliers: {
+      top: [],
+      bottom: [],
+    },
+    postingPattern: { totalDays: 150, postsPerWeek: 1.17 },
+  };
+
+  it("buildInsightsPrompt includes profile in user message", () => {
+    const result = buildInsightsPrompt(insightContext, profile);
+    expect(result.user).toContain("Creator Profile");
+    expect(result.user).toContain("Tech / Software");
+  });
+
+  it("buildInsightsPrompt works without profile", () => {
+    const result = buildInsightsPrompt(insightContext);
+    expect(result.user).not.toContain("Creator Profile");
+  });
+
+  it("buildInsightsPrompt system prompt mentions profile tailoring", () => {
+    const result = buildInsightsPrompt(insightContext, profile);
+    expect(result.system).toContain("Creator Profile");
+  });
+
+  it("buildIdeasPrompt includes profile in user message", () => {
+    const result = buildIdeasPrompt(insightContext, [], profile);
+    expect(result.user).toContain("Creator Profile");
+    expect(result.user).toContain("Build authority");
+  });
+
+  it("buildIdeasPrompt works without profile", () => {
+    const result = buildIdeasPrompt(insightContext, []);
+    expect(result.user).not.toContain("Creator Profile");
+  });
+
+  it("buildImprovePrompt includes profile in user message", () => {
+    const result = buildImprovePrompt("Some draft content", [], profile);
+    expect(result.user).toContain("Creator Profile");
+    expect(result.user).toContain("SaaS founders");
+  });
+
+  it("buildImprovePrompt works without profile", () => {
+    const result = buildImprovePrompt("Some draft content", []);
+    expect(result.user).not.toContain("Creator Profile");
+  });
+
+  it("buildExperimentsPrompt includes profile in user message", () => {
+    const result = buildExperimentsPrompt(insightContext, profile);
+    expect(result.user).toContain("Creator Profile");
+    expect(result.user).toContain("Tech / Software");
+  });
+
+  it("buildExperimentsPrompt works without profile", () => {
+    const result = buildExperimentsPrompt(insightContext);
+    expect(result.user).not.toContain("Creator Profile");
   });
 });

@@ -5,6 +5,7 @@ import {
   updateOnboardingStep,
   completeOnboarding,
   getCreatorProfile,
+  updateCreatorProfile,
 } from "./profiles";
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -84,12 +85,10 @@ describe("profiles service", () => {
 
   describe("updateOnboardingStep", () => {
     it("updates the onboarding step", async () => {
-      const { client, chain } = mockSupabase({
+      const { client } = mockSupabase({
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       });
 
-      // For update().eq().single() pattern, we need the update to return the chain
-      // but the result should come from the final call
       const updateChain = {
         eq: vi.fn().mockReturnValue({
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -127,17 +126,18 @@ describe("profiles service", () => {
   });
 
   describe("saveQuickProfile", () => {
-    it("upserts creator profile data", async () => {
+    it("upserts creator profile with niches and goals arrays", async () => {
       const { client } = mockSupabase();
 
+      const upsertMock = vi.fn();
       const upsertChain = {
         select: vi.fn().mockReturnValue({
           single: vi.fn().mockResolvedValue({
             data: {
               id: "cp-1",
               user_id: userId,
-              primary_niche: "tech_software",
-              primary_goal: "build_authority",
+              niches: ["tech_software"],
+              goals: ["build_authority"],
               target_audience: "SaaS founders",
             },
             error: null,
@@ -145,17 +145,64 @@ describe("profiles service", () => {
         }),
       };
       client.from = vi.fn().mockReturnValue({
-        upsert: vi.fn().mockReturnValue(upsertChain),
+        upsert: upsertMock.mockReturnValue(upsertChain),
       });
 
       const result = await saveQuickProfile(userId, {
-        primary_niche: "tech_software",
-        primary_goal: "build_authority",
+        niches: ["tech_software"],
+        goals: ["build_authority"],
         target_audience: "SaaS founders",
       });
 
-      expect(result.primary_niche).toBe("tech_software");
+      expect(result.niches).toEqual(["tech_software"]);
+      expect(result.goals).toEqual(["build_authority"]);
       expect(client.from).toHaveBeenCalledWith("creator_profiles");
+      expect(upsertMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: userId,
+          niches: ["tech_software"],
+          goals: ["build_authority"],
+          target_audience: "SaaS founders",
+        }),
+        { onConflict: "user_id" },
+      );
+    });
+
+    it("resolves 'other' niche with custom_niche value", async () => {
+      const { client } = mockSupabase();
+
+      const upsertMock = vi.fn();
+      const upsertChain = {
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: "cp-1",
+              user_id: userId,
+              niches: ["tech_software", "Quantum Computing"],
+              goals: ["build_authority"],
+              target_audience: "SaaS founders",
+            },
+            error: null,
+          }),
+        }),
+      };
+      client.from = vi.fn().mockReturnValue({
+        upsert: upsertMock.mockReturnValue(upsertChain),
+      });
+
+      await saveQuickProfile(userId, {
+        niches: ["tech_software", "other"],
+        goals: ["build_authority"],
+        target_audience: "SaaS founders",
+        custom_niche: "Quantum Computing",
+      });
+
+      expect(upsertMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          niches: ["tech_software", "Quantum Computing"],
+        }),
+        { onConflict: "user_id" },
+      );
     });
 
     it("throws on error", async () => {
@@ -174,11 +221,68 @@ describe("profiles service", () => {
 
       await expect(
         saveQuickProfile(userId, {
-          primary_niche: "tech_software",
-          primary_goal: "build_authority",
+          niches: ["tech_software"],
+          goals: ["build_authority"],
           target_audience: "SaaS founders",
         }),
       ).rejects.toThrow("Upsert failed");
+    });
+  });
+
+  describe("updateCreatorProfile", () => {
+    it("updates partial profile data", async () => {
+      const { client } = mockSupabase();
+
+      const updateMock = vi.fn();
+      const updateChain = {
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: "cp-1",
+                user_id: userId,
+                niches: ["marketing", "design"],
+                goals: ["build_authority"],
+                target_audience: "SaaS founders",
+              },
+              error: null,
+            }),
+          }),
+        }),
+      };
+      client.from = vi.fn().mockReturnValue({
+        update: updateMock.mockReturnValue(updateChain),
+      });
+
+      const result = await updateCreatorProfile(userId, {
+        niches: ["marketing", "design"],
+      });
+
+      expect(result.niches).toEqual(["marketing", "design"]);
+      expect(client.from).toHaveBeenCalledWith("creator_profiles");
+      expect(updateMock).toHaveBeenCalledWith({ niches: ["marketing", "design"] });
+    });
+
+    it("throws on error", async () => {
+      const { client } = mockSupabase();
+
+      const updateChain = {
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: "Update failed" },
+            }),
+          }),
+        }),
+      };
+      client.from = vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue(updateChain),
+      });
+
+      await expect(
+        updateCreatorProfile(userId, { goals: ["network"] }),
+      ).rejects.toThrow("Update failed");
     });
   });
 
@@ -223,8 +327,8 @@ describe("profiles service", () => {
             data: {
               id: "cp-1",
               user_id: userId,
-              primary_niche: "tech_software",
-              primary_goal: "build_authority",
+              niches: ["tech_software"],
+              goals: ["build_authority"],
               target_audience: "SaaS founders",
             },
             error: null,
@@ -237,7 +341,7 @@ describe("profiles service", () => {
 
       const result = await getCreatorProfile(userId);
       expect(result).not.toBeNull();
-      expect(result?.primary_niche).toBe("tech_software");
+      expect(result?.niches).toEqual(["tech_software"]);
     });
 
     it("returns null when no profile exists", async () => {

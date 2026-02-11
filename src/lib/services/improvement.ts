@@ -8,8 +8,10 @@ import {
   buildImprovePrompt,
   IMPROVE_CONTENT_TEMPLATE,
   IMPROVE_CONTENT_VERSION,
+  type CreatorProfileContext,
 } from "@/lib/ai/prompts";
 import { insertAiLog } from "./ai-logs";
+import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
 
@@ -35,8 +37,14 @@ export async function improveContent(
     (r) => (r as unknown as { posts: { body: string } }).posts.body,
   );
 
-  // 2. Build prompt
-  const prompt = buildImprovePrompt(content, topPosts);
+  // 2. Fetch creator profile for context
+  const profile = await getCreatorProfile(userId);
+  const creatorProfile: CreatorProfileContext | undefined = profile
+    ? { niches: profile.niches ?? [], goals: profile.goals ?? [], targetAudience: profile.target_audience }
+    : undefined;
+
+  // 3. Build prompt
+  const prompt = buildImprovePrompt(content, topPosts, creatorProfile);
 
   // 3. Call OpenAI
   const openai = getOpenAIClient();

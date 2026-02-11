@@ -374,8 +374,8 @@ export type Database = {
         Row: {
           id: string
           user_id: string
-          primary_niche: string
-          primary_goal: string
+          niches: string[]
+          goals: string[]
           target_audience: string
           created_at: string | null
           updated_at: string | null
@@ -383,8 +383,8 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
-          primary_niche: string
-          primary_goal: string
+          niches: string[]
+          goals: string[]
           target_audience: string
           created_at?: string | null
           updated_at?: string | null
@@ -392,8 +392,8 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
-          primary_niche?: string
-          primary_goal?: string
+          niches?: string[]
+          goals?: string[]
           target_audience?: string
           created_at?: string | null
           updated_at?: string | null

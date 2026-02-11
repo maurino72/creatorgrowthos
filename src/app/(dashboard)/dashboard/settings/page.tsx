@@ -13,6 +13,8 @@ import {
   useUpdatePreferences,
   useExportData,
   useDeleteAccount,
+  useCreatorProfile,
+  useUpdateCreatorProfile,
 } from "@/lib/queries/settings";
 import { useConnections } from "@/lib/queries/connections";
 import {
@@ -22,12 +24,14 @@ import {
   DEFAULT_PREFERENCES,
   type PreferenceSection,
 } from "@/lib/validators/settings";
+import { NICHES, GOALS } from "@/lib/validators/onboarding";
 import { cn } from "@/lib/utils";
 
 /* ─── Section Navigation ─── */
 
 const SECTIONS = [
   { id: "profile", label: "Profile", icon: "M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5Zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5Z" },
+  { id: "creator-profile", label: "Creator Profile", icon: "M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" },
   { id: "account", label: "Account", icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm-1 14H9V8h2v8Zm4 0h-2V8h2v8Z" },
   { id: "platforms", label: "Platforms", icon: "M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" },
   { id: "publishing", label: "Publishing", icon: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" },
@@ -266,6 +270,162 @@ function ProfileSection({
       {isSaving && (
         <p className="py-2 text-xs text-muted-foreground/30">Saving...</p>
       )}
+    </SectionBlock>
+  );
+}
+
+function CreatorProfileSection() {
+  const { data, isLoading } = useCreatorProfile();
+  const updateCreatorProfile = useUpdateCreatorProfile();
+
+  const profile = data?.profile;
+  const [niches, setNiches] = useState<string[]>([]);
+  const [goals, setGoals] = useState<string[]>([]);
+  const [targetAudience, setTargetAudience] = useState("");
+  const [initialized, setInitialized] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    if (profile && !initialized) {
+      setNiches(profile.niches ?? []);
+      setGoals(profile.goals ?? []);
+      setTargetAudience(profile.target_audience ?? "");
+      setInitialized(true);
+    }
+  }, [profile, initialized]);
+
+  function handleSave(data: Record<string, unknown>) {
+    updateCreatorProfile.mutate(data as never, {
+      onSuccess: () => toast.success("Creator profile updated"),
+      onError: () => toast.error("Failed to update creator profile"),
+    });
+  }
+
+  function toggleNiche(value: string) {
+    const newNiches = niches.includes(value)
+      ? niches.filter((n) => n !== value)
+      : niches.length < 3
+        ? [...niches, value]
+        : niches;
+    if (newNiches.length === 0) return;
+    setNiches(newNiches);
+    handleSave({ niches: newNiches });
+  }
+
+  function toggleGoal(value: string) {
+    const newGoals = goals.includes(value)
+      ? goals.filter((g) => g !== value)
+      : goals.length < 3
+        ? [...goals, value]
+        : goals;
+    if (newGoals.length === 0) return;
+    setGoals(newGoals);
+    handleSave({ goals: newGoals });
+  }
+
+  if (isLoading) {
+    return (
+      <SectionBlock title="Creator Profile" description="Your content niches, goals, and audience">
+        <div className="py-3.5">
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </SectionBlock>
+    );
+  }
+
+  return (
+    <SectionBlock
+      title="Creator Profile"
+      description="Your content niches, goals, and audience"
+    >
+      {/* Niches */}
+      <div className="py-3.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+            Niches
+          </label>
+          <span className="text-[10px] font-mono tabular-nums text-muted-foreground/30">
+            {niches.length}/3 selected
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {NICHES.filter((n) => n.value !== "other").map((niche) => (
+            <button
+              key={niche.value}
+              type="button"
+              data-testid={`niche-chip-${niche.value}`}
+              data-selected={niches.includes(niche.value) ? "true" : "false"}
+              onClick={() => toggleNiche(niche.value)}
+              className={cn(
+                "cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-all duration-200",
+                niches.includes(niche.value)
+                  ? "border-primary/40 bg-primary/10 text-foreground"
+                  : "border-input/60 text-muted-foreground/60 hover:border-input hover:text-muted-foreground",
+                niches.length >= 3 &&
+                  !niches.includes(niche.value) &&
+                  "opacity-40 cursor-not-allowed",
+              )}
+            >
+              {niche.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Goals */}
+      <div className="py-3.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+            Goals
+          </label>
+          <span className="text-[10px] font-mono tabular-nums text-muted-foreground/30">
+            {goals.length}/3 selected
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {GOALS.map((goal) => (
+            <button
+              key={goal.value}
+              type="button"
+              data-testid={`goal-chip-${goal.value}`}
+              data-selected={goals.includes(goal.value) ? "true" : "false"}
+              onClick={() => toggleGoal(goal.value)}
+              className={cn(
+                "cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-all duration-200",
+                goals.includes(goal.value)
+                  ? "border-primary/40 bg-primary/10 text-foreground"
+                  : "border-input/60 text-muted-foreground/60 hover:border-input hover:text-muted-foreground",
+                goals.length >= 3 &&
+                  !goals.includes(goal.value) &&
+                  "opacity-40 cursor-not-allowed",
+              )}
+            >
+              {goal.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Target Audience */}
+      <div className="py-3.5">
+        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+          Target audience
+        </label>
+        <input
+          type="text"
+          value={targetAudience}
+          onChange={(e) => {
+            setTargetAudience(e.target.value);
+            clearTimeout(debounceRef.current);
+            debounceRef.current = setTimeout(() => {
+              handleSave({ target_audience: e.target.value });
+            }, 800);
+          }}
+          maxLength={100}
+          placeholder="e.g., SaaS founders, indie hackers..."
+          className="h-9 w-full rounded border border-input bg-transparent px-3 text-sm outline-none focus:border-ring/50 placeholder:text-muted-foreground/25"
+        />
+      </div>
     </SectionBlock>
   );
 }
@@ -1093,6 +1253,10 @@ export default function SettingsPage() {
                   onSave={handleProfileSave}
                   isSaving={updateProfile.isPending}
                 />
+              )}
+
+              {activeSection === "creator-profile" && (
+                <CreatorProfileSection />
               )}
 
               {activeSection === "account" && (

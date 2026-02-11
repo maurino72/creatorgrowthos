@@ -20,8 +20,13 @@ vi.mock("./ai-logs", () => ({
   insertAiLog: vi.fn().mockResolvedValue({ id: "log-1" }),
 }));
 
+vi.mock("./profiles", () => ({
+  getCreatorProfile: vi.fn(),
+}));
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { insertAiLog } from "./ai-logs";
+import { getCreatorProfile } from "./profiles";
 import OpenAI from "openai";
 import { improveContent } from "./improvement";
 
@@ -126,6 +131,36 @@ describe("improveContent", () => {
       limit: vi.fn().mockReturnValue({ data: [], error: null }),
     };
     vi.mocked(createAdminClient).mockReturnValue(chain as never);
+    mockOpenAIResponse(JSON.stringify(validImprovement));
+
+    const result = await improveContent("user-1", "Some draft");
+    expect(result.improvements).toHaveLength(2);
+  });
+
+  it("fetches creator profile and includes in prompt", async () => {
+    vi.mocked(getCreatorProfile).mockResolvedValue({
+      id: "cp-1",
+      user_id: "user-1",
+      niches: ["design"],
+      goals: ["build_authority"],
+      target_audience: "UX designers",
+      created_at: null,
+      updated_at: null,
+    });
+    mockSupabase();
+    const mockCreate = mockOpenAIResponse(JSON.stringify(validImprovement));
+
+    await improveContent("user-1", "Some draft about design");
+
+    expect(getCreatorProfile).toHaveBeenCalledWith("user-1");
+    const userMsg = mockCreate.mock.calls[0][0].messages[1].content;
+    expect(userMsg).toContain("Creator Profile");
+    expect(userMsg).toContain("Design");
+  });
+
+  it("works when no creator profile exists", async () => {
+    vi.mocked(getCreatorProfile).mockResolvedValue(null);
+    mockSupabase();
     mockOpenAIResponse(JSON.stringify(validImprovement));
 
     const result = await improveContent("user-1", "Some draft");

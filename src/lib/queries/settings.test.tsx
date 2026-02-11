@@ -9,7 +9,10 @@ import {
   useUpdatePreferences,
   useExportData,
   useDeleteAccount,
+  useCreatorProfile,
+  useUpdateCreatorProfile,
   settingsKeys,
+  creatorProfileKeys,
 } from "./settings";
 
 function createWrapper() {
@@ -118,6 +121,59 @@ describe("settings query hooks", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confirmation: "DELETE" }),
+    });
+  });
+
+  it("has correct creatorProfile query key structure", () => {
+    expect(creatorProfileKeys.all).toEqual(["creator-profile"]);
+  });
+
+  it("useCreatorProfile fetches creator profile", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          profile: {
+            niches: ["tech_software"],
+            goals: ["build_authority"],
+            target_audience: "SaaS founders",
+          },
+        }),
+    } as Response);
+
+    const { result } = renderHook(() => useCreatorProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data.profile.niches).toEqual(["tech_software"]);
+    expect(fetch).toHaveBeenCalledWith("/api/settings/creator-profile");
+  });
+
+  it("useUpdateCreatorProfile calls PATCH /api/settings/creator-profile", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          profile: {
+            niches: ["design", "creative"],
+            goals: ["build_authority"],
+            target_audience: "SaaS founders",
+          },
+        }),
+    } as Response);
+
+    const { result } = renderHook(() => useUpdateCreatorProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ niches: ["design", "creative"] });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(fetch).toHaveBeenCalledWith("/api/settings/creator-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ niches: ["design", "creative"] }),
     });
   });
 });

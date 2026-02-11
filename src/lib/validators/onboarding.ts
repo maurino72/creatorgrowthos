@@ -38,14 +38,26 @@ export const GOALS = [
 const nicheValues = NICHES.map((n) => n.value);
 const goalValues = GOALS.map((g) => g.value);
 
+const nichesArraySchema = z.array(z.enum(nicheValues as [string, ...string[]])).min(1).max(3);
+const goalsArraySchema = z.array(z.enum(goalValues as [string, ...string[]])).min(1).max(3);
+
 export const quickProfileSchema = z.object({
-  primary_niche: z.enum(nicheValues as [string, ...string[]]),
-  primary_goal: z.enum(goalValues as [string, ...string[]]),
+  niches: nichesArraySchema,
+  goals: goalsArraySchema,
   target_audience: z.string().min(5).max(100),
   custom_niche: z.string().max(100).optional(),
 });
 
 export type QuickProfileInput = z.infer<typeof quickProfileSchema>;
+
+export const updateCreatorProfileSchema = z.object({
+  niches: nichesArraySchema.optional(),
+  goals: goalsArraySchema.optional(),
+  target_audience: z.string().min(5).max(100).optional(),
+  custom_niche: z.string().max(100).optional(),
+});
+
+export type UpdateCreatorProfileInput = z.infer<typeof updateCreatorProfileSchema>;
 
 export const updateStepSchema = z.object({
   step: z.enum(ONBOARDING_STEPS),

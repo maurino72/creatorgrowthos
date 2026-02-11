@@ -24,6 +24,7 @@ const mockUpdateProfile = vi.fn();
 const mockUpdatePreferences = vi.fn();
 const mockExportData = vi.fn();
 const mockDeleteAccount = vi.fn();
+const mockUpdateCreatorProfile = vi.fn();
 
 vi.mock("@/lib/queries/settings", () => ({
   useSettings: vi.fn(() => ({
@@ -91,6 +92,20 @@ vi.mock("@/lib/queries/settings", () => ({
   })),
   useDeleteAccount: vi.fn(() => ({
     mutate: mockDeleteAccount,
+    isPending: false,
+  })),
+  useCreatorProfile: vi.fn(() => ({
+    data: {
+      profile: {
+        niches: ["tech_software", "marketing"],
+        goals: ["build_authority"],
+        target_audience: "SaaS founders",
+      },
+    },
+    isLoading: false,
+  })),
+  useUpdateCreatorProfile: vi.fn(() => ({
+    mutate: mockUpdateCreatorProfile,
     isPending: false,
   })),
 }));
@@ -163,6 +178,7 @@ describe("SettingsPage", () => {
     renderSettings();
     const labels = [
       "Profile",
+      "Creator Profile",
       "Account",
       "Platforms",
       "Publishing",
@@ -613,6 +629,89 @@ describe("SettingsPage", () => {
 
     expect(mockDeleteAccount).toHaveBeenCalledWith(
       { confirmation: "DELETE" },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
+  });
+
+  // ─── Creator Profile Section ───
+
+  it("renders creator profile section with niches and goals", () => {
+    renderSettings();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Creator Profile" }),
+    );
+    expect(
+      screen.getByText("Your content niches, goals, and audience"),
+    ).toBeInTheDocument();
+    // Check selected niches are shown
+    expect(screen.getByTestId("niche-chip-tech_software")).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
+    expect(screen.getByTestId("niche-chip-marketing")).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
+    expect(screen.getByTestId("niche-chip-design")).toHaveAttribute(
+      "data-selected",
+      "false",
+    );
+  });
+
+  it("toggles niche chip in creator profile settings", () => {
+    renderSettings();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Creator Profile" }),
+    );
+
+    // Click design to add it
+    fireEvent.click(screen.getByTestId("niche-chip-design"));
+
+    expect(mockUpdateCreatorProfile).toHaveBeenCalledWith(
+      { niches: ["tech_software", "marketing", "design"] },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
+  });
+
+  it("toggles goal in creator profile settings", () => {
+    renderSettings();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Creator Profile" }),
+    );
+
+    // Click "Grow audience" to add it
+    fireEvent.click(screen.getByTestId("goal-chip-grow_audience"));
+
+    expect(mockUpdateCreatorProfile).toHaveBeenCalledWith(
+      { goals: ["build_authority", "grow_audience"] },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
+  });
+
+  it("debounces target audience update", () => {
+    renderSettings();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Creator Profile" }),
+    );
+
+    const input = screen.getByDisplayValue("SaaS founders");
+    fireEvent.change(input, { target: { value: "Indie hackers" } });
+
+    expect(mockUpdateCreatorProfile).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(900);
+
+    expect(mockUpdateCreatorProfile).toHaveBeenCalledWith(
+      { target_audience: "Indie hackers" },
       expect.objectContaining({
         onSuccess: expect.any(Function),
         onError: expect.any(Function),

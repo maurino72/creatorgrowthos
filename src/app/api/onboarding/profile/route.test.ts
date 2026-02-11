@@ -35,8 +35,8 @@ describe("POST /api/onboarding/profile", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        primary_niche: "tech_software",
-        primary_goal: "build_authority",
+        niches: ["tech_software"],
+        goals: ["build_authority"],
         target_audience: "SaaS founders",
       }),
     });
@@ -49,8 +49,8 @@ describe("POST /api/onboarding/profile", () => {
     vi.mocked(saveQuickProfile).mockResolvedValue({
       id: "cp-1",
       user_id: "user-1",
-      primary_niche: "tech_software",
-      primary_goal: "build_authority",
+      niches: ["tech_software"],
+      goals: ["build_authority"],
       target_audience: "SaaS founders",
       created_at: "2024-01-01",
       updated_at: "2024-01-01",
@@ -61,8 +61,8 @@ describe("POST /api/onboarding/profile", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        primary_niche: "tech_software",
-        primary_goal: "build_authority",
+        niches: ["tech_software"],
+        goals: ["build_authority"],
         target_audience: "SaaS founders",
       }),
     });
@@ -70,10 +70,10 @@ describe("POST /api/onboarding/profile", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.profile.primary_niche).toBe("tech_software");
+    expect(body.profile.niches).toEqual(["tech_software"]);
     expect(saveQuickProfile).toHaveBeenCalledWith("user-1", {
-      primary_niche: "tech_software",
-      primary_goal: "build_authority",
+      niches: ["tech_software"],
+      goals: ["build_authority"],
       target_audience: "SaaS founders",
     });
   });
@@ -86,8 +86,8 @@ describe("POST /api/onboarding/profile", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        primary_niche: "invalid_niche",
-        primary_goal: "build_authority",
+        niches: ["invalid_niche"],
+        goals: ["build_authority"],
         target_audience: "Fo",
       }),
     });

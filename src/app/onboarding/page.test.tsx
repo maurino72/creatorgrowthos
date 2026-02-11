@@ -191,18 +191,48 @@ describe("Onboarding page", () => {
 
       fireEvent.click(screen.getByText("Continue"));
 
-      expect(screen.getByText("Pick your niche")).toBeInTheDocument();
-      expect(screen.getByText("Choose your goal")).toBeInTheDocument();
+      expect(screen.getByText("Pick at least one niche")).toBeInTheDocument();
+      expect(screen.getByText("Choose at least one goal")).toBeInTheDocument();
       expect(screen.getByText("At least 5 characters")).toBeInTheDocument();
       expect(mockSaveProfile).not.toHaveBeenCalled();
+    });
+
+    it("toggles niche chip selection", async () => {
+      const Page = await importPage();
+      render(<Page />, { wrapper: createWrapper() });
+
+      const techChip = screen.getByTestId("niche-chip-tech_software");
+      fireEvent.click(techChip);
+
+      // Counter should show 1/3
+      expect(screen.getByTestId("niche-counter")).toHaveTextContent("1/3 selected");
+
+      // Click again to deselect
+      fireEvent.click(techChip);
+      expect(screen.getByTestId("niche-counter")).toHaveTextContent("0/3 selected");
+    });
+
+    it("enforces max 3 niches", async () => {
+      const Page = await importPage();
+      render(<Page />, { wrapper: createWrapper() });
+
+      fireEvent.click(screen.getByTestId("niche-chip-tech_software"));
+      fireEvent.click(screen.getByTestId("niche-chip-marketing"));
+      fireEvent.click(screen.getByTestId("niche-chip-design"));
+
+      expect(screen.getByTestId("niche-counter")).toHaveTextContent("3/3 selected");
+
+      // 4th click should not add
+      fireEvent.click(screen.getByTestId("niche-chip-finance"));
+      // Still 3 selected
+      expect(screen.getByTestId("niche-counter")).toHaveTextContent("3/3 selected");
     });
 
     it("shows custom niche input when 'other' is selected", async () => {
       const Page = await importPage();
       render(<Page />, { wrapper: createWrapper() });
 
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "other" } });
+      fireEvent.click(screen.getByTestId("niche-chip-other"));
 
       expect(
         screen.getByPlaceholderText("Enter your niche..."),
@@ -214,8 +244,7 @@ describe("Onboarding page", () => {
       render(<Page />, { wrapper: createWrapper() });
 
       // Select "other" niche
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "other" } });
+      fireEvent.click(screen.getByTestId("niche-chip-other"));
 
       // Fill goal and audience but leave custom niche empty
       fireEvent.click(screen.getByText("Build authority"));
@@ -234,13 +263,23 @@ describe("Onboarding page", () => {
       expect(mockSaveProfile).not.toHaveBeenCalled();
     });
 
+    it("toggles goal card selection (max 3)", async () => {
+      const Page = await importPage();
+      render(<Page />, { wrapper: createWrapper() });
+
+      fireEvent.click(screen.getByText("Build authority"));
+      fireEvent.click(screen.getByText("Grow audience"));
+
+      // Counter should show 2/3
+      expect(screen.getByText("2/3 selected")).toBeInTheDocument();
+    });
+
     it("validates audience max length", async () => {
       const Page = await importPage();
       render(<Page />, { wrapper: createWrapper() });
 
       // Fill out valid niche and goal
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "tech_software" } });
+      fireEvent.click(screen.getByTestId("niche-chip-tech_software"));
       fireEvent.click(screen.getByText("Grow audience"));
 
       // Enter audience exceeding 100 chars
@@ -256,7 +295,7 @@ describe("Onboarding page", () => {
       expect(screen.getByText("Max 100 characters")).toBeInTheDocument();
     });
 
-    it("submits valid profile and advances to import step", async () => {
+    it("submits valid profile with arrays and advances to import step", async () => {
       // Make saveProfile call onSuccess
       mockSaveProfile.mockImplementation(
         (_data: unknown, options: { onSuccess: () => void }) => {
@@ -267,9 +306,9 @@ describe("Onboarding page", () => {
       const Page = await importPage();
       render(<Page />, { wrapper: createWrapper() });
 
-      // Fill form
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "tech_software" } });
+      // Fill form — multi-select
+      fireEvent.click(screen.getByTestId("niche-chip-tech_software"));
+      fireEvent.click(screen.getByTestId("niche-chip-marketing"));
       fireEvent.click(screen.getByText("Grow audience"));
       const audienceInput = screen.getByPlaceholderText(
         "e.g., Early-stage SaaS founders",
@@ -282,8 +321,8 @@ describe("Onboarding page", () => {
 
       expect(mockSaveProfile).toHaveBeenCalledWith(
         {
-          primary_niche: "tech_software",
-          primary_goal: "grow_audience",
+          niches: ["tech_software", "marketing"],
+          goals: ["grow_audience"],
           target_audience: "Tech professionals",
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),

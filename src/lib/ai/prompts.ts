@@ -4,6 +4,43 @@ import type { ContentIdea } from "./ideas";
 import { IMPROVEMENT_TYPES } from "./improvement";
 import { EXPERIMENT_TYPES } from "./experiments";
 import type { InsightContext, PerformanceByCategory, OutlierPost } from "@/lib/services/aggregation";
+import { NICHES, GOALS } from "@/lib/validators/onboarding";
+
+export interface CreatorProfileContext {
+  niches: string[];
+  goals: string[];
+  targetAudience: string | null;
+}
+
+const NICHE_LABELS: Record<string, string> = Object.fromEntries(
+  NICHES.map((n) => [n.value, n.label]),
+);
+
+const GOAL_LABELS: Record<string, string> = Object.fromEntries(
+  GOALS.map((g) => [g.value, g.label]),
+);
+
+export function formatCreatorProfile(profile: CreatorProfileContext): string {
+  const niches = profile.niches ?? [];
+  const goals = profile.goals ?? [];
+  if (niches.length === 0 && goals.length === 0 && !profile.targetAudience) {
+    return "";
+  }
+  const parts: string[] = [];
+  parts.push("## Creator Profile");
+  if (niches.length > 0) {
+    parts.push(`- Niches: ${niches.map((n) => NICHE_LABELS[n] ?? n).join(", ")}`);
+  }
+  if (goals.length > 0) {
+    parts.push(`- Goals: ${goals.map((g) => GOAL_LABELS[g] ?? g).join(", ")}`);
+  }
+  if (profile.targetAudience) {
+    parts.push(`- Target audience: ${profile.targetAudience}`);
+  }
+  return parts.join("\n");
+}
+
+const CREATOR_PROFILE_INSTRUCTION = "\nWhen a Creator Profile section is provided, tailor your analysis to the creator's specific niches, goals, and target audience.";
 
 export const CLASSIFY_POST_TEMPLATE = "classify_post";
 export const CLASSIFY_POST_VERSION = "1.0";
@@ -105,7 +142,7 @@ const CONFIDENCE_DESCRIPTIONS: Record<string, string> = {
   low: "Minimum data available, suggestive pattern only",
 };
 
-const INSIGHTS_SYSTEM_PROMPT = `You are a growth analyst for content creators. Your job is to analyze a creator's content performance data and generate actionable insights.
+const INSIGHTS_SYSTEM_PROMPT = `You are a growth analyst for content creators. Your job is to analyze a creator's content performance data and generate actionable insights.${CREATOR_PROFILE_INSTRUCTION}
 
 ## Your Role
 
@@ -178,10 +215,15 @@ export interface InsightsPromptResult {
   fullPrompt: string;
 }
 
-export function buildInsightsPrompt(context: InsightContext): InsightsPromptResult {
+export function buildInsightsPrompt(context: InsightContext, creatorProfile?: CreatorProfileContext): InsightsPromptResult {
   const { creatorSummary, byIntent, byTopic, byContentType, recentTrend, outliers, postingPattern } = context;
 
   const userParts: string[] = [];
+
+  if (creatorProfile) {
+    userParts.push(formatCreatorProfile(creatorProfile));
+    userParts.push("");
+  }
 
   // Creator summary
   userParts.push("## Creator Summary");
@@ -253,7 +295,7 @@ const INTENT_IDEA_DESCRIPTIONS: Record<string, string> = {
   entertain: "Humor, casual content — memes, observations",
 };
 
-const IDEAS_SYSTEM_PROMPT = `You are a content strategist with deep knowledge of this creator's audience and performance data. Your job is to suggest content ideas grounded in real data about what works.
+const IDEAS_SYSTEM_PROMPT = `You are a content strategist with deep knowledge of this creator's audience and performance data. Your job is to suggest content ideas grounded in real data about what works.${CREATOR_PROFILE_INSTRUCTION}
 
 ## Your Role
 
@@ -310,10 +352,16 @@ export interface IdeasPromptResult {
 export function buildIdeasPrompt(
   context: InsightContext,
   recentPosts: string[],
+  creatorProfile?: CreatorProfileContext,
 ): IdeasPromptResult {
   const { creatorSummary, byIntent, byTopic, byContentType, outliers } = context;
 
   const userParts: string[] = [];
+
+  if (creatorProfile) {
+    userParts.push(formatCreatorProfile(creatorProfile));
+    userParts.push("");
+  }
 
   // Creator summary
   userParts.push("## Creator Summary");
@@ -371,7 +419,7 @@ const IMPROVEMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
   focus: "Topic focus — narrow to one clear message if too scattered",
 };
 
-const IMPROVE_SYSTEM_PROMPT = `You are an editor helping improve social media posts before publishing. You understand what makes content perform well on social platforms.
+const IMPROVE_SYSTEM_PROMPT = `You are an editor helping improve social media posts before publishing. You understand what makes content perform well on social platforms.${CREATOR_PROFILE_INSTRUCTION}
 
 ## Your Role
 
@@ -418,8 +466,14 @@ export interface ImprovePromptResult {
 export function buildImprovePrompt(
   content: string,
   topPosts: string[],
+  creatorProfile?: CreatorProfileContext,
 ): ImprovePromptResult {
   const userParts: string[] = [];
+
+  if (creatorProfile) {
+    userParts.push(formatCreatorProfile(creatorProfile));
+    userParts.push("");
+  }
 
   userParts.push("## Draft to Improve");
   userParts.push(content);
@@ -454,7 +508,7 @@ const EXPERIMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
   style_test: "Test a different tone or style (more personal, more data-driven, etc.)",
 };
 
-const EXPERIMENTS_SYSTEM_PROMPT = `You are a growth strategist helping content creators run deliberate experiments to learn what works.
+const EXPERIMENTS_SYSTEM_PROMPT = `You are a growth strategist helping content creators run deliberate experiments to learn what works.${CREATOR_PROFILE_INSTRUCTION}
 
 ## Your Role
 
@@ -503,10 +557,16 @@ export interface ExperimentsPromptResult {
 
 export function buildExperimentsPrompt(
   context: InsightContext,
+  creatorProfile?: CreatorProfileContext,
 ): ExperimentsPromptResult {
   const { creatorSummary, byIntent, byTopic, byContentType, recentTrend } = context;
 
   const userParts: string[] = [];
+
+  if (creatorProfile) {
+    userParts.push(formatCreatorProfile(creatorProfile));
+    userParts.push("");
+  }
 
   userParts.push("## Creator Summary");
   userParts.push(`- Total published posts: ${creatorSummary.totalPosts}`);

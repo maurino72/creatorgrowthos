@@ -43,13 +43,13 @@ describe("POST /api/onboarding/ideas", () => {
     expect(response.status).toBe(401);
   });
 
-  it("generates starter ideas based on profile", async () => {
+  it("generates starter ideas based on profile with arrays", async () => {
     mockAuth({ id: "user-1" });
     vi.mocked(getCreatorProfile).mockResolvedValue({
       id: "cp-1",
       user_id: "user-1",
-      primary_niche: "tech_software",
-      primary_goal: "build_authority",
+      niches: ["tech_software", "marketing"],
+      goals: ["build_authority"],
       target_audience: "SaaS founders",
       created_at: "2024-01-01",
       updated_at: "2024-01-01",
@@ -70,6 +70,11 @@ describe("POST /api/onboarding/ideas", () => {
     expect(response.status).toBe(200);
     expect(body.ideas).toHaveLength(3);
     expect(body.preview).toHaveLength(3);
+    expect(generateStarterIdeas).toHaveBeenCalledWith({
+      niches: ["tech_software", "marketing"],
+      goals: ["build_authority"],
+      target_audience: "SaaS founders",
+    });
   });
 
   it("returns 400 when no profile exists", async () => {

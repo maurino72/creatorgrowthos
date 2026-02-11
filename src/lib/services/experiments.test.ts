@@ -24,9 +24,14 @@ vi.mock("./ai-logs", () => ({
   insertAiLog: vi.fn().mockResolvedValue({ id: "log-1" }),
 }));
 
+vi.mock("./profiles", () => ({
+  getCreatorProfile: vi.fn(),
+}));
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
+import { getCreatorProfile } from "./profiles";
 import OpenAI from "openai";
 import type { InsightContext } from "./aggregation";
 import {
@@ -163,6 +168,37 @@ describe("suggestExperiments", () => {
         wasUsed: true,
       }),
     );
+  });
+
+  it("fetches creator profile and includes in prompt", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue({
+      id: "cp-1",
+      user_id: "user-1",
+      niches: ["marketing"],
+      goals: ["get_clients"],
+      target_audience: "Small businesses",
+      created_at: null,
+      updated_at: null,
+    });
+    mockSupabaseForSuggest();
+    const mockCreate = mockOpenAIResponse(JSON.stringify(validSuggestions));
+
+    await suggestExperiments("user-1");
+
+    expect(getCreatorProfile).toHaveBeenCalledWith("user-1");
+    const userMsg = mockCreate.mock.calls[0][0].messages[1].content;
+    expect(userMsg).toContain("Creator Profile");
+  });
+
+  it("works when no creator profile exists", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue(null);
+    mockSupabaseForSuggest();
+    mockOpenAIResponse(JSON.stringify(validSuggestions));
+
+    const result = await suggestExperiments("user-1");
+    expect(result).toHaveLength(2);
   });
 });
 

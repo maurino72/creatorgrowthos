@@ -7,10 +7,16 @@ export interface OnboardingState {
 }
 
 export interface QuickProfileData {
-  primary_niche: string;
-  primary_goal: string;
+  niches: string[];
+  goals: string[];
   target_audience: string;
   custom_niche?: string;
+}
+
+export interface UpdateCreatorProfileData {
+  niches?: string[];
+  goals?: string[];
+  target_audience?: string;
 }
 
 export async function getOnboardingState(
@@ -49,23 +55,39 @@ export async function saveQuickProfile(
 ) {
   const supabase = createAdminClient();
 
-  // Store the effective niche (custom if "other")
-  const effectiveNiche =
-    data.primary_niche === "other" && data.custom_niche
-      ? data.custom_niche
-      : data.primary_niche;
+  // Resolve "other" niche with custom_niche value
+  const effectiveNiches = data.niches.map((niche) =>
+    niche === "other" && data.custom_niche ? data.custom_niche : niche,
+  );
 
   const { data: profile, error } = await supabase
     .from("creator_profiles")
     .upsert(
       {
         user_id: userId,
-        primary_niche: effectiveNiche,
-        primary_goal: data.primary_goal,
+        niches: effectiveNiches,
+        goals: data.goals,
         target_audience: data.target_audience,
       },
       { onConflict: "user_id" },
     )
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return profile;
+}
+
+export async function updateCreatorProfile(
+  userId: string,
+  data: UpdateCreatorProfileData,
+) {
+  const supabase = createAdminClient();
+
+  const { data: profile, error } = await supabase
+    .from("creator_profiles")
+    .update(data)
+    .eq("user_id", userId)
     .select()
     .single();
 

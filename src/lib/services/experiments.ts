@@ -5,9 +5,11 @@ import {
   buildExperimentsPrompt,
   SUGGEST_EXPERIMENTS_TEMPLATE,
   SUGGEST_EXPERIMENTS_VERSION,
+  type CreatorProfileContext,
 } from "@/lib/ai/prompts";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
+import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
 
@@ -40,8 +42,14 @@ export async function suggestExperiments(userId: string, platform?: string) {
     throw new InsufficientDataError(context.creatorSummary.totalPosts);
   }
 
-  // 3. Build prompt
-  const prompt = buildExperimentsPrompt(context);
+  // 3. Fetch creator profile for context
+  const profile = await getCreatorProfile(userId);
+  const creatorProfile: CreatorProfileContext | undefined = profile
+    ? { niches: profile.niches ?? [], goals: profile.goals ?? [], targetAudience: profile.target_audience }
+    : undefined;
+
+  // 4. Build prompt
+  const prompt = buildExperimentsPrompt(context, creatorProfile);
 
   // 4. Call OpenAI
   const openai = getOpenAIClient();

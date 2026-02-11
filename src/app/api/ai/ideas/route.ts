@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     if (err instanceof InsufficientDataError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    console.error("[POST /api/ai/ideas]", err);
     return NextResponse.json(
       { error: "Failed to generate ideas" },
       { status: 500 },

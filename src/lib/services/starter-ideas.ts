@@ -8,8 +8,8 @@ export interface StarterIdea {
 }
 
 export interface StarterProfileInput {
-  primary_niche: string;
-  primary_goal: string;
+  niches: string[];
+  goals: string[];
   target_audience: string;
 }
 
@@ -32,8 +32,8 @@ Each idea should include:
 Return JSON: { "ideas": [...] }`;
 
     const userPrompt = `Creator profile:
-- Niche: ${profile.primary_niche}
-- Goal: ${profile.primary_goal}
+- Niches: ${profile.niches.join(", ")}
+- Goals: ${profile.goals.join(", ")}
 - Target audience: ${profile.target_audience}
 
 Generate 10 content ideas tailored to this creator. Mix formats: stories, tips, opinions, questions, and lists.`;

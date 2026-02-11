@@ -5,9 +5,11 @@ import {
   buildInsightsPrompt,
   GENERATE_INSIGHTS_TEMPLATE,
   GENERATE_INSIGHTS_VERSION,
+  type CreatorProfileContext,
 } from "@/lib/ai/prompts";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
+import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
 
@@ -39,8 +41,14 @@ export async function generateInsights(userId: string, platform?: string) {
     throw new InsufficientDataError(context.creatorSummary.totalPosts);
   }
 
-  // 3. Build prompt
-  const prompt = buildInsightsPrompt(context);
+  // 3. Fetch creator profile for context
+  const profile = await getCreatorProfile(userId);
+  const creatorProfile: CreatorProfileContext | undefined = profile
+    ? { niches: profile.niches ?? [], goals: profile.goals ?? [], targetAudience: profile.target_audience }
+    : undefined;
+
+  // 4. Build prompt
+  const prompt = buildInsightsPrompt(context, creatorProfile);
 
   // 4. Call OpenAI
   const openai = getOpenAIClient();

@@ -10,41 +10,78 @@ describe("generateStarterIdeas", () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
   });
 
-  it("generates ideas based on profile data", async () => {
+  it("generates ideas based on profile data with arrays", async () => {
     const mockIdeas = [
       { idea: "Share your origin story", hook: "I didn't plan to..." },
       { idea: "A mistake that taught you", hook: "Last year..." },
       { idea: "Your contrarian take", hook: "Unpopular opinion..." },
     ];
 
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ ideas: mockIdeas }),
+          },
+        },
+      ],
+      usage: { prompt_tokens: 100, completion_tokens: 200 },
+    });
+
     vi.mocked(OpenAI).mockImplementation(
       () =>
         ({
           chat: {
-            completions: {
-              create: vi.fn().mockResolvedValue({
-                choices: [
-                  {
-                    message: {
-                      content: JSON.stringify({ ideas: mockIdeas }),
-                    },
-                  },
-                ],
-                usage: { prompt_tokens: 100, completion_tokens: 200 },
-              }),
-            },
+            completions: { create: mockCreate },
           },
         }) as never,
     );
 
     const result = await generateStarterIdeas({
-      primary_niche: "tech_software",
-      primary_goal: "build_authority",
+      niches: ["tech_software", "marketing"],
+      goals: ["build_authority", "grow_audience"],
       target_audience: "Early-stage SaaS founders",
     });
 
     expect(result).toHaveLength(3);
     expect(result[0].idea).toBe("Share your origin story");
+
+    // Verify the prompt contains joined niches/goals
+    const userPrompt = mockCreate.mock.calls[0][0].messages[1].content;
+    expect(userPrompt).toContain("tech_software, marketing");
+    expect(userPrompt).toContain("build_authority, grow_audience");
+  });
+
+  it("works with single niche and goal", async () => {
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ ideas: [{ idea: "Test", hook: "Hook" }] }),
+          },
+        },
+      ],
+      usage: { prompt_tokens: 100, completion_tokens: 100 },
+    });
+
+    vi.mocked(OpenAI).mockImplementation(
+      () =>
+        ({
+          chat: {
+            completions: { create: mockCreate },
+          },
+        }) as never,
+    );
+
+    const result = await generateStarterIdeas({
+      niches: ["tech_software"],
+      goals: ["build_authority"],
+      target_audience: "Developers",
+    });
+
+    expect(result).toHaveLength(1);
+    const userPrompt = mockCreate.mock.calls[0][0].messages[1].content;
+    expect(userPrompt).toContain("tech_software");
   });
 
   it("returns empty array when AI fails", async () => {
@@ -60,8 +97,8 @@ describe("generateStarterIdeas", () => {
     );
 
     const result = await generateStarterIdeas({
-      primary_niche: "tech_software",
-      primary_goal: "build_authority",
+      niches: ["tech_software"],
+      goals: ["build_authority"],
       target_audience: "SaaS founders",
     });
 
@@ -84,8 +121,8 @@ describe("generateStarterIdeas", () => {
     );
 
     const result = await generateStarterIdeas({
-      primary_niche: "marketing",
-      primary_goal: "grow_audience",
+      niches: ["marketing"],
+      goals: ["grow_audience"],
       target_audience: "Marketers",
     });
 

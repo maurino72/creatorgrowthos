@@ -23,8 +23,8 @@ export async function POST(_request: Request) {
   }
 
   const ideas = await generateStarterIdeas({
-    primary_niche: profile.primary_niche,
-    primary_goal: profile.primary_goal,
+    niches: profile.niches,
+    goals: profile.goals,
     target_audience: profile.target_audience,
   });
 

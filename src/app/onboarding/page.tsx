@@ -35,8 +35,8 @@ function OnboardingContent() {
   const initialStep = onboardingState?.onboarding_step ?? "welcome";
   const [currentStep, setCurrentStep] = useState<string>(initialStep);
   const [profileData, setProfileData] = useState<QuickProfileInput>({
-    primary_niche: "",
-    primary_goal: "",
+    niches: [],
+    goals: [],
     target_audience: "",
   });
   const [customNiche, setCustomNiche] = useState("");
@@ -81,13 +81,13 @@ function OnboardingContent() {
 
   function handleProfileSubmit() {
     const errors: Record<string, string> = {};
-    if (!profileData.primary_niche) errors.niche = "Pick your niche";
-    if (!profileData.primary_goal) errors.goal = "Choose your goal";
+    if (profileData.niches.length === 0) errors.niche = "Pick at least one niche";
+    if (profileData.goals.length === 0) errors.goal = "Choose at least one goal";
     if (!profileData.target_audience || profileData.target_audience.length < 5)
       errors.audience = "At least 5 characters";
     if (profileData.target_audience.length > 100)
       errors.audience = "Max 100 characters";
-    if (profileData.primary_niche === "other" && !customNiche)
+    if (profileData.niches.includes("other") && !customNiche)
       errors.niche = "Enter your custom niche";
 
     if (Object.keys(errors).length > 0) {
@@ -99,7 +99,7 @@ function OnboardingContent() {
     saveProfile.mutate(
       {
         ...profileData,
-        ...(profileData.primary_niche === "other" && { custom_niche: customNiche }),
+        ...(profileData.niches.includes("other") && { custom_niche: customNiche }),
       },
       {
         onSuccess: () => goToStep("import"),
@@ -378,6 +378,22 @@ function QuickProfileStep({
   onCustomNicheChange: (value: string) => void;
   onSubmit: () => void;
 }) {
+  function toggleNiche(value: string) {
+    if (data.niches.includes(value)) {
+      onChange({ ...data, niches: data.niches.filter((n) => n !== value) });
+    } else if (data.niches.length < 3) {
+      onChange({ ...data, niches: [...data.niches, value] });
+    }
+  }
+
+  function toggleGoal(value: string) {
+    if (data.goals.includes(value)) {
+      onChange({ ...data, goals: data.goals.filter((g) => g !== value) });
+    } else if (data.goals.length < 3) {
+      onChange({ ...data, goals: [...data.goals, value] });
+    }
+  }
+
   return (
     <div>
       <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
@@ -387,33 +403,38 @@ function QuickProfileStep({
         This helps us give you personalized ideas (30 seconds)
       </p>
 
-      {/* Niche dropdown */}
+      {/* Niche multi-select chips */}
       <div className="mb-5">
-        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
-          What&apos;s your niche?
-        </label>
-        <select
-          value={data.primary_niche}
-          onChange={(e) =>
-            onChange({ ...data, primary_niche: e.target.value })
-          }
-          className={cn(
-            "w-full rounded border bg-transparent px-3 py-2.5 text-sm text-foreground outline-none transition-colors",
-            errors.niche
-              ? "border-red-500/50"
-              : "border-input focus:border-ring/50",
-          )}
-        >
-          <option value="" className="bg-background">
-            Select a niche...
-          </option>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+            What are your niches?
+          </label>
+          <span data-testid="niche-counter" className="text-[10px] font-mono tabular-nums text-muted-foreground/30">
+            {data.niches.length}/3 selected
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {NICHES.map((niche) => (
-            <option key={niche.value} value={niche.value} className="bg-background">
-              {niche.label} — {niche.hint}
-            </option>
+            <button
+              key={niche.value}
+              type="button"
+              data-testid={`niche-chip-${niche.value}`}
+              onClick={() => toggleNiche(niche.value)}
+              className={cn(
+                "cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-all duration-200",
+                data.niches.includes(niche.value)
+                  ? "border-primary/40 bg-primary/10 text-foreground"
+                  : "border-input/60 text-muted-foreground/60 hover:border-input hover:text-muted-foreground",
+                data.niches.length >= 3 &&
+                  !data.niches.includes(niche.value) &&
+                  "opacity-40 cursor-not-allowed",
+              )}
+            >
+              {niche.label}
+            </button>
           ))}
-        </select>
-        {data.primary_niche === "other" && (
+        </div>
+        {data.niches.includes("other") && (
           <input
             type="text"
             placeholder="Enter your niche..."
@@ -428,24 +449,30 @@ function QuickProfileStep({
         )}
       </div>
 
-      {/* Goal cards */}
+      {/* Goal multi-select cards */}
       <div className="mb-5">
-        <label className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-editorial-label">
-          What&apos;s your main goal?
-        </label>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-[10px] uppercase tracking-[0.2em] text-editorial-label">
+            What are your goals?
+          </label>
+          <span data-testid="goal-counter" className="text-[10px] font-mono tabular-nums text-muted-foreground/30">
+            {data.goals.length}/3 selected
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           {GOALS.map((goal) => (
             <button
               key={goal.value}
               type="button"
-              onClick={() =>
-                onChange({ ...data, primary_goal: goal.value })
-              }
+              onClick={() => toggleGoal(goal.value)}
               className={cn(
                 "cursor-pointer rounded border p-3 text-left transition-all duration-200",
-                data.primary_goal === goal.value
+                data.goals.includes(goal.value)
                   ? "border-primary/30 bg-foreground/[0.04]"
                   : "border-input/60 hover:border-input hover:bg-foreground/[0.02]",
+                data.goals.length >= 3 &&
+                  !data.goals.includes(goal.value) &&
+                  "opacity-40 cursor-not-allowed",
               )}
             >
               <p className="text-sm font-medium text-foreground">{goal.label}</p>

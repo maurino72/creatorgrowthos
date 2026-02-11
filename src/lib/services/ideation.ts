@@ -5,9 +5,11 @@ import {
   buildIdeasPrompt,
   GENERATE_IDEAS_TEMPLATE,
   GENERATE_IDEAS_VERSION,
+  type CreatorProfileContext,
 } from "@/lib/ai/prompts";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
+import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
 
@@ -52,8 +54,14 @@ export async function generateContentIdeas(
     (r: { body: string }) => r.body,
   );
 
-  // 4. Build prompt
-  const prompt = buildIdeasPrompt(context, recentPosts);
+  // 4. Fetch creator profile for context
+  const profile = await getCreatorProfile(userId);
+  const creatorProfile: CreatorProfileContext | undefined = profile
+    ? { niches: profile.niches ?? [], goals: profile.goals ?? [], targetAudience: profile.target_audience }
+    : undefined;
+
+  // 5. Build prompt
+  const prompt = buildIdeasPrompt(context, recentPosts, creatorProfile);
 
   // 5. Call OpenAI
   const openai = getOpenAIClient();
