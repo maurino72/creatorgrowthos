@@ -4,16 +4,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
-vi.mock("openai", () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: vi.fn(),
-        },
-      },
-    })),
-  };
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
 });
 
 vi.mock("./aggregation", () => ({
@@ -29,10 +22,10 @@ vi.mock("./profiles", () => ({
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chatCompletion } from "@/lib/ai/client";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
-import OpenAI from "openai";
 import type { InsightContext } from "./aggregation";
 import {
   suggestExperiments,
@@ -85,17 +78,15 @@ const validSuggestions = [
   },
 ];
 
-function mockOpenAIResponse(content: string) {
-  const mockCreate = vi.fn().mockResolvedValue({
-    choices: [{ message: { content } }],
-    usage: { prompt_tokens: 500, completion_tokens: 300 },
+function mockChatCompletion(content: string) {
+  const mock = vi.mocked(chatCompletion).mockResolvedValue({
+    content,
+    tokensIn: 500,
+    tokensOut: 300,
+    latencyMs: 100,
+    model: "gpt-4o-mini",
   });
-  vi.mocked(OpenAI).mockImplementation(() => ({
-    chat: {
-      completions: { create: mockCreate },
-    },
-  }) as never);
-  return mockCreate;
+  return mock;
 }
 
 function mockSupabaseForSuggest() {
@@ -119,13 +110,12 @@ function mockSupabaseForSuggest() {
 describe("suggestExperiments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.OPENAI_API_KEY = "test-key";
   });
 
   it("returns experiment suggestions from AI", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabaseForSuggest();
-    mockOpenAIResponse(JSON.stringify(validSuggestions));
+    mockChatCompletion(JSON.stringify(validSuggestions));
 
     const result = await suggestExperiments("user-1");
     expect(result).toHaveLength(2);
@@ -134,7 +124,7 @@ describe("suggestExperiments", () => {
   it("passes platform to getAggregatedData when provided", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabaseForSuggest();
-    mockOpenAIResponse(JSON.stringify(validSuggestions));
+    mockChatCompletion(JSON.stringify(validSuggestions));
 
     await suggestExperiments("user-1", "twitter");
 
@@ -159,7 +149,7 @@ describe("suggestExperiments", () => {
   it("logs the AI call", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabaseForSuggest();
-    mockOpenAIResponse(JSON.stringify(validSuggestions));
+    mockChatCompletion(JSON.stringify(validSuggestions));
 
     await suggestExperiments("user-1");
     expect(insertAiLog).toHaveBeenCalledWith(
@@ -182,12 +172,13 @@ describe("suggestExperiments", () => {
       updated_at: null,
     });
     mockSupabaseForSuggest();
-    const mockCreate = mockOpenAIResponse(JSON.stringify(validSuggestions));
+    mockChatCompletion(JSON.stringify(validSuggestions));
 
     await suggestExperiments("user-1");
 
     expect(getCreatorProfile).toHaveBeenCalledWith("user-1");
-    const userMsg = mockCreate.mock.calls[0][0].messages[1].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userMsg = callArgs.messages[1].content;
     expect(userMsg).toContain("Creator Profile");
   });
 
@@ -195,7 +186,7 @@ describe("suggestExperiments", () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     vi.mocked(getCreatorProfile).mockResolvedValue(null);
     mockSupabaseForSuggest();
-    mockOpenAIResponse(JSON.stringify(validSuggestions));
+    mockChatCompletion(JSON.stringify(validSuggestions));
 
     const result = await suggestExperiments("user-1");
     expect(result).toHaveLength(2);

@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { experimentSuggestionsArraySchema } from "@/lib/ai/experiments";
 import {
@@ -14,10 +14,6 @@ import { getCreatorProfile } from "./profiles";
 const MODEL = "gpt-4o-mini";
 
 export const MIN_EXPERIMENT_POSTS = 15;
-
-function getOpenAIClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
 
 export class InsufficientDataError extends Error {
   constructor(totalPosts: number) {
@@ -52,32 +48,29 @@ export async function suggestExperiments(userId: string, platform?: string) {
   const prompt = buildExperimentsPrompt(context, creatorProfile);
 
   // 4. Call OpenAI
-  const openai = getOpenAIClient();
-  const startTime = Date.now();
-
-  const completion = await openai.chat.completions.create({
+  const result = await chatCompletion({
     model: MODEL,
-    temperature: 0.6,
-    max_tokens: 1200,
-    response_format: { type: "json_object" },
     messages: [
       { role: "system", content: prompt.system },
       { role: "user", content: prompt.user },
     ],
+    maxTokens: 1200,
+    temperature: 0.6,
+    responseFormat: { type: "json_object" },
   });
-
-  const latencyMs = Date.now() - startTime;
-  const rawContent = completion.choices[0]?.message?.content ?? "";
-  const tokensIn = completion.usage?.prompt_tokens ?? 0;
-  const tokensOut = completion.usage?.completion_tokens ?? 0;
 
   // 5. Parse and validate
   let suggestions;
   try {
-    const parsed = JSON.parse(rawContent);
-    const arr = Array.isArray(parsed) ? parsed : parsed.experiments;
+    const arr = extractJsonPayload(result.content, { arrayKeys: ["experiments"] });
     suggestions = experimentSuggestionsArraySchema.parse(arr);
-  } catch {
+  } catch (parseError) {
+    console.error("[experiments] Parse/validation failed", {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      rawContentPreview: result.content.slice(0, 500),
+      model: result.model,
+    });
+
     await insertAiLog({
       userId,
       actionType: "suggest_experiments",
@@ -86,14 +79,14 @@ export async function suggestExperiments(userId: string, platform?: string) {
       promptVersion: Number(SUGGEST_EXPERIMENTS_VERSION),
       contextPayload: { totalPosts: context.creatorSummary.totalPosts },
       fullPrompt: prompt.fullPrompt,
-      response: rawContent,
-      tokensIn,
-      tokensOut,
-      latencyMs,
+      response: result.content,
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      latencyMs: result.latencyMs,
       wasUsed: false,
     });
 
-    throw new Error("Failed to parse AI experiments response");
+    throw new Error("Failed to parse AI experiments response", { cause: parseError });
   }
 
   // 6. Log success
@@ -105,10 +98,10 @@ export async function suggestExperiments(userId: string, platform?: string) {
     promptVersion: Number(SUGGEST_EXPERIMENTS_VERSION),
     contextPayload: { totalPosts: context.creatorSummary.totalPosts },
     fullPrompt: prompt.fullPrompt,
-    response: rawContent,
-    tokensIn,
-    tokensOut,
-    latencyMs,
+    response: result.content,
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    latencyMs: result.latencyMs,
     wasUsed: true,
   });
 

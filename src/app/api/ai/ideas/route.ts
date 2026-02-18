@@ -22,9 +22,17 @@ export async function POST(request: Request) {
     if (err instanceof InsufficientDataError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error("[POST /api/ai/ideas]", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const causeMessage = err instanceof Error && err.cause instanceof Error
+      ? err.cause.message
+      : undefined;
+    console.error("[POST /api/ai/ideas]", message, causeMessage ? `cause: ${causeMessage}` : "", err);
     return NextResponse.json(
-      { error: "Failed to generate ideas" },
+      {
+        error: "Failed to generate ideas",
+        detail: message,
+        ...(causeMessage && { cause: causeMessage }),
+      },
       { status: 500 },
     );
   }

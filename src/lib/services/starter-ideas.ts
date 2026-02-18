@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 
 const MODEL = "gpt-4o-mini";
 
@@ -13,16 +13,10 @@ export interface StarterProfileInput {
   target_audience: string;
 }
 
-function getOpenAIClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
-
 export async function generateStarterIdeas(
   profile: StarterProfileInput,
 ): Promise<StarterIdea[]> {
   try {
-    const openai = getOpenAIClient();
-
     const systemPrompt = `You are a content strategist helping creators get started. Generate 10 content ideas as a "Starter Pack" for a new creator.
 
 Each idea should include:
@@ -38,20 +32,18 @@ Return JSON: { "ideas": [...] }`;
 
 Generate 10 content ideas tailored to this creator. Mix formats: stories, tips, opinions, questions, and lists.`;
 
-    const completion = await openai.chat.completions.create({
+    const result = await chatCompletion({
       model: MODEL,
-      temperature: 0.8,
-      max_tokens: 1500,
-      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
+      maxTokens: 1500,
+      temperature: 0.8,
+      responseFormat: { type: "json_object" },
     });
 
-    const rawContent = completion.choices[0]?.message?.content ?? "";
-    const parsed = JSON.parse(rawContent);
-    const ideas = Array.isArray(parsed) ? parsed : parsed.ideas;
+    const ideas = extractJsonPayload(result.content, { arrayKeys: ["ideas"] });
 
     if (!Array.isArray(ideas)) return [];
     return ideas as StarterIdea[];

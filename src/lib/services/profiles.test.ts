@@ -6,6 +6,7 @@ import {
   completeOnboarding,
   getCreatorProfile,
   updateCreatorProfile,
+  clearProfileCache,
 } from "./profiles";
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -47,6 +48,7 @@ const userId = "user-123";
 describe("profiles service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearProfileCache();
   });
 
   describe("getOnboardingState", () => {

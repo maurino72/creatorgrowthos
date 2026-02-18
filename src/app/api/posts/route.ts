@@ -25,30 +25,39 @@ export async function POST(request: Request) {
     );
   }
 
-  // Verify user has active connections for selected platforms
-  for (const platform of parsed.data.platforms) {
-    const connection = await getConnectionByPlatform(user.id, platform);
-    if (!connection || connection.status !== "active") {
-      return NextResponse.json(
-        { error: `No active connection for ${platform}` },
-        { status: 400 },
+  try {
+    // Verify user has active connections for selected platforms
+    for (const platform of parsed.data.platforms) {
+      const connection = await getConnectionByPlatform(user.id, platform);
+      if (!connection || connection.status !== "active") {
+        return NextResponse.json(
+          { error: `No active connection for ${platform}` },
+          { status: 400 },
+        );
+      }
+    }
+
+    const post = await createPost(user.id, parsed.data);
+
+    // Send Inngest events (fire-and-forget)
+    sendPostCreated(post.id, user.id).catch((err) =>
+      console.error("[inngest] Failed to send post created:", err),
+    );
+    if (parsed.data.scheduled_at) {
+      sendPostScheduled(post.id, user.id, parsed.data.scheduled_at).catch((err) =>
+        console.error("[inngest] Failed to send schedule:", err),
       );
     }
-  }
 
-  const post = await createPost(user.id, parsed.data);
-
-  // Send Inngest events (fire-and-forget)
-  sendPostCreated(post.id, user.id).catch((err) =>
-    console.error("[inngest] Failed to send post created:", err),
-  );
-  if (parsed.data.scheduled_at) {
-    sendPostScheduled(post.id, user.id, parsed.data.scheduled_at).catch((err) =>
-      console.error("[inngest] Failed to send schedule:", err),
+    return NextResponse.json({ post }, { status: 201 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[POST /api/posts]", message, err);
+    return NextResponse.json(
+      { error: "Failed to create post", detail: message },
+      { status: 500 },
     );
   }
-
-  return NextResponse.json({ post }, { status: 201 });
 }
 
 export async function GET(request: Request) {

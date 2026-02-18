@@ -9,18 +9,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
-vi.mock("openai", () => {
-  const mockCreate = vi.fn();
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    })),
-    __mockCreate: mockCreate,
-  };
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
 });
 
 vi.mock("./ai-logs", () => ({
@@ -28,12 +19,17 @@ vi.mock("./ai-logs", () => ({
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chatCompletion } from "@/lib/ai/client";
 import { insertAiLog } from "./ai-logs";
 
-// Access the mock create function
-async function getMockCreate() {
-  const mod = await import("openai");
-  return (mod as unknown as { __mockCreate: ReturnType<typeof vi.fn> }).__mockCreate;
+function mockChatCompletionResponse(content: string) {
+  vi.mocked(chatCompletion).mockResolvedValueOnce({
+    content,
+    tokensIn: 150,
+    tokensOut: 30,
+    latencyMs: 50,
+    model: "gpt-4o-mini",
+  });
 }
 
 const validAiResponse = {
@@ -109,16 +105,11 @@ function mockSupabaseForNeedingClassification(posts: Array<{ id: string; body: s
 describe("classifyPost", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
   });
 
   it("fetches post, calls OpenAI, updates post, and logs the call", async () => {
     const { updateSelectSingle } = mockSupabaseForClassify();
-    const mockCreate = await getMockCreate();
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: JSON.stringify(validAiResponse) } }],
-      usage: { prompt_tokens: 150, completion_tokens: 30 },
-    });
+    mockChatCompletionResponse(JSON.stringify(validAiResponse));
 
     const result = await classifyPost("user-1", "post-1");
 
@@ -138,19 +129,11 @@ describe("classifyPost", () => {
 
   it("normalizes topics from AI response", async () => {
     mockSupabaseForClassify();
-    const mockCreate = await getMockCreate();
-    mockCreate.mockResolvedValueOnce({
-      choices: [{
-        message: {
-          content: JSON.stringify({
-            intent: "educate",
-            content_type: "single",
-            topics: ["Machine Learning", " AI ", "Building in Public"],
-          }),
-        },
-      }],
-      usage: { prompt_tokens: 100, completion_tokens: 25 },
-    });
+    mockChatCompletionResponse(JSON.stringify({
+      intent: "educate",
+      content_type: "single",
+      topics: ["Machine Learning", " AI ", "Building in Public"],
+    }));
 
     const result = await classifyPost("user-1", "post-1");
     expect(result.topics).toEqual(["machine-learning", "ai", "building-in-public"]);
@@ -170,41 +153,25 @@ describe("classifyPost", () => {
 
   it("throws when OpenAI returns invalid JSON", async () => {
     mockSupabaseForClassify();
-    const mockCreate = await getMockCreate();
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: "Not valid JSON at all" } }],
-      usage: { prompt_tokens: 100, completion_tokens: 10 },
-    });
+    mockChatCompletionResponse("Not valid JSON at all");
 
     await expect(classifyPost("user-1", "post-1")).rejects.toThrow("classification");
   });
 
   it("throws when OpenAI returns invalid classification values", async () => {
     mockSupabaseForClassify();
-    const mockCreate = await getMockCreate();
-    mockCreate.mockResolvedValueOnce({
-      choices: [{
-        message: {
-          content: JSON.stringify({
-            intent: "spam",
-            content_type: "single",
-            topics: ["ai"],
-          }),
-        },
-      }],
-      usage: { prompt_tokens: 100, completion_tokens: 20 },
-    });
+    mockChatCompletionResponse(JSON.stringify({
+      intent: "spam",
+      content_type: "single",
+      topics: ["ai"],
+    }));
 
     await expect(classifyPost("user-1", "post-1")).rejects.toThrow("classification");
   });
 
   it("logs failed AI call with was_used=false", async () => {
     mockSupabaseForClassify();
-    const mockCreate = await getMockCreate();
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: "invalid json" } }],
-      usage: { prompt_tokens: 100, completion_tokens: 10 },
-    });
+    mockChatCompletionResponse("invalid json");
 
     await classifyPost("user-1", "post-1").catch(() => {});
 

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TTLCache } from "@/lib/utils/cache";
 import type { OnboardingStep } from "@/lib/validators/onboarding";
 
 export interface OnboardingState {
@@ -109,7 +110,13 @@ export async function completeOnboarding(userId: string) {
   if (error) throw new Error(error.message);
 }
 
-export async function getCreatorProfile(userId: string) {
+const profileCache = new TTLCache<Awaited<ReturnType<typeof getCreatorProfileFromDb>>>(10 * 60 * 1000); // 10 min
+
+export function clearProfileCache(): void {
+  profileCache.clear();
+}
+
+async function getCreatorProfileFromDb(userId: string) {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -120,4 +127,13 @@ export async function getCreatorProfile(userId: string) {
 
   if (error && error.code !== "PGRST116") throw new Error(error.message);
   return data ?? null;
+}
+
+export async function getCreatorProfile(userId: string) {
+  const cached = profileCache.get(userId);
+  if (cached !== undefined) return cached;
+
+  const profile = await getCreatorProfileFromDb(userId);
+  profileCache.set(userId, profile);
+  return profile;
 }

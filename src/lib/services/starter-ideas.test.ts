@@ -1,13 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateStarterIdeas } from "./starter-ideas";
-import OpenAI from "openai";
 
-vi.mock("openai");
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
+});
+
+import { chatCompletion } from "@/lib/ai/client";
+import { generateStarterIdeas } from "./starter-ideas";
+
+function mockChatCompletion(content: string) {
+  vi.mocked(chatCompletion).mockResolvedValue({
+    content,
+    tokensIn: 100,
+    tokensOut: 200,
+    latencyMs: 50,
+    model: "gpt-4o-mini",
+  });
+}
 
 describe("generateStarterIdeas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
   });
 
   it("generates ideas based on profile data with arrays", async () => {
@@ -17,25 +30,7 @@ describe("generateStarterIdeas", () => {
       { idea: "Your contrarian take", hook: "Unpopular opinion..." },
     ];
 
-    const mockCreate = vi.fn().mockResolvedValue({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({ ideas: mockIdeas }),
-          },
-        },
-      ],
-      usage: { prompt_tokens: 100, completion_tokens: 200 },
-    });
-
-    vi.mocked(OpenAI).mockImplementation(
-      () =>
-        ({
-          chat: {
-            completions: { create: mockCreate },
-          },
-        }) as never,
-    );
+    mockChatCompletion(JSON.stringify({ ideas: mockIdeas }));
 
     const result = await generateStarterIdeas({
       niches: ["tech_software", "marketing"],
@@ -47,31 +42,14 @@ describe("generateStarterIdeas", () => {
     expect(result[0].idea).toBe("Share your origin story");
 
     // Verify the prompt contains joined niches/goals
-    const userPrompt = mockCreate.mock.calls[0][0].messages[1].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userPrompt = callArgs.messages[1].content;
     expect(userPrompt).toContain("tech_software, marketing");
     expect(userPrompt).toContain("build_authority, grow_audience");
   });
 
   it("works with single niche and goal", async () => {
-    const mockCreate = vi.fn().mockResolvedValue({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({ ideas: [{ idea: "Test", hook: "Hook" }] }),
-          },
-        },
-      ],
-      usage: { prompt_tokens: 100, completion_tokens: 100 },
-    });
-
-    vi.mocked(OpenAI).mockImplementation(
-      () =>
-        ({
-          chat: {
-            completions: { create: mockCreate },
-          },
-        }) as never,
-    );
+    mockChatCompletion(JSON.stringify({ ideas: [{ idea: "Test", hook: "Hook" }] }));
 
     const result = await generateStarterIdeas({
       niches: ["tech_software"],
@@ -80,21 +58,13 @@ describe("generateStarterIdeas", () => {
     });
 
     expect(result).toHaveLength(1);
-    const userPrompt = mockCreate.mock.calls[0][0].messages[1].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userPrompt = callArgs.messages[1].content;
     expect(userPrompt).toContain("tech_software");
   });
 
   it("returns empty array when AI fails", async () => {
-    vi.mocked(OpenAI).mockImplementation(
-      () =>
-        ({
-          chat: {
-            completions: {
-              create: vi.fn().mockRejectedValue(new Error("API error")),
-            },
-          },
-        }) as never,
-    );
+    vi.mocked(chatCompletion).mockRejectedValue(new Error("API error"));
 
     const result = await generateStarterIdeas({
       niches: ["tech_software"],
@@ -106,19 +76,7 @@ describe("generateStarterIdeas", () => {
   });
 
   it("returns empty array when AI returns unparseable content", async () => {
-    vi.mocked(OpenAI).mockImplementation(
-      () =>
-        ({
-          chat: {
-            completions: {
-              create: vi.fn().mockResolvedValue({
-                choices: [{ message: { content: "not json" } }],
-                usage: { prompt_tokens: 0, completion_tokens: 0 },
-              }),
-            },
-          },
-        }) as never,
-    );
+    mockChatCompletion("not json");
 
     const result = await generateStarterIdeas({
       niches: ["marketing"],

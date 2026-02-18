@@ -4,16 +4,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
-vi.mock("openai", () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: vi.fn(),
-        },
-      },
-    })),
-  };
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
 });
 
 vi.mock("./ai-logs", () => ({
@@ -25,9 +18,9 @@ vi.mock("./profiles", () => ({
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chatCompletion } from "@/lib/ai/client";
 import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
-import OpenAI from "openai";
 import { improveContent } from "./improvement";
 
 const validImprovement = {
@@ -47,17 +40,15 @@ const validImprovement = {
   improved_version: "I grew to $10K MRR. Here's the playbook:\n\n...",
 };
 
-function mockOpenAIResponse(content: string) {
-  const mockCreate = vi.fn().mockResolvedValue({
-    choices: [{ message: { content } }],
-    usage: { prompt_tokens: 400, completion_tokens: 250 },
+function mockChatCompletion(content: string) {
+  const mock = vi.mocked(chatCompletion).mockResolvedValue({
+    content,
+    tokensIn: 400,
+    tokensOut: 250,
+    latencyMs: 100,
+    model: "gpt-4o-mini",
   });
-  vi.mocked(OpenAI).mockImplementation(() => ({
-    chat: {
-      completions: { create: mockCreate },
-    },
-  }) as never);
-  return mockCreate;
+  return mock;
 }
 
 function mockSupabase() {
@@ -82,12 +73,11 @@ function mockSupabase() {
 describe("improveContent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.OPENAI_API_KEY = "test-key";
   });
 
   it("returns validated improvement from AI", async () => {
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(validImprovement));
+    mockChatCompletion(JSON.stringify(validImprovement));
 
     const result = await improveContent("user-1", "Here's how I built my SaaS");
     expect(result.overall_assessment).toContain("Strong educational");
@@ -97,7 +87,7 @@ describe("improveContent", () => {
 
   it("logs the AI call on success", async () => {
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(validImprovement));
+    mockChatCompletion(JSON.stringify(validImprovement));
 
     await improveContent("user-1", "Some draft");
     expect(insertAiLog).toHaveBeenCalledWith(
@@ -111,7 +101,7 @@ describe("improveContent", () => {
 
   it("logs and rethrows on invalid AI response", async () => {
     mockSupabase();
-    mockOpenAIResponse("not json");
+    mockChatCompletion("not json");
 
     await expect(
       improveContent("user-1", "Some draft"),
@@ -131,7 +121,7 @@ describe("improveContent", () => {
       limit: vi.fn().mockReturnValue({ data: [], error: null }),
     };
     vi.mocked(createAdminClient).mockReturnValue(chain as never);
-    mockOpenAIResponse(JSON.stringify(validImprovement));
+    mockChatCompletion(JSON.stringify(validImprovement));
 
     const result = await improveContent("user-1", "Some draft");
     expect(result.improvements).toHaveLength(2);
@@ -148,12 +138,13 @@ describe("improveContent", () => {
       updated_at: null,
     });
     mockSupabase();
-    const mockCreate = mockOpenAIResponse(JSON.stringify(validImprovement));
+    mockChatCompletion(JSON.stringify(validImprovement));
 
     await improveContent("user-1", "Some draft about design");
 
     expect(getCreatorProfile).toHaveBeenCalledWith("user-1");
-    const userMsg = mockCreate.mock.calls[0][0].messages[1].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userMsg = callArgs.messages[1].content;
     expect(userMsg).toContain("Creator Profile");
     expect(userMsg).toContain("Design");
   });
@@ -161,7 +152,7 @@ describe("improveContent", () => {
   it("works when no creator profile exists", async () => {
     vi.mocked(getCreatorProfile).mockResolvedValue(null);
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(validImprovement));
+    mockChatCompletion(JSON.stringify(validImprovement));
 
     const result = await improveContent("user-1", "Some draft");
     expect(result.improvements).toHaveLength(2);

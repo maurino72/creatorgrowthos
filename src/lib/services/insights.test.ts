@@ -4,16 +4,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
-vi.mock("openai", () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: vi.fn(),
-        },
-      },
-    })),
-  };
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
 });
 
 vi.mock("./aggregation", () => ({
@@ -29,10 +22,10 @@ vi.mock("./profiles", () => ({
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chatCompletion } from "@/lib/ai/client";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
-import OpenAI from "openai";
 import type { InsightContext } from "./aggregation";
 import {
   generateInsights,
@@ -100,17 +93,15 @@ const MOCK_AI_RESPONSE = JSON.stringify([
   },
 ]);
 
-function mockOpenAIResponse(content: string) {
-  const mockCreate = vi.fn().mockResolvedValue({
-    choices: [{ message: { content } }],
-    usage: { prompt_tokens: 500, completion_tokens: 200 },
+function mockChatCompletion(content: string) {
+  const mock = vi.mocked(chatCompletion).mockResolvedValue({
+    content,
+    tokensIn: 500,
+    tokensOut: 200,
+    latencyMs: 100,
+    model: "gpt-4o-mini",
   });
-  vi.mocked(OpenAI).mockImplementation(() => ({
-    chat: {
-      completions: { create: mockCreate },
-    },
-  }) as never);
-  return mockCreate;
+  return mock;
 }
 
 function mockSupabase() {
@@ -158,7 +149,7 @@ describe("generateInsights", () => {
 
   it("generates insights from aggregated data", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
-    mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockChatCompletion(MOCK_AI_RESPONSE);
     const chain = mockSupabase();
 
     const result = await generateInsights("user-1");
@@ -169,7 +160,7 @@ describe("generateInsights", () => {
 
   it("passes platform to getAggregatedData when provided", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
-    mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockChatCompletion(MOCK_AI_RESPONSE);
     mockSupabase();
 
     await generateInsights("user-1", "twitter");
@@ -188,7 +179,7 @@ describe("generateInsights", () => {
 
   it("stores each insight in the database", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
-    mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockChatCompletion(MOCK_AI_RESPONSE);
     const chain = mockSupabase();
 
     await generateInsights("user-1");
@@ -199,7 +190,7 @@ describe("generateInsights", () => {
 
   it("logs the AI call", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
-    mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockChatCompletion(MOCK_AI_RESPONSE);
     mockSupabase();
 
     await generateInsights("user-1");
@@ -216,7 +207,7 @@ describe("generateInsights", () => {
 
   it("logs failed parse and throws on invalid AI response", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
-    mockOpenAIResponse("not valid json");
+    mockChatCompletion("not valid json");
     mockSupabase();
 
     await expect(generateInsights("user-1")).rejects.toThrow("Failed to parse AI insights response");
@@ -227,7 +218,7 @@ describe("generateInsights", () => {
 
   it("logs failed validation when AI returns wrong schema", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
-    mockOpenAIResponse(JSON.stringify([{ type: "invalid" }]));
+    mockChatCompletion(JSON.stringify([{ type: "invalid" }]));
     mockSupabase();
 
     await expect(generateInsights("user-1")).rejects.toThrow("Failed to parse AI insights response");
@@ -247,21 +238,22 @@ describe("generateInsights", () => {
       created_at: null,
       updated_at: null,
     });
-    const mockCreate = mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockChatCompletion(MOCK_AI_RESPONSE);
     mockSupabase();
 
     await generateInsights("user-1");
 
     expect(getCreatorProfile).toHaveBeenCalledWith("user-1");
     // The prompt should contain creator profile info
-    const systemMsg = mockCreate.mock.calls[0][0].messages[0].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const systemMsg = callArgs.messages[0].content;
     expect(systemMsg).toContain("Creator Profile");
   });
 
   it("works when no creator profile exists", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
     vi.mocked(getCreatorProfile).mockResolvedValue(null);
-    mockOpenAIResponse(MOCK_AI_RESPONSE);
+    mockChatCompletion(MOCK_AI_RESPONSE);
     mockSupabase();
 
     const result = await generateInsights("user-1");

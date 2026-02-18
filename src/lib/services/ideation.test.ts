@@ -4,16 +4,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
-vi.mock("openai", () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: vi.fn(),
-        },
-      },
-    })),
-  };
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
 });
 
 vi.mock("./aggregation", () => ({
@@ -25,16 +18,21 @@ vi.mock("./ai-logs", () => ({
 }));
 
 vi.mock("./profiles", () => ({
-  getCreatorProfile: vi.fn(),
+  getCreatorProfile: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("./trending", () => ({
+  fetchTrendingTopics: vi.fn().mockResolvedValue([]),
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chatCompletion } from "@/lib/ai/client";
 import { getAggregatedData } from "./aggregation";
 import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
-import OpenAI from "openai";
+import { fetchTrendingTopics } from "./trending";
 import type { InsightContext } from "./aggregation";
-import { generateContentIdeas, MIN_IDEATION_POSTS } from "./ideation";
+import { generateContentIdeas, MIN_IDEATION_POSTS, clearIdeationCache } from "./ideation";
 
 const baseContext: InsightContext = {
   creatorSummary: {
@@ -91,17 +89,15 @@ const validIdeas = [
   },
 ];
 
-function mockOpenAIResponse(content: string) {
-  const mockCreate = vi.fn().mockResolvedValue({
-    choices: [{ message: { content } }],
-    usage: { prompt_tokens: 500, completion_tokens: 300 },
+function mockChatCompletion(content: string) {
+  const mock = vi.mocked(chatCompletion).mockResolvedValue({
+    content,
+    tokensIn: 500,
+    tokensOut: 300,
+    latencyMs: 100,
+    model: "gpt-5",
   });
-  vi.mocked(OpenAI).mockImplementation(() => ({
-    chat: {
-      completions: { create: mockCreate },
-    },
-  }) as never);
-  return mockCreate;
+  return mock;
 }
 
 function mockSupabase() {
@@ -126,13 +122,13 @@ function mockSupabase() {
 describe("generateContentIdeas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.OPENAI_API_KEY = "test-key";
+    clearIdeationCache();
   });
 
   it("returns validated ideas from AI", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(validIdeas));
+    mockChatCompletion(JSON.stringify(validIdeas));
 
     const result = await generateContentIdeas("user-1");
     expect(result).toHaveLength(3);
@@ -145,6 +141,7 @@ describe("generateContentIdeas", () => {
       ...baseContext,
       creatorSummary: { ...baseContext.creatorSummary, totalPosts: 5 },
     });
+    mockSupabase();
 
     await expect(generateContentIdeas("user-1")).rejects.toThrow(
       /insufficient data/i,
@@ -158,7 +155,7 @@ describe("generateContentIdeas", () => {
   it("logs the AI call on success", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(validIdeas));
+    mockChatCompletion(JSON.stringify(validIdeas));
 
     await generateContentIdeas("user-1");
     expect(insertAiLog).toHaveBeenCalledWith(
@@ -170,10 +167,10 @@ describe("generateContentIdeas", () => {
     );
   });
 
-  it("logs and rethrows on invalid AI response", async () => {
+  it("logs and rethrows on invalid AI response with cause", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabase();
-    mockOpenAIResponse("not json");
+    mockChatCompletion("not json");
 
     await expect(generateContentIdeas("user-1")).rejects.toThrow(
       /failed to parse/i,
@@ -185,10 +182,31 @@ describe("generateContentIdeas", () => {
     );
   });
 
+  it("includes cause and raw content preview in error on Zod validation failure", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    mockSupabase();
+    // Valid JSON but invalid schema (bad format value)
+    const badIdeas = [
+      { headline: "Test", format: "podcast", intent: "educate", topic: "ai", rationale: "r", suggested_hook: "h", confidence: "high" },
+      { headline: "Test2", format: "single", intent: "educate", topic: "ai", rationale: "r", suggested_hook: "h", confidence: "high" },
+      { headline: "Test3", format: "single", intent: "educate", topic: "ai", rationale: "r", suggested_hook: "h", confidence: "high" },
+    ];
+    mockChatCompletion(JSON.stringify(badIdeas));
+
+    try {
+      await generateContentIdeas("user-1");
+      expect.fail("should throw");
+    } catch (err) {
+      const error = err as Error;
+      expect(error.message).toContain("Failed to parse AI ideas response");
+      expect(error.cause).toBeDefined();
+    }
+  });
+
   it("handles AI response wrapped in { ideas: [...] }", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify({ ideas: validIdeas }));
+    mockChatCompletion(JSON.stringify({ ideas: validIdeas }));
 
     const result = await generateContentIdeas("user-1");
     expect(result).toHaveLength(3);
@@ -206,12 +224,13 @@ describe("generateContentIdeas", () => {
       updated_at: null,
     });
     mockSupabase();
-    const mockCreate = mockOpenAIResponse(JSON.stringify(validIdeas));
+    mockChatCompletion(JSON.stringify(validIdeas));
 
     await generateContentIdeas("user-1");
 
     expect(getCreatorProfile).toHaveBeenCalledWith("user-1");
-    const userMsg = mockCreate.mock.calls[0][0].messages[1].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userMsg = callArgs.messages[1].content;
     expect(userMsg).toContain("Creator Profile");
   });
 
@@ -219,13 +238,13 @@ describe("generateContentIdeas", () => {
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     vi.mocked(getCreatorProfile).mockResolvedValue(null);
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(validIdeas));
+    mockChatCompletion(JSON.stringify(validIdeas));
 
     const result = await generateContentIdeas("user-1");
     expect(result).toHaveLength(3);
   });
 
-  it("filters out thread-format ideas from AI response", async () => {
+  it("keeps thread-format ideas in AI response", async () => {
     const ideasWithThread = [
       ...validIdeas,
       {
@@ -240,10 +259,116 @@ describe("generateContentIdeas", () => {
     ];
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     mockSupabase();
-    mockOpenAIResponse(JSON.stringify(ideasWithThread));
+    mockChatCompletion(JSON.stringify(ideasWithThread));
 
     const result = await generateContentIdeas("user-1");
-    expect(result.every((idea) => idea.format !== "thread")).toBe(true);
+    expect(result.some((idea) => idea.format === "thread")).toBe(true);
+    expect(result).toHaveLength(4);
+  });
+
+  it("fetches trending topics when creator has niches", async () => {
+    const trendingTopics = [
+      { topic: "AI agents", description: "Companies deploying agents", relevance: "high" },
+    ];
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue({
+      id: "cp-1",
+      user_id: "user-1",
+      niches: ["tech_software"],
+      goals: ["grow_audience"],
+      target_audience: "Developers",
+      created_at: null,
+      updated_at: null,
+    });
+    vi.mocked(fetchTrendingTopics).mockResolvedValue(trendingTopics);
+    mockSupabase();
+    mockChatCompletion(JSON.stringify(validIdeas));
+
+    await generateContentIdeas("user-1");
+
+    expect(fetchTrendingTopics).toHaveBeenCalledWith(["tech_software"]);
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userMsg = callArgs.messages[1].content;
+    expect(userMsg).toContain("Trending Topics");
+    expect(userMsg).toContain("AI agents");
+  });
+
+  it("skips trending when no creator profile exists", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue(null);
+    mockSupabase();
+    mockChatCompletion(JSON.stringify(validIdeas));
+
+    await generateContentIdeas("user-1");
+
+    expect(fetchTrendingTopics).not.toHaveBeenCalled();
+  });
+
+  it("skips trending when creator has empty niches", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue({
+      id: "cp-1",
+      user_id: "user-1",
+      niches: [],
+      goals: ["grow_audience"],
+      target_audience: "Developers",
+      created_at: null,
+      updated_at: null,
+    });
+    mockSupabase();
+    mockChatCompletion(JSON.stringify(validIdeas));
+
+    await generateContentIdeas("user-1");
+
+    expect(fetchTrendingTopics).not.toHaveBeenCalled();
+  });
+
+  it("continues pipeline when trending fetch fails", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue({
+      id: "cp-1",
+      user_id: "user-1",
+      niches: ["tech_software"],
+      goals: ["grow_audience"],
+      target_audience: "Developers",
+      created_at: null,
+      updated_at: null,
+    });
+    vi.mocked(fetchTrendingTopics).mockResolvedValue([]);
+    mockSupabase();
+    mockChatCompletion(JSON.stringify(validIdeas));
+
+    const result = await generateContentIdeas("user-1");
     expect(result).toHaveLength(3);
+  });
+
+  it("includes trendingTopicsCount in AI log contextPayload", async () => {
+    const trendingTopics = [
+      { topic: "AI agents", description: "Companies deploying agents", relevance: "high" },
+      { topic: "Vibe coding", description: "Coding debate", relevance: "medium" },
+    ];
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    vi.mocked(getCreatorProfile).mockResolvedValue({
+      id: "cp-1",
+      user_id: "user-1",
+      niches: ["tech_software"],
+      goals: ["grow_audience"],
+      target_audience: "Developers",
+      created_at: null,
+      updated_at: null,
+    });
+    vi.mocked(fetchTrendingTopics).mockResolvedValue(trendingTopics);
+    mockSupabase();
+    mockChatCompletion(JSON.stringify(validIdeas));
+
+    await generateContentIdeas("user-1");
+
+    expect(insertAiLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contextPayload: expect.objectContaining({
+          trendingTopicsCount: 2,
+        }),
+      }),
+    );
   });
 });

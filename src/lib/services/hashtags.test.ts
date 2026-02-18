@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import OpenAI from "openai";
 
-vi.mock("openai");
+vi.mock("@/lib/ai/client", async () => {
+  const actual = await vi.importActual("@/lib/ai/client");
+  return { ...actual, chatCompletion: vi.fn() };
+});
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
@@ -12,29 +14,27 @@ vi.mock("./profiles", () => ({
   getCreatorProfile: vi.fn(),
 }));
 
+import { chatCompletion } from "@/lib/ai/client";
 import { suggestHashtags } from "./hashtags";
 import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
 
 const TEST_USER_ID = "user-123";
 
-function mockOpenAI(response: string) {
-  const create = vi.fn().mockResolvedValue({
-    choices: [{ message: { content: response } }],
-    usage: { prompt_tokens: 100, completion_tokens: 50 },
+function mockChatCompletion(content: string) {
+  const mock = vi.mocked(chatCompletion).mockResolvedValue({
+    content,
+    tokensIn: 100,
+    tokensOut: 50,
+    latencyMs: 50,
+    model: "gpt-4o-mini",
   });
-
-  vi.mocked(OpenAI).mockImplementation(
-    () => ({ chat: { completions: { create } } }) as never,
-  );
-
-  return create;
+  return mock;
 }
 
 describe("suggestHashtags", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.OPENAI_API_KEY = "test-key";
     vi.mocked(getCreatorProfile).mockResolvedValue(null);
   });
 
@@ -44,7 +44,7 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    mockOpenAI(JSON.stringify(suggestions));
+    mockChatCompletion(JSON.stringify(suggestions));
 
     const result = await suggestHashtags(TEST_USER_ID, "Building with React and Next.js");
 
@@ -57,11 +57,11 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    const create = mockOpenAI(JSON.stringify(suggestions));
+    mockChatCompletion(JSON.stringify(suggestions));
 
     await suggestHashtags(TEST_USER_ID, "Building with React");
 
-    expect(create).toHaveBeenCalledWith(
+    expect(chatCompletion).toHaveBeenCalledWith(
       expect.objectContaining({ temperature: 0.3 }),
     );
   });
@@ -72,7 +72,7 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    const create = mockOpenAI(JSON.stringify(suggestions));
+    mockChatCompletion(JSON.stringify(suggestions));
     vi.mocked(getCreatorProfile).mockResolvedValue({
       id: "cp-1",
       user_id: TEST_USER_ID,
@@ -85,7 +85,8 @@ describe("suggestHashtags", () => {
 
     await suggestHashtags(TEST_USER_ID, "Building with React");
 
-    const userContent = create.mock.calls[0][0].messages[1].content;
+    const callArgs = vi.mocked(chatCompletion).mock.calls[0][0];
+    const userContent = callArgs.messages[1].content;
     expect(userContent).toContain("Creator Profile");
   });
 
@@ -95,7 +96,7 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    mockOpenAI(JSON.stringify(suggestions));
+    mockChatCompletion(JSON.stringify(suggestions));
 
     await suggestHashtags(TEST_USER_ID, "Building with React");
 
@@ -114,7 +115,7 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    mockOpenAI(JSON.stringify({ suggestions }));
+    mockChatCompletion(JSON.stringify({ suggestions }));
 
     const result = await suggestHashtags(TEST_USER_ID, "Building with React");
 
@@ -122,7 +123,7 @@ describe("suggestHashtags", () => {
   });
 
   it("throws on invalid AI response", async () => {
-    mockOpenAI("invalid json");
+    mockChatCompletion("invalid json");
 
     await expect(
       suggestHashtags(TEST_USER_ID, "Building with React"),
@@ -130,7 +131,7 @@ describe("suggestHashtags", () => {
   });
 
   it("logs the failure when parsing fails", async () => {
-    mockOpenAI("invalid json");
+    mockChatCompletion("invalid json");
 
     await expect(
       suggestHashtags(TEST_USER_ID, "Building with React"),
@@ -149,7 +150,7 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    mockOpenAI(JSON.stringify({ hashtags: suggestions }));
+    mockChatCompletion(JSON.stringify({ hashtags: suggestions }));
 
     const result = await suggestHashtags(TEST_USER_ID, "Building with React");
 
@@ -162,7 +163,7 @@ describe("suggestHashtags", () => {
       { tag: "nextjs", relevance: "medium" },
       { tag: "webdev", relevance: "low" },
     ];
-    mockOpenAI(JSON.stringify({ tags: suggestions }));
+    mockChatCompletion(JSON.stringify({ tags: suggestions }));
 
     const result = await suggestHashtags(TEST_USER_ID, "Building with React");
 
@@ -171,7 +172,7 @@ describe("suggestHashtags", () => {
 
   it("handles response with only 1 suggestion", async () => {
     const suggestions = [{ tag: "react", relevance: "high" }];
-    mockOpenAI(JSON.stringify({ suggestions }));
+    mockChatCompletion(JSON.stringify({ suggestions }));
 
     const result = await suggestHashtags(TEST_USER_ID, "React");
 
@@ -179,7 +180,7 @@ describe("suggestHashtags", () => {
   });
 
   it("still throws original error when insertAiLog fails in error path", async () => {
-    mockOpenAI("invalid json");
+    mockChatCompletion("not valid json {{{");
     vi.mocked(insertAiLog).mockRejectedValueOnce(new Error("DB insert failed"));
 
     await expect(
@@ -188,13 +189,12 @@ describe("suggestHashtags", () => {
   });
 
   it("throws descriptive error when OPENAI_API_KEY is missing", async () => {
-    const original = process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_API_KEY;
+    vi.mocked(chatCompletion).mockRejectedValueOnce(
+      new Error("OPENAI_API_KEY environment variable is not set"),
+    );
 
     await expect(
       suggestHashtags(TEST_USER_ID, "Building with React"),
     ).rejects.toThrow("OPENAI_API_KEY");
-
-    process.env.OPENAI_API_KEY = original;
   });
 });

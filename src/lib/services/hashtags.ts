@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import {
   hashtagSuggestionsArraySchema,
   type HashtagSuggestion,
@@ -13,14 +13,6 @@ import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
-
-function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY environment variable is not set");
-  }
-  return new OpenAI({ apiKey });
-}
 
 export async function suggestHashtags(
   userId: string,
@@ -40,38 +32,29 @@ export async function suggestHashtags(
   const prompt = buildSuggestHashtagsPrompt(content, creatorProfile);
 
   // Call OpenAI
-  const openai = getOpenAIClient();
-  const startTime = Date.now();
-
-  const completion = await openai.chat.completions.create({
+  const result = await chatCompletion({
     model: MODEL,
-    temperature: 0.3,
-    max_tokens: 500,
-    response_format: { type: "json_object" },
     messages: [
       { role: "system", content: prompt.system },
       { role: "user", content: prompt.user },
     ],
+    maxTokens: 500,
+    temperature: 0.3,
+    responseFormat: { type: "json_object" },
   });
-
-  const latencyMs = Date.now() - startTime;
-  const rawContent = completion.choices[0]?.message?.content ?? "";
-  const tokensIn = completion.usage?.prompt_tokens ?? 0;
-  const tokensOut = completion.usage?.completion_tokens ?? 0;
 
   // Parse and validate
   let suggestions: HashtagSuggestion[];
   try {
-    const parsed = JSON.parse(rawContent);
-    let arr: unknown;
-    if (Array.isArray(parsed)) {
-      arr = parsed;
-    } else if (typeof parsed === "object" && parsed !== null) {
-      // Find the first array value in the response object (handles any wrapper key)
-      arr = Object.values(parsed).find((v) => Array.isArray(v));
-    }
+    const arr = extractJsonPayload(result.content, { arrayKeys: ["suggestions", "hashtags", "tags"] });
     suggestions = hashtagSuggestionsArraySchema.parse(arr);
-  } catch {
+  } catch (parseError) {
+    console.error("[hashtags] Parse/validation failed", {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      rawContentPreview: result.content.slice(0, 500),
+      model: result.model,
+    });
+
     try {
       await insertAiLog({
         userId,
@@ -81,17 +64,17 @@ export async function suggestHashtags(
         promptVersion: Number(SUGGEST_HASHTAGS_VERSION),
         contextPayload: { contentLength: content.length },
         fullPrompt: prompt.fullPrompt,
-        response: rawContent,
-        tokensIn,
-        tokensOut,
-        latencyMs,
+        response: result.content,
+        tokensIn: result.tokensIn,
+        tokensOut: result.tokensOut,
+        latencyMs: result.latencyMs,
         wasUsed: false,
       });
     } catch {
       // Don't let logging failure mask the original error
     }
 
-    throw new Error("Failed to parse AI hashtag suggestions");
+    throw new Error("Failed to parse AI hashtag suggestions", { cause: parseError });
   }
 
   // Log success
@@ -103,10 +86,10 @@ export async function suggestHashtags(
     promptVersion: Number(SUGGEST_HASHTAGS_VERSION),
     contextPayload: { contentLength: content.length },
     fullPrompt: prompt.fullPrompt,
-    response: rawContent,
-    tokensIn,
-    tokensOut,
-    latencyMs,
+    response: result.content,
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    latencyMs: result.latencyMs,
     wasUsed: true,
   });
 

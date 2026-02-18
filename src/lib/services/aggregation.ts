@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TTLCache } from "@/lib/utils/cache";
 import type { Database } from "@/types/database";
 
 export interface PerformanceByCategory {
@@ -119,7 +120,17 @@ function computeAvg(items: { impressions: number; engagement: number; engagement
   };
 }
 
+const aggregationCache = new TTLCache<InsightContext>(5 * 60 * 1000); // 5 min
+
+export function clearAggregationCache(): void {
+  aggregationCache.clear();
+}
+
 export async function getAggregatedData(userId: string, platform?: string): Promise<InsightContext> {
+  const cacheKey = `${userId}:${platform ?? "all"}`;
+  const cached = aggregationCache.get(cacheKey);
+  if (cached) return cached;
+
   const supabase = createAdminClient();
 
   const selectClause = platform
@@ -277,7 +288,7 @@ export async function getAggregatedData(userId: string, platform?: string): Prom
 
   const postsPerWeek = allPosts.length > 0 ? (allPosts.length / totalDays) * 7 : 0;
 
-  return {
+  const result: InsightContext = {
     creatorSummary,
     byIntent,
     byTopic,
@@ -289,4 +300,7 @@ export async function getAggregatedData(userId: string, platform?: string): Prom
       postsPerWeek,
     },
   };
+
+  aggregationCache.set(cacheKey, result);
+  return result;
 }

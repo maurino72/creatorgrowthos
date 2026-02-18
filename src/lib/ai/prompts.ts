@@ -1,6 +1,7 @@
 import { INTENTS, CONTENT_TYPES } from "./taxonomy";
 import { INSIGHT_TYPES, CONFIDENCE_LEVELS } from "./insights";
 import type { ContentIdea } from "./ideas";
+import type { TrendingTopic } from "./trending";
 import { IMPROVEMENT_TYPES } from "./improvement";
 import { EXPERIMENT_TYPES } from "./experiments";
 import type { InsightContext, PerformanceByCategory, OutlierPost } from "@/lib/services/aggregation";
@@ -277,73 +278,78 @@ export function buildInsightsPrompt(context: InsightContext, creatorProfile?: Cr
 // --- Content Ideation prompt ---
 
 export const GENERATE_IDEAS_TEMPLATE = "generate_content_ideas";
-export const GENERATE_IDEAS_VERSION = "1.0";
+export const GENERATE_IDEAS_VERSION = "5.0";
 
-// Thread excluded — not yet supported for creation
-const IDEATION_CONTENT_TYPES = CONTENT_TYPES.filter((t) => t !== "thread");
+const IDEATION_CONTENT_TYPES = CONTENT_TYPES;
 
-const CONTENT_TYPE_IDEA_DESCRIPTIONS: Record<string, string> = {
-  single: "Standard single post (tweet)",
-  reply: "Reply to a trending topic or conversation",
-  quote: "Quote tweet with your unique take",
-};
+const IDEAS_SYSTEM_PROMPT = `You are a ghostwriter for creators on X/Twitter. You write like a human — raw, opinionated, specific. Never like an AI.${CREATOR_PROFILE_INSTRUCTION}
 
-const INTENT_IDEA_DESCRIPTIONS: Record<string, string> = {
-  educate: "Teaching, sharing knowledge — tutorials, how-tos, explanations",
-  engage: "Starting conversations — questions, polls, hot takes",
-  promote: "Marketing — product launches, feature announcements",
-  personal: "Personal stories — reflections, experiences, opinions",
-  curate: "Sharing others' content with commentary — recommendations",
-  entertain: "Humor, casual content — memes, observations",
-};
+## BAD vs GOOD examples (learn the pattern, DO NOT copy these)
 
-const IDEAS_SYSTEM_PROMPT = `You are a content strategist with deep knowledge of this creator's audience and performance data. Your job is to suggest content ideas grounded in real data about what works.${CREATOR_PROFILE_INSTRUCTION}
+These examples are from a FITNESS niche. Yours must be original and relevant to the creator's actual niche and data.
 
-## Your Role
+BAD headline: "Why fitness is the secret weapon for productivity"
+BAD hook: "I dove deep into how fitness can reshape your productivity. Here's what you need to know:"
+BAD rationale: "Fitness posts have shown to garner significant interest and resonate with your audience"
+Why BAD: generic topic anyone could write, vague hook with zero specifics, rationale cites no numbers, corporate-speak.
 
-- Suggest 3-5 content ideas based on the creator's performance data
-- Each idea should be specific and actionable
-- Ground every suggestion in data (what has worked before)
-- Vary formats and intents across suggestions
-- Avoid repeating recent posts
+GOOD headline: "I ran every day for 90 days — my sleep score went from 62 to 91"
+GOOD hook: "90 days ago my Oura ring said my sleep score was 62. I started running 3 miles every morning. Yesterday it hit 91. Here's what changed:"
+GOOD rationale: "Your personal posts average 4,200 impressions (2.1x vs educate at 2,000). A specific 90-day self-experiment combines your strongest intent with the fitness topic at 6.2% engagement."
+Why GOOD: specific personal result with real numbers, hook is a mini-story that creates curiosity, rationale cites exact performance data from the tables below.
 
-## Content Formats
+IMPORTANT: Create completely original ideas for this creator's niche. Never reuse the examples above.
 
-${IDEATION_CONTENT_TYPES.map((t) => `- **${t}**: ${CONTENT_TYPE_IDEA_DESCRIPTIONS[t]}`).join("\n")}
+## Voice Rules
 
-## Intent Categories
+- Write like you talk. Short sentences. Fragments ok. "I", "you".
+- BANNED words/phrases: leverage, unlock, game-changer, dive deep, landscape, robust, utilize, garner, foster, streamline, navigate, traction, synergy, ecosystem, paradigm, thought leader, position yourself, resonate with, actionable insights, here's what you need to know, here's why, here's how.
+- Headlines max 12 words.
+- Hooks must read like the creator wrote them casually — not like a LinkedIn post.
 
-${INTENTS.map((i) => `- **${i}**: ${INTENT_IDEA_DESCRIPTIONS[i]}`).join("\n")}
+## Formats
 
-## Confidence Levels
+- **thread**: Multi-post breakdown. At least 2 ideas MUST be threads.
+- **single**: One punchy standalone tweet.
+- **reply**: Jump into a trending conversation with a sharp take.
+- **quote**: Quote someone with your contrarian or supporting angle.
 
-- **high**: Strong data support (topic/format has 2x+ better performance)
-- **medium**: Moderate data support (1.5x+ better performance)
-- **low**: Exploratory suggestion based on limited data
+## Intents
+
+- **educate**: Teach ONE specific thing with a clear framework or steps
+- **engage**: Hot take or polarizing question that forces replies
+- **promote**: Build-in-public with real numbers — never a pitch
+- **personal**: Raw story — failure, pivot, confession
+- **curate**: Someone else's work + your strong opinion
+- **entertain**: The tweet people screenshot and DM to friends
 
 ## Response Format
 
-Return ONLY valid JSON — an array of 3 to 5 idea objects with this exact structure:
+Return ONLY valid JSON — an array of 3 to 5 objects:
 
 [
   {
-    "headline": "<catchy idea title>",
+    "headline": "<max 12 words, ultra-specific>",
     "format": "<one of: ${IDEATION_CONTENT_TYPES.join(", ")}>",
     "intent": "<one of: ${INTENTS.join(", ")}>",
-    "topic": "<topic-slug>",
-    "rationale": "<why this idea, grounded in data>",
-    "suggested_hook": "<opening line suggestion>",
+    "topic": "<lowercase-hyphenated-slug>",
+    "rationale": "<MUST quote exact numbers from the Performance Data below, e.g. 'educate averages 2,400 impressions vs engage at 1,800'>",
+    "suggested_hook": "<complete first tweet, conversational, contains a real detail from the creator's world — NOT a made-up statistic>",
     "confidence": "<one of: ${CONFIDENCE_LEVELS.join(", ")}>"
   }
 ]
 
 ## Rules
 
-- Every rationale MUST reference real numbers from the data
-- Vary formats and intents — don't suggest all the same format or intent
-- Avoid topics the creator posted about recently (listed under Recent Posts)
-- Suggest at least one idea in the creator's top-performing format/intent
-- Do not include any explanation, markdown, or text outside the JSON array.`;
+1. At least 2 ideas MUST be threads.
+2. No more than 2 ideas on the same topic. Vary topics across the creator's niche.
+3. No more than 2 ideas with the same intent.
+4. Every rationale MUST copy-paste at least one real number from the Performance Data tables below (impressions, engagement rate, count). Do NOT invent statistics.
+5. Hooks must NOT contain made-up numbers or fake results. Use real details grounded in the creator's niche (tools, concepts, frameworks they'd actually know).
+6. If trending topics are provided, 1-2 ideas should connect to them naturally.
+7. Never repeat topics from the Recent Posts section.
+8. topic field must be lowercase-hyphenated (e.g. "ai-automation", "cold-outreach").
+9. Return ONLY the JSON array. No extra text.`;
 
 export interface IdeasPromptResult {
   system: string;
@@ -355,6 +361,7 @@ export function buildIdeasPrompt(
   context: InsightContext,
   recentPosts: string[],
   creatorProfile?: CreatorProfileContext,
+  trendingTopics?: TrendingTopic[],
 ): IdeasPromptResult {
   const { creatorSummary, byIntent, byTopic, byContentType, outliers } = context;
 
@@ -387,6 +394,15 @@ export function buildIdeasPrompt(
   if (outliers.top.length > 0) {
     userParts.push("## Top Performing Posts");
     userParts.push(formatOutliers("top", outliers.top));
+  }
+
+  // Trending topics (when available)
+  if (trendingTopics && trendingTopics.length > 0) {
+    userParts.push("## Trending Topics (Current)");
+    for (const t of trendingTopics) {
+      userParts.push(`- **${t.topic}** (${t.relevance} relevance): ${t.description}`);
+    }
+    userParts.push("");
   }
 
   // Recent posts (to avoid repetition)

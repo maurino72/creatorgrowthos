@@ -7,6 +7,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getAggregatedData,
+  clearAggregationCache,
   type InsightContext,
   type PerformanceByCategory,
 } from "./aggregation";
@@ -64,6 +65,7 @@ function mockSupabaseQuery(data: unknown[] | null, error: { message: string } | 
 describe("getAggregatedData", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearAggregationCache();
   });
 
   it("returns structured InsightContext with creator summary", async () => {

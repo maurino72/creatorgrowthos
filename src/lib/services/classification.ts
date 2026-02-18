@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { classificationSchema, normalizeTopics, type Classification } from "@/lib/ai/taxonomy";
 import {
@@ -9,10 +9,6 @@ import {
 import { insertAiLog } from "./ai-logs";
 
 const MODEL = "gpt-4o-mini";
-
-function getOpenAIClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
 
 export async function classifyPost(
   userId: string,
@@ -37,32 +33,30 @@ export async function classifyPost(
   const prompt = buildClassifyPrompt(post.body);
 
   // 3. Call OpenAI
-  const openai = getOpenAIClient();
-  const startTime = Date.now();
-
-  const completion = await openai.chat.completions.create({
+  const result = await chatCompletion({
     model: MODEL,
-    temperature: 0.3,
-    max_tokens: 200,
-    response_format: { type: "json_object" },
     messages: [
       { role: "system", content: prompt.system },
       { role: "user", content: prompt.user },
     ],
+    maxTokens: 200,
+    temperature: 0.3,
+    responseFormat: { type: "json_object" },
   });
-
-  const latencyMs = Date.now() - startTime;
-  const rawContent = completion.choices[0]?.message?.content ?? "";
-  const tokensIn = completion.usage?.prompt_tokens ?? 0;
-  const tokensOut = completion.usage?.completion_tokens ?? 0;
 
   // 4. Parse and validate
   let classification: Classification;
   try {
-    const parsed = JSON.parse(rawContent);
+    const parsed = extractJsonPayload(result.content);
     classification = classificationSchema.parse(parsed);
     classification.topics = normalizeTopics(classification.topics);
-  } catch {
+  } catch (parseError) {
+    console.error("[classification] Parse/validation failed", {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      rawContentPreview: result.content.slice(0, 500),
+      model: result.model,
+    });
+
     // Log failed attempt
     await insertAiLog({
       userId,
@@ -72,14 +66,14 @@ export async function classifyPost(
       promptVersion: Number(CLASSIFY_POST_VERSION),
       contextPayload: { post_id: postId, body_preview: post.body.slice(0, 100) },
       fullPrompt: prompt.fullPrompt,
-      response: rawContent,
-      tokensIn,
-      tokensOut,
-      latencyMs,
+      response: result.content,
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      latencyMs: result.latencyMs,
       wasUsed: false,
     });
 
-    throw new Error("Failed to parse AI classification response");
+    throw new Error("Failed to parse AI classification response", { cause: parseError });
   }
 
   // 5. Update post
@@ -109,10 +103,10 @@ export async function classifyPost(
     promptVersion: Number(CLASSIFY_POST_VERSION),
     contextPayload: { post_id: postId, body_preview: post.body.slice(0, 100) },
     fullPrompt: prompt.fullPrompt,
-    response: rawContent,
-    tokensIn,
-    tokensOut,
-    latencyMs,
+    response: result.content,
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    latencyMs: result.latencyMs,
     wasUsed: true,
   });
 

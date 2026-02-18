@@ -186,7 +186,7 @@ describe("ideas prompt constants", () => {
   });
 
   it("exports GENERATE_IDEAS_VERSION", () => {
-    expect(GENERATE_IDEAS_VERSION).toBe("1.0");
+    expect(GENERATE_IDEAS_VERSION).toBe("5.0");
   });
 });
 
@@ -237,20 +237,32 @@ describe("buildIdeasPrompt", () => {
     expect(typeof result.user).toBe("string");
   });
 
-  it("system message describes content strategist role", () => {
-    expect(result.system).toContain("content strategist");
+  it("system message describes ghostwriter role", () => {
+    expect(result.system).toContain("ghostwriter");
+  });
+
+  it("system prompt emphasizes human voice and threads", () => {
+    expect(result.system).toContain("thread");
+    expect(result.system).toMatch(/human/i);
+  });
+
+  it("system prompt includes good/bad examples to calibrate output", () => {
+    expect(result.system).toContain("BAD headline");
+    expect(result.system).toContain("GOOD headline");
+  });
+
+  it("system prompt bans corporate speak words", () => {
+    expect(result.system).toContain("BANNED words");
   });
 
   it("system message instructs JSON output", () => {
     expect(result.system).toMatch(/json/i);
   });
 
-  it("system message includes actionable formats but not thread", () => {
-    for (const type of ["single", "reply", "quote"]) {
+  it("system message includes all content formats including thread", () => {
+    for (const type of ["single", "thread", "reply", "quote"]) {
       expect(result.system).toContain(type);
     }
-    // thread is not supported for creation yet
-    expect(result.system).not.toMatch(/\bthread\b.*long-form/i);
   });
 
   it("system message includes all valid intents", () => {
@@ -281,6 +293,32 @@ describe("buildIdeasPrompt", () => {
   it("works with empty recent posts", () => {
     const r = buildIdeasPrompt(context, []);
     expect(r.user).toMatch(/no recent posts/i);
+  });
+
+  it("includes trending topics section when provided", () => {
+    const trendingTopics = [
+      { topic: "AI agents in production", description: "Companies deploying agents", relevance: "high" as const },
+      { topic: "Vibe coding", description: "AI-generated code debate", relevance: "medium" as const },
+    ];
+    const r = buildIdeasPrompt(context, recentPosts, undefined, trendingTopics);
+    expect(r.user).toContain("Trending Topics");
+    expect(r.user).toContain("AI agents in production");
+    expect(r.user).toContain("Vibe coding");
+  });
+
+  it("does not include trending section when no topics provided", () => {
+    const r = buildIdeasPrompt(context, recentPosts);
+    expect(r.user).not.toContain("Trending Topics");
+  });
+
+  it("does not include trending section when topics array is empty", () => {
+    const r = buildIdeasPrompt(context, recentPosts, undefined, []);
+    expect(r.user).not.toContain("Trending Topics");
+  });
+
+  it("system prompt includes trending blending instruction", () => {
+    const r = buildIdeasPrompt(context, recentPosts);
+    expect(r.system).toContain("trending");
   });
 });
 

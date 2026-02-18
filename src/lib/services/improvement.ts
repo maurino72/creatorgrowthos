@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   improvementResponseSchema,
@@ -14,10 +14,6 @@ import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
-
-function getOpenAIClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
 
 export async function improveContent(
   userId: string,
@@ -47,31 +43,29 @@ export async function improveContent(
   const prompt = buildImprovePrompt(content, topPosts, creatorProfile);
 
   // 3. Call OpenAI
-  const openai = getOpenAIClient();
-  const startTime = Date.now();
-
-  const completion = await openai.chat.completions.create({
+  const aiResult = await chatCompletion({
     model: MODEL,
-    temperature: 0.5,
-    max_tokens: 1500,
-    response_format: { type: "json_object" },
     messages: [
       { role: "system", content: prompt.system },
       { role: "user", content: prompt.user },
     ],
+    maxTokens: 1500,
+    temperature: 0.5,
+    responseFormat: { type: "json_object" },
   });
-
-  const latencyMs = Date.now() - startTime;
-  const rawContent = completion.choices[0]?.message?.content ?? "";
-  const tokensIn = completion.usage?.prompt_tokens ?? 0;
-  const tokensOut = completion.usage?.completion_tokens ?? 0;
 
   // 4. Parse and validate
   let result: ImprovementResponse;
   try {
-    const parsed = JSON.parse(rawContent);
+    const parsed = extractJsonPayload(aiResult.content);
     result = improvementResponseSchema.parse(parsed);
-  } catch {
+  } catch (parseError) {
+    console.error("[improvement] Parse/validation failed", {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      rawContentPreview: aiResult.content.slice(0, 500),
+      model: aiResult.model,
+    });
+
     await insertAiLog({
       userId,
       actionType: "improve_content",
@@ -80,14 +74,14 @@ export async function improveContent(
       promptVersion: Number(IMPROVE_CONTENT_VERSION),
       contextPayload: { contentLength: content.length },
       fullPrompt: prompt.fullPrompt,
-      response: rawContent,
-      tokensIn,
-      tokensOut,
-      latencyMs,
+      response: aiResult.content,
+      tokensIn: aiResult.tokensIn,
+      tokensOut: aiResult.tokensOut,
+      latencyMs: aiResult.latencyMs,
       wasUsed: false,
     });
 
-    throw new Error("Failed to parse AI improvement response");
+    throw new Error("Failed to parse AI improvement response", { cause: parseError });
   }
 
   // 5. Log success
@@ -99,10 +93,10 @@ export async function improveContent(
     promptVersion: Number(IMPROVE_CONTENT_VERSION),
     contextPayload: { contentLength: content.length },
     fullPrompt: prompt.fullPrompt,
-    response: rawContent,
-    tokensIn,
-    tokensOut,
-    latencyMs,
+    response: aiResult.content,
+    tokensIn: aiResult.tokensIn,
+    tokensOut: aiResult.tokensOut,
+    latencyMs: aiResult.latencyMs,
     wasUsed: true,
   });
 

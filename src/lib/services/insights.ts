@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { insightsArraySchema, MIN_POSTS } from "@/lib/ai/insights";
 import {
@@ -12,10 +12,6 @@ import { insertAiLog } from "./ai-logs";
 import { getCreatorProfile } from "./profiles";
 
 const MODEL = "gpt-4o-mini";
-
-function getOpenAIClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
 
 export class InsufficientDataError extends Error {
   constructor(totalPosts: number) {
@@ -51,33 +47,29 @@ export async function generateInsights(userId: string, platform?: string) {
   const prompt = buildInsightsPrompt(context, creatorProfile);
 
   // 4. Call OpenAI
-  const openai = getOpenAIClient();
-  const startTime = Date.now();
-
-  const completion = await openai.chat.completions.create({
+  const aiResult = await chatCompletion({
     model: MODEL,
-    temperature: 0.5,
-    max_tokens: 1500,
-    response_format: { type: "json_object" },
     messages: [
       { role: "system", content: prompt.system },
       { role: "user", content: prompt.user },
     ],
+    maxTokens: 1500,
+    temperature: 0.5,
+    responseFormat: { type: "json_object" },
   });
-
-  const latencyMs = Date.now() - startTime;
-  const rawContent = completion.choices[0]?.message?.content ?? "";
-  const tokensIn = completion.usage?.prompt_tokens ?? 0;
-  const tokensOut = completion.usage?.completion_tokens ?? 0;
 
   // 5. Parse and validate
   let insights;
   try {
-    const parsed = JSON.parse(rawContent);
-    // AI might return { insights: [...] } or just [...]
-    const arr = Array.isArray(parsed) ? parsed : parsed.insights;
+    const arr = extractJsonPayload(aiResult.content, { arrayKeys: ["insights"] });
     insights = insightsArraySchema.parse(arr);
-  } catch {
+  } catch (parseError) {
+    console.error("[insights] Parse/validation failed", {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      rawContentPreview: aiResult.content.slice(0, 500),
+      model: aiResult.model,
+    });
+
     await insertAiLog({
       userId,
       actionType: "generate_insights",
@@ -86,14 +78,14 @@ export async function generateInsights(userId: string, platform?: string) {
       promptVersion: Number(GENERATE_INSIGHTS_VERSION),
       contextPayload: { totalPosts: context.creatorSummary.totalPosts },
       fullPrompt: prompt.fullPrompt,
-      response: rawContent,
-      tokensIn,
-      tokensOut,
-      latencyMs,
+      response: aiResult.content,
+      tokensIn: aiResult.tokensIn,
+      tokensOut: aiResult.tokensOut,
+      latencyMs: aiResult.latencyMs,
       wasUsed: false,
     });
 
-    throw new Error("Failed to parse AI insights response");
+    throw new Error("Failed to parse AI insights response", { cause: parseError });
   }
 
   // 6. Log success
@@ -105,10 +97,10 @@ export async function generateInsights(userId: string, platform?: string) {
     promptVersion: Number(GENERATE_INSIGHTS_VERSION),
     contextPayload: { totalPosts: context.creatorSummary.totalPosts },
     fullPrompt: prompt.fullPrompt,
-    response: rawContent,
-    tokensIn,
-    tokensOut,
-    latencyMs,
+    response: aiResult.content,
+    tokensIn: aiResult.tokensIn,
+    tokensOut: aiResult.tokensOut,
+    latencyMs: aiResult.latencyMs,
     wasUsed: true,
   });
 
