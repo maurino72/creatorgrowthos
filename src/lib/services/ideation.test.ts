@@ -64,10 +64,10 @@ const baseContext: InsightContext = {
 const validIdeas = [
   {
     headline: "Behind-the-scenes of AI tool building",
-    format: "thread",
+    format: "single",
     intent: "educate",
     topic: "ai",
-    rationale: "Your AI threads get 3x engagement",
+    rationale: "Your AI posts on this topic get 3x engagement",
     suggested_hook: "I just built an AI tool. Here's how:",
     confidence: "high",
   },
@@ -137,7 +137,7 @@ describe("generateContentIdeas", () => {
     const result = await generateContentIdeas("user-1");
     expect(result).toHaveLength(3);
     expect(result[0].headline).toBe("Behind-the-scenes of AI tool building");
-    expect(result[0].format).toBe("thread");
+    expect(result[0].format).toBe("single");
   });
 
   it("throws InsufficientDataError when <MIN_IDEATION_POSTS published posts", async () => {

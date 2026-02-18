@@ -15,7 +15,11 @@ import { getCreatorProfile } from "./profiles";
 const MODEL = "gpt-4o-mini";
 
 function getOpenAIClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY environment variable is not set");
+  }
+  return new OpenAI({ apiKey });
 }
 
 export async function suggestHashtags(
@@ -59,23 +63,33 @@ export async function suggestHashtags(
   let suggestions: HashtagSuggestion[];
   try {
     const parsed = JSON.parse(rawContent);
-    const arr = Array.isArray(parsed) ? parsed : parsed.suggestions;
+    let arr: unknown;
+    if (Array.isArray(parsed)) {
+      arr = parsed;
+    } else if (typeof parsed === "object" && parsed !== null) {
+      // Find the first array value in the response object (handles any wrapper key)
+      arr = Object.values(parsed).find((v) => Array.isArray(v));
+    }
     suggestions = hashtagSuggestionsArraySchema.parse(arr);
   } catch {
-    await insertAiLog({
-      userId,
-      actionType: "suggest_hashtags",
-      model: MODEL,
-      promptTemplate: SUGGEST_HASHTAGS_TEMPLATE,
-      promptVersion: Number(SUGGEST_HASHTAGS_VERSION),
-      contextPayload: { contentLength: content.length },
-      fullPrompt: prompt.fullPrompt,
-      response: rawContent,
-      tokensIn,
-      tokensOut,
-      latencyMs,
-      wasUsed: false,
-    });
+    try {
+      await insertAiLog({
+        userId,
+        actionType: "suggest_hashtags",
+        model: MODEL,
+        promptTemplate: SUGGEST_HASHTAGS_TEMPLATE,
+        promptVersion: Number(SUGGEST_HASHTAGS_VERSION),
+        contextPayload: { contentLength: content.length },
+        fullPrompt: prompt.fullPrompt,
+        response: rawContent,
+        tokensIn,
+        tokensOut,
+        latencyMs,
+        wasUsed: false,
+      });
+    } catch {
+      // Don't let logging failure mask the original error
+    }
 
     throw new Error("Failed to parse AI hashtag suggestions");
   }

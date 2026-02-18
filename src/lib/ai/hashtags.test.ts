@@ -64,9 +64,13 @@ describe("hashtagSuggestionsArraySchema", () => {
     expect(hashtagSuggestionsArraySchema.safeParse(suggestions).success).toBe(true);
   });
 
-  it("rejects fewer than 3 suggestions", () => {
+  it("accepts a single suggestion (min 1)", () => {
     const suggestions = [{ tag: "react", relevance: "high" }];
-    expect(hashtagSuggestionsArraySchema.safeParse(suggestions).success).toBe(false);
+    expect(hashtagSuggestionsArraySchema.safeParse(suggestions).success).toBe(true);
+  });
+
+  it("rejects an empty array", () => {
+    expect(hashtagSuggestionsArraySchema.safeParse([]).success).toBe(false);
   });
 
   it("rejects more than 5 suggestions", () => {

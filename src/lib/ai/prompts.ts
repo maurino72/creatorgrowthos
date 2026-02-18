@@ -279,9 +279,11 @@ export function buildInsightsPrompt(context: InsightContext, creatorProfile?: Cr
 export const GENERATE_IDEAS_TEMPLATE = "generate_content_ideas";
 export const GENERATE_IDEAS_VERSION = "1.0";
 
+// Thread excluded — not yet supported for creation
+const IDEATION_CONTENT_TYPES = CONTENT_TYPES.filter((t) => t !== "thread");
+
 const CONTENT_TYPE_IDEA_DESCRIPTIONS: Record<string, string> = {
   single: "Standard single post (tweet)",
-  thread: "Multi-post thread — good for long-form storytelling",
   reply: "Reply to a trending topic or conversation",
   quote: "Quote tweet with your unique take",
 };
@@ -307,7 +309,7 @@ const IDEAS_SYSTEM_PROMPT = `You are a content strategist with deep knowledge of
 
 ## Content Formats
 
-${CONTENT_TYPES.map((t) => `- **${t}**: ${CONTENT_TYPE_IDEA_DESCRIPTIONS[t]}`).join("\n")}
+${IDEATION_CONTENT_TYPES.map((t) => `- **${t}**: ${CONTENT_TYPE_IDEA_DESCRIPTIONS[t]}`).join("\n")}
 
 ## Intent Categories
 
@@ -326,7 +328,7 @@ Return ONLY valid JSON — an array of 3 to 5 idea objects with this exact struc
 [
   {
     "headline": "<catchy idea title>",
-    "format": "<one of: ${CONTENT_TYPES.join(", ")}>",
+    "format": "<one of: ${IDEATION_CONTENT_TYPES.join(", ")}>",
     "intent": "<one of: ${INTENTS.join(", ")}>",
     "topic": "<topic-slug>",
     "rationale": "<why this idea, grounded in data>",
@@ -338,7 +340,7 @@ Return ONLY valid JSON — an array of 3 to 5 idea objects with this exact struc
 ## Rules
 
 - Every rationale MUST reference real numbers from the data
-- Vary formats and intents — don't suggest 5 threads or 5 educational posts
+- Vary formats and intents — don't suggest all the same format or intent
 - Avoid topics the creator posted about recently (listed under Recent Posts)
 - Suggest at least one idea in the creator's top-performing format/intent
 - Do not include any explanation, markdown, or text outside the JSON array.`;

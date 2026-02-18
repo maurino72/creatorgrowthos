@@ -9,5 +9,5 @@ export type HashtagSuggestion = z.infer<typeof hashtagSuggestionSchema>;
 
 export const hashtagSuggestionsArraySchema = z
   .array(hashtagSuggestionSchema)
-  .min(3)
+  .min(1)
   .max(5);

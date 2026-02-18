@@ -245,10 +245,12 @@ describe("buildIdeasPrompt", () => {
     expect(result.system).toMatch(/json/i);
   });
 
-  it("system message includes all valid formats", () => {
-    for (const type of CONTENT_TYPES) {
+  it("system message includes actionable formats but not thread", () => {
+    for (const type of ["single", "reply", "quote"]) {
       expect(result.system).toContain(type);
     }
+    // thread is not supported for creation yet
+    expect(result.system).not.toMatch(/\bthread\b.*long-form/i);
   });
 
   it("system message includes all valid intents", () => {

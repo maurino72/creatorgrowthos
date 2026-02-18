@@ -34,6 +34,7 @@ function mockOpenAI(response: string) {
 describe("suggestHashtags", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.OPENAI_API_KEY = "test-key";
     vi.mocked(getCreatorProfile).mockResolvedValue(null);
   });
 
@@ -140,5 +141,60 @@ describe("suggestHashtags", () => {
         wasUsed: false,
       }),
     );
+  });
+
+  it("handles wrapped response format { hashtags: [...] }", async () => {
+    const suggestions = [
+      { tag: "react", relevance: "high" },
+      { tag: "nextjs", relevance: "medium" },
+      { tag: "webdev", relevance: "low" },
+    ];
+    mockOpenAI(JSON.stringify({ hashtags: suggestions }));
+
+    const result = await suggestHashtags(TEST_USER_ID, "Building with React");
+
+    expect(result).toEqual(suggestions);
+  });
+
+  it("handles wrapped response format { tags: [...] }", async () => {
+    const suggestions = [
+      { tag: "react", relevance: "high" },
+      { tag: "nextjs", relevance: "medium" },
+      { tag: "webdev", relevance: "low" },
+    ];
+    mockOpenAI(JSON.stringify({ tags: suggestions }));
+
+    const result = await suggestHashtags(TEST_USER_ID, "Building with React");
+
+    expect(result).toEqual(suggestions);
+  });
+
+  it("handles response with only 1 suggestion", async () => {
+    const suggestions = [{ tag: "react", relevance: "high" }];
+    mockOpenAI(JSON.stringify({ suggestions }));
+
+    const result = await suggestHashtags(TEST_USER_ID, "React");
+
+    expect(result).toEqual(suggestions);
+  });
+
+  it("still throws original error when insertAiLog fails in error path", async () => {
+    mockOpenAI("invalid json");
+    vi.mocked(insertAiLog).mockRejectedValueOnce(new Error("DB insert failed"));
+
+    await expect(
+      suggestHashtags(TEST_USER_ID, "Building with React"),
+    ).rejects.toThrow("Failed to parse AI hashtag suggestions");
+  });
+
+  it("throws descriptive error when OPENAI_API_KEY is missing", async () => {
+    const original = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+
+    await expect(
+      suggestHashtags(TEST_USER_ID, "Building with React"),
+    ).rejects.toThrow("OPENAI_API_KEY");
+
+    process.env.OPENAI_API_KEY = original;
   });
 });
