@@ -109,7 +109,10 @@ export async function generateContentIdeas(
     throw new Error("Failed to parse AI ideas response");
   }
 
-  // 7. Log success
+  // 7. Filter out unsupported formats (thread not yet supported for creation)
+  ideas = ideas.filter((idea) => idea.format !== "thread");
+
+  // 8. Log success
   await insertAiLog({
     userId,
     actionType: "generate_content_ideas",

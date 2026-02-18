@@ -224,4 +224,26 @@ describe("generateContentIdeas", () => {
     const result = await generateContentIdeas("user-1");
     expect(result).toHaveLength(3);
   });
+
+  it("filters out thread-format ideas from AI response", async () => {
+    const ideasWithThread = [
+      ...validIdeas,
+      {
+        headline: "How I built my SaaS — a breakdown",
+        format: "thread",
+        intent: "educate",
+        topic: "saas",
+        rationale: "Thread format gets 2x engagement",
+        suggested_hook: "Let me walk you through it:",
+        confidence: "high",
+      },
+    ];
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    mockSupabase();
+    mockOpenAIResponse(JSON.stringify(ideasWithThread));
+
+    const result = await generateContentIdeas("user-1");
+    expect(result.every((idea) => idea.format !== "thread")).toBe(true);
+    expect(result).toHaveLength(3);
+  });
 });
