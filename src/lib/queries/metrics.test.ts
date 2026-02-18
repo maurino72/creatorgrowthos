@@ -138,7 +138,7 @@ describe("useLatestMetrics", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const queryState = queryClient.getQueryCache().find({ queryKey: metricKeys.latest("post-1") });
-    expect(queryState?.options.staleTime).toBe(5 * 60 * 1000);
+    expect((queryState?.options as Record<string, unknown>)?.staleTime).toBe(5 * 60 * 1000);
   });
 });
 

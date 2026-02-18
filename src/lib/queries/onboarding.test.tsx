@@ -119,8 +119,8 @@ describe("useSaveQuickProfile", () => {
     });
 
     result.current.mutate({
-      primary_niche: "tech_software",
-      primary_goal: "build_authority",
+      niches: ["tech_software"],
+      goals: ["build_authority"],
       target_audience: "SaaS founders",
     });
 
