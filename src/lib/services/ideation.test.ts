@@ -268,7 +268,7 @@ describe("generateContentIdeas", () => {
 
   it("fetches trending topics when creator has niches", async () => {
     const trendingTopics = [
-      { topic: "AI agents", description: "Companies deploying agents", relevance: "high" },
+      { topic: "AI agents", description: "Companies deploying agents", relevance: "high" as const },
     ];
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     vi.mocked(getCreatorProfile).mockResolvedValue({
@@ -344,8 +344,8 @@ describe("generateContentIdeas", () => {
 
   it("includes trendingTopicsCount in AI log contextPayload", async () => {
     const trendingTopics = [
-      { topic: "AI agents", description: "Companies deploying agents", relevance: "high" },
-      { topic: "Vibe coding", description: "Coding debate", relevance: "medium" },
+      { topic: "AI agents", description: "Companies deploying agents", relevance: "high" as const },
+      { topic: "Vibe coding", description: "Coding debate", relevance: "medium" as const },
     ];
     vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
     vi.mocked(getCreatorProfile).mockResolvedValue({

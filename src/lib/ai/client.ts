@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ChatCompletion } from "openai/resources";
 
 const STRICT_TEMPERATURE_PREFIXES = ["gpt-5", "o1", "o3"];
 
@@ -79,17 +80,18 @@ export async function chatCompletion(
     paramKeys: Object.keys(params).filter((k) => k !== "messages"),
   });
 
-  const completion = await client.chat.completions.create(
-    params as Parameters<typeof client.chat.completions.create>[0],
-  );
+  const completion = (await client.chat.completions.create(
+    params as unknown as Parameters<typeof client.chat.completions.create>[0],
+  )) as ChatCompletion;
 
   const latencyMs = Date.now() - startTime;
   const content = completion.choices[0]?.message?.content ?? "";
   const tokensIn = completion.usage?.prompt_tokens ?? 0;
   const tokensOut = completion.usage?.completion_tokens ?? 0;
+  const usageAny = completion.usage as unknown as Record<string, unknown> | undefined;
   const reasoningTokens =
-    (completion.usage as Record<string, unknown>)?.completion_tokens_details != null
-      ? ((completion.usage as Record<string, unknown>).completion_tokens_details as Record<string, number>)?.reasoning_tokens ?? 0
+    usageAny?.completion_tokens_details != null
+      ? (usageAny.completion_tokens_details as Record<string, number>)?.reasoning_tokens ?? 0
       : 0;
   const finishReason = completion.choices[0]?.finish_reason ?? "unknown";
 

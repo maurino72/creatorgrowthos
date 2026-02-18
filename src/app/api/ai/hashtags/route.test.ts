@@ -73,9 +73,9 @@ describe("POST /api/ai/hashtags", () => {
     mockAuth(TEST_USER_ID);
 
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "react", relevance: "high" as const },
+      { tag: "nextjs", relevance: "medium" as const },
+      { tag: "webdev", relevance: "low" as const },
     ];
     vi.mocked(suggestHashtags).mockResolvedValue(suggestions);
 
