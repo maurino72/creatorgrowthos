@@ -19,6 +19,11 @@ export interface PostPayload {
   mediaUrls?: string[];
   mediaIds?: string[];
   replyToId?: string;
+  authorId?: string;
+}
+
+export interface UploadMediaOptions {
+  authorId?: string;
 }
 
 export interface PlatformPostResult {
@@ -60,6 +65,7 @@ export interface PlatformAdapter {
     accessToken: string,
     buffer: Buffer,
     mimeType: string,
+    options?: UploadMediaOptions,
   ): Promise<string>;
   deletePost(accessToken: string, platformPostId: string): Promise<void>;
   fetchPostMetrics(

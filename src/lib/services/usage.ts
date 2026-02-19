@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPlanLimits, getUpgradePath, type PlanType } from "@/lib/stripe/plans";
+import { getPlanLimits, getUpgradePath, canAccessPlatform, type PlanType } from "@/lib/stripe/plans";
+import type { PlatformType } from "@/lib/adapters/types";
 import { getSubscriptionForUser } from "./subscriptions";
+import { getConnectionsForUser } from "./connections";
 
 type UsageField =
   | "posts_count"
@@ -208,4 +210,44 @@ export async function getRemainingQuota(
   const currentCount = (usage as unknown as Record<string, number>)[mapping.field] ?? 0;
 
   return Math.max(0, limit - currentCount);
+}
+
+export async function canConnectPlatform(
+  userId: string,
+  platform: PlatformType,
+): Promise<ActionResult> {
+  const subscription = await getSubscriptionForUser(userId);
+  if (!subscription) return { allowed: false, reason: "No subscription" };
+
+  const plan = subscription.plan as PlanType;
+
+  // Check platform access based on plan
+  if (!canAccessPlatform(plan, platform)) {
+    return {
+      allowed: false,
+      upgrade_to: getUpgradePath(plan),
+      reason: `${platform} requires Business plan or higher`,
+    };
+  }
+
+  // Check platform count limit
+  const limits = getPlanLimits(plan);
+  if (limits.platforms !== -1) {
+    const connections = await getConnectionsForUser(userId);
+    const activeConnections = connections.filter(
+      (c) => c.status === "active",
+    );
+
+    // Don't count against limit if reconnecting an existing platform
+    const isReconnect = connections.some((c) => c.platform === platform);
+    if (!isReconnect && activeConnections.length >= limits.platforms) {
+      return {
+        allowed: false,
+        upgrade_to: getUpgradePath(plan),
+        reason: `Platform connection limit reached (${activeConnections.length}/${limits.platforms})`,
+      };
+    }
+  }
+
+  return { allowed: true };
 }

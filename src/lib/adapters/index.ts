@@ -1,8 +1,10 @@
 import type { PlatformAdapter, PlatformType } from "./types";
 import { TwitterAdapter } from "./twitter";
+import { LinkedInAdapter } from "./linkedin";
 
 const adapters: Record<string, () => PlatformAdapter> = {
   twitter: () => new TwitterAdapter(),
+  linkedin: () => new LinkedInAdapter(),
 };
 
 export function getAdapterForPlatform(platform: PlatformType): PlatformAdapter {
@@ -20,4 +22,5 @@ export type {
   PostPayload,
   PlatformPostResult,
   RawMetricSnapshot,
+  UploadMediaOptions,
 } from "./types";

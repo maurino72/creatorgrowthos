@@ -11,11 +11,10 @@ export interface MentionInputProps {
   disabled?: boolean;
   bodyLength: number;
   tagsCharLength: number;
+  charLimit?: number;
   suggestions?: MentionSuggestion[];
   suggestLoading?: boolean;
 }
-
-const CHAR_LIMIT = 280;
 
 export function MentionInput({
   mentions,
@@ -24,13 +23,14 @@ export function MentionInput({
   disabled = false,
   bodyLength,
   tagsCharLength,
+  charLimit = 280,
   suggestions,
   suggestLoading,
 }: MentionInputProps) {
   const [inputValue, setInputValue] = useState("");
 
   const mentionsCharLen = computeMentionsCharLength(mentions);
-  const remaining = CHAR_LIMIT - bodyLength - tagsCharLength - mentionsCharLen;
+  const remaining = charLimit - bodyLength - tagsCharLength - mentionsCharLen;
 
   function addMention(raw: string) {
     const normalized = normalizeMention(raw);

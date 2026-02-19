@@ -119,7 +119,7 @@ describe("PATCH /api/posts/:id", () => {
     const request = new Request("http://localhost:3000/api/posts/post-1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: "a".repeat(281) }),
+      body: JSON.stringify({ body: "a".repeat(3001) }),
     });
     const response = await PATCH(request, makeParams("post-1"));
     expect(response.status).toBe(400);

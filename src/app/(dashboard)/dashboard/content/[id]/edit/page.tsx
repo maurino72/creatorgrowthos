@@ -10,6 +10,7 @@ import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queri
 import { useImproveContent, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
+import { getCharLimitForPlatforms } from "@/lib/adapters/platform-config";
 import { useSignedUrls } from "@/lib/queries/media";
 import { ImageUploadZone, type ImageItem } from "@/components/image-upload-zone";
 import { MentionInput } from "@/components/mention-input";
@@ -18,17 +19,15 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatEngagementRate, formatTimeAgo } from "@/lib/utils/format";
 
-const CHAR_LIMIT = 280;
-
-function getCharColor(count: number): string {
-  if (count > CHAR_LIMIT) return "text-red-500";
-  if (count >= 260) return "text-yellow-500";
+function getCharColor(count: number, limit: number): string {
+  if (count > limit) return "text-red-500";
+  if (count >= limit * 0.93) return "text-yellow-500";
   return "text-muted-foreground/50";
 }
 
-function getBarColor(count: number): string {
-  if (count > CHAR_LIMIT) return "#ef4444";
-  if (count >= 260) return "#eab308";
+function getBarColor(count: number, limit: number): string {
+  if (count > limit) return "#ef4444";
+  if (count >= limit * 0.93) return "#eab308";
   return "var(--foreground)";
 }
 
@@ -318,14 +317,15 @@ export default function EditPostPage() {
     }
   }, [signedUrls, images.length, initialized]);
 
-  const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
-  const isOverLimit = charCount > CHAR_LIMIT;
   const isReadOnly = post?.status === "published";
   const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
   const hasUploading = images.some((i) => i.uploading);
   const existingPlatforms = (
     post?.post_publications?.map((p: { platform: string }) => p.platform) ?? []
   ) as ("twitter" | "linkedin" | "threads")[];
+  const charLimit = getCharLimitForPlatforms(existingPlatforms);
+  const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
+  const isOverLimit = charCount > charLimit;
   const canSubmit =
     body.trim().length > 0 &&
     !isOverLimit &&
@@ -441,16 +441,16 @@ export default function EditPostPage() {
           <div
             className="absolute inset-y-0 left-0 transition-all duration-500 ease-out"
             style={{
-              width: `${Math.min((charCount / CHAR_LIMIT) * 100, 100)}%`,
-              backgroundColor: getBarColor(charCount),
+              width: `${Math.min((charCount / charLimit) * 100, 100)}%`,
+              backgroundColor: getBarColor(charCount, charLimit),
               opacity: charCount > 0 ? 0.5 : 0,
             }}
           />
         </div>
         <span
-          className={`text-[11px] font-mono tabular-nums shrink-0 ${getCharColor(charCount)}`}
+          className={`text-[11px] font-mono tabular-nums shrink-0 ${getCharColor(charCount, charLimit)}`}
         >
-          {charCount} / {CHAR_LIMIT}
+          {charCount} / {charLimit}
         </span>
       </div>
 
@@ -483,6 +483,7 @@ export default function EditPostPage() {
           onChange={setMentions}
           bodyLength={body.length}
           tagsCharLength={computeTagsCharLength(tags)}
+          charLimit={charLimit}
           disabled={isReadOnly}
           suggestions={suggestMentions.data ?? undefined}
           suggestLoading={suggestMentions.isPending}
@@ -517,6 +518,7 @@ export default function EditPostPage() {
           tags={tags}
           onChange={setTags}
           bodyLength={body.length + computeMentionsCharLength(mentions)}
+          charLimit={charLimit}
           disabled={isReadOnly}
           suggestions={suggestHashtags.data ?? undefined}
           suggestLoading={suggestHashtags.isPending}

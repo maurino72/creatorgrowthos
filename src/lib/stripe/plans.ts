@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PlatformType } from "@/lib/adapters/types";
 
 export const PLANS = ["starter", "business", "agency"] as const;
 export type PlanType = (typeof PLANS)[number];
@@ -136,6 +137,16 @@ export function getPlanDisplayName(plan: PlanType): string {
 
 export function getPlanDescription(plan: PlanType): string {
   return PLAN_DESCRIPTIONS[plan];
+}
+
+export const PLATFORM_ACCESS: Record<PlatformType, PlanType[]> = {
+  twitter: ["starter", "business", "agency"],
+  linkedin: ["business", "agency"],
+  threads: ["business", "agency"],
+};
+
+export function canAccessPlatform(plan: PlanType, platform: PlatformType): boolean {
+  return PLATFORM_ACCESS[platform].includes(plan);
 }
 
 export const TRIAL_PERIOD_DAYS = 5;

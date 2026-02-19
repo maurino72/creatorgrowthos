@@ -10,11 +10,10 @@ export interface TagInputProps {
   maxTags?: number;
   disabled?: boolean;
   bodyLength: number;
+  charLimit?: number;
   suggestions?: HashtagSuggestion[];
   suggestLoading?: boolean;
 }
-
-const CHAR_LIMIT = 280;
 
 export function TagInput({
   tags,
@@ -22,13 +21,14 @@ export function TagInput({
   maxTags = MAX_TAGS_PER_POST,
   disabled = false,
   bodyLength,
+  charLimit = 280,
   suggestions,
   suggestLoading,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState("");
 
   const tagsCharLen = computeTagsCharLength(tags);
-  const remaining = CHAR_LIMIT - bodyLength - tagsCharLen;
+  const remaining = charLimit - bodyLength - tagsCharLen;
 
   function addTag(raw: string) {
     const normalized = normalizeTag(raw);

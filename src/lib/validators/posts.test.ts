@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { createPostSchema, updatePostSchema } from "./posts";
+import { createPostSchema, updatePostSchema, validateBodyForPlatforms } from "./posts";
 
 describe("createPostSchema", () => {
   afterEach(() => {
@@ -32,15 +32,23 @@ describe("createPostSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects body exceeding 280 characters", () => {
+  it("rejects body exceeding 3000 characters (schema ceiling)", () => {
     const result = createPostSchema.safeParse({
-      body: "a".repeat(281),
-      platforms: ["twitter"],
+      body: "a".repeat(3001),
+      platforms: ["linkedin"],
     });
     expect(result.success).toBe(false);
   });
 
-  it("accepts body at exactly 280 characters", () => {
+  it("accepts body at exactly 3000 characters", () => {
+    const result = createPostSchema.safeParse({
+      body: "a".repeat(3000),
+      platforms: ["linkedin"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts body at exactly 280 characters for twitter", () => {
     const result = createPostSchema.safeParse({
       body: "a".repeat(280),
       platforms: ["twitter"],
@@ -297,9 +305,9 @@ describe("updatePostSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects body exceeding 280 characters", () => {
+  it("rejects body exceeding 3000 characters (schema ceiling)", () => {
     const result = updatePostSchema.safeParse({
-      body: "a".repeat(281),
+      body: "a".repeat(3001),
     });
     expect(result.success).toBe(false);
   });
@@ -402,5 +410,41 @@ describe("updatePostSchema", () => {
       mentions: ["INVALID"],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("validateBodyForPlatforms", () => {
+  it("returns null when body is within twitter limit", () => {
+    expect(validateBodyForPlatforms("a".repeat(280), ["twitter"])).toBeNull();
+  });
+
+  it("returns error when body exceeds twitter limit", () => {
+    const result = validateBodyForPlatforms("a".repeat(281), ["twitter"]);
+    expect(result).not.toBeNull();
+    expect(result).toContain("280");
+  });
+
+  it("returns null when body is within linkedin limit", () => {
+    expect(validateBodyForPlatforms("a".repeat(3000), ["linkedin"])).toBeNull();
+  });
+
+  it("returns error when body exceeds linkedin limit", () => {
+    const result = validateBodyForPlatforms("a".repeat(3001), ["linkedin"]);
+    expect(result).not.toBeNull();
+    expect(result).toContain("3000");
+  });
+
+  it("uses min limit for multi-platform (twitter + linkedin = 280)", () => {
+    const result = validateBodyForPlatforms("a".repeat(281), ["twitter", "linkedin"]);
+    expect(result).not.toBeNull();
+    expect(result).toContain("280");
+  });
+
+  it("returns null for 280-char body targeting twitter + linkedin", () => {
+    expect(validateBodyForPlatforms("a".repeat(280), ["twitter", "linkedin"])).toBeNull();
+  });
+
+  it("returns null for empty platforms (uses default 280)", () => {
+    expect(validateBodyForPlatforms("a".repeat(280), [])).toBeNull();
   });
 });

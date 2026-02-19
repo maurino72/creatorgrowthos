@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createPostSchema } from "@/lib/validators/posts";
+import { createPostSchema, validateBodyForPlatforms } from "@/lib/validators/posts";
 import { createPost, getPostsForUser } from "@/lib/services/posts";
 import { getConnectionByPlatform } from "@/lib/services/connections";
 import { sendPostCreated, sendPostScheduled } from "@/lib/inngest/send";
@@ -22,6 +22,15 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  // Platform-specific body length check
+  const bodyError = validateBodyForPlatforms(parsed.data.body, parsed.data.platforms);
+  if (bodyError) {
+    return NextResponse.json(
+      { error: bodyError },
       { status: 400 },
     );
   }

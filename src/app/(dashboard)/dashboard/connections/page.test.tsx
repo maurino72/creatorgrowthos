@@ -32,9 +32,18 @@ vi.mock("@/lib/queries/connections", () => ({
   },
 }));
 
+vi.mock("@/lib/queries/billing", () => ({
+  useSubscription: vi.fn(),
+  billingKeys: {
+    all: ["billing"],
+    subscription: ["billing", "subscription"],
+  },
+}));
+
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useConnections } from "@/lib/queries/connections";
+import { useSubscription } from "@/lib/queries/billing";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -58,6 +67,11 @@ describe("Connections page", () => {
     vi.mocked(useSearchParams).mockReturnValue(
       new URLSearchParams() as never,
     );
+    // Default: business plan
+    vi.mocked(useSubscription).mockReturnValue({
+      data: { plan: "business", status: "active" },
+      isLoading: false,
+    } as never);
   });
 
   afterEach(() => {
@@ -101,7 +115,11 @@ describe("Connections page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(screen.getByText("X")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /connect/i })).toBeInTheDocument();
+    const connectLinks = screen.getAllByRole("link", { name: /connect/i });
+    const twitterLink = connectLinks.find(
+      (l) => (l as HTMLAnchorElement).href.includes("twitter"),
+    );
+    expect(twitterLink).toBeDefined();
   });
 
   it("renders connected state with username and Disconnect button", async () => {
@@ -157,7 +175,7 @@ describe("Connections page", () => {
     expect(screen.getByRole("link", { name: /reconnect/i })).toBeInTheDocument();
   });
 
-  it("shows coming soon state for LinkedIn and Threads", async () => {
+  it("shows coming soon state only for Threads", async () => {
     vi.mocked(useConnections).mockReturnValue({
       data: [],
       isLoading: false,
@@ -167,9 +185,8 @@ describe("Connections page", () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("LinkedIn")).toBeInTheDocument();
     expect(screen.getByText("Threads")).toBeInTheDocument();
-    expect(screen.getAllByText("Coming Soon")).toHaveLength(2);
+    expect(screen.getAllByText("Coming Soon")).toHaveLength(1);
   });
 
   it("shows success toast when connected param is present", async () => {
@@ -202,5 +219,111 @@ describe("Connections page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(toast.error).toHaveBeenCalled();
+  });
+
+  // ── LinkedIn-specific tests ──
+
+  it("shows LinkedIn Connect button for business plan users", async () => {
+    vi.mocked(useSubscription).mockReturnValue({
+      data: { plan: "business", status: "active" },
+      isLoading: false,
+    } as never);
+    vi.mocked(useConnections).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("LinkedIn")).toBeInTheDocument();
+    // LinkedIn should have a Connect link, not Coming Soon
+    const linkedinLinks = screen.getAllByRole("link", { name: /connect/i });
+    const linkedinLink = linkedinLinks.find(
+      (l) => (l as HTMLAnchorElement).href.includes("linkedin"),
+    );
+    expect(linkedinLink).toBeDefined();
+  });
+
+  it("shows upgrade prompt for starter plan users on LinkedIn", async () => {
+    vi.mocked(useSubscription).mockReturnValue({
+      data: { plan: "starter", status: "active" },
+      isLoading: false,
+    } as never);
+    vi.mocked(useConnections).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("LinkedIn")).toBeInTheDocument();
+    expect(screen.getByText(/Upgrade/i)).toBeInTheDocument();
+  });
+
+  it("shows LinkedIn connected state with name (no @ prefix)", async () => {
+    vi.mocked(useConnections).mockReturnValue({
+      data: [
+        {
+          id: "conn-2",
+          platform: "linkedin",
+          platform_username: "John Smith",
+          platform_user_id: "li-abc",
+          status: "active",
+          connected_at: "2024-01-01T00:00:00Z",
+          token_expires_at: null,
+          scopes: null,
+          last_synced_at: null,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    // LinkedIn should show name without @ prefix
+    expect(screen.getByText("John Smith")).toBeInTheDocument();
+    expect(screen.queryByText("@John Smith")).not.toBeInTheDocument();
+  });
+
+  it("shows plan_required error toast", async () => {
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("error=plan_required") as never,
+    );
+    vi.mocked(useConnections).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "This platform requires a Business plan or higher.",
+    );
+  });
+
+  it("shows LinkedIn success toast when connected=linkedin", async () => {
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("connected=linkedin") as never,
+    );
+    vi.mocked(useConnections).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const Page = await importPage();
+    render(<Page />, { wrapper: createWrapper() });
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "LinkedIn connected successfully!",
+    );
   });
 });

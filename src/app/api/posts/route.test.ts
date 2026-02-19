@@ -126,6 +126,69 @@ describe("POST /api/posts", () => {
     });
   });
 
+  it("returns 400 when body exceeds platform-specific char limit (twitter 281 chars)", async () => {
+    mockAuth("user-123");
+    vi.mocked(getConnectionByPlatform).mockResolvedValue({
+      id: "conn-1",
+      status: "active",
+    } as never);
+
+    const POST = await importPOST();
+    const request = new Request("http://localhost:3000/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body: "a".repeat(281),
+        platforms: ["twitter"],
+      }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain("character limit");
+  });
+
+  it("allows 281-char body for linkedin-only post", async () => {
+    mockAuth("user-123");
+    vi.mocked(getConnectionByPlatform).mockResolvedValue({
+      id: "conn-1",
+      status: "active",
+    } as never);
+    vi.mocked(createPost).mockResolvedValue({
+      id: "post-li",
+      body: "a".repeat(281),
+      status: "draft",
+    } as never);
+
+    const POST = await importPOST();
+    const request = new Request("http://localhost:3000/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body: "a".repeat(281),
+        platforms: ["linkedin"],
+      }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(201);
+  });
+
+  it("returns 400 when body exceeds 3000 chars for linkedin", async () => {
+    mockAuth("user-123");
+
+    const POST = await importPOST();
+    const request = new Request("http://localhost:3000/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body: "a".repeat(3001),
+        platforms: ["linkedin"],
+      }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
   it("creates scheduled post when scheduled_at provided", async () => {
     mockAuth("user-123");
     vi.mocked(getConnectionByPlatform).mockResolvedValue({

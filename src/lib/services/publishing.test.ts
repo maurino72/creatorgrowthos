@@ -467,6 +467,7 @@ describe("publishing service", () => {
         "access-token",
         expect.any(Buffer),
         "image/jpeg",
+        undefined,
       );
       expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
         text: "Post with image!",
@@ -566,6 +567,145 @@ describe("publishing service", () => {
       expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
         text: "Great post @dan_abramov #React",
       });
+    });
+
+    it("uses platform-specific char limit (280 for twitter)", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter();
+      mockConnection();
+
+      // Body is 275 chars + tag " #React" = 282 — over 280
+      const body = "a".repeat(275);
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body,
+          status: "draft",
+          tags: ["React"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      // Tag should NOT be appended because 275 + 7 = 282 > 280
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: body,
+      });
+    });
+
+    it("uses platform-specific char limit (3000 for linkedin)", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter();
+      mockConnection({
+        platform: "linkedin",
+        platform_user_id: "urn:li:person:abc",
+      });
+
+      const body = "a".repeat(275);
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body,
+          status: "draft",
+          tags: ["React"],
+          post_publications: [
+            { id: "pub-1", platform: "linkedin", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      // Tag SHOULD be appended for LinkedIn (275 + 7 = 282 < 3000)
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: body + " #React",
+        authorId: "urn:li:person:abc",
+      });
+    });
+
+    it("passes authorId from connection.platform_user_id for linkedin", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter();
+      mockConnection({
+        platform: "linkedin",
+        platform_user_id: "urn:li:person:abc",
+      });
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Hello LinkedIn!",
+          status: "draft",
+          post_publications: [
+            { id: "pub-1", platform: "linkedin", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Hello LinkedIn!",
+        authorId: "urn:li:person:abc",
+      });
+    });
+
+    it("passes authorId to uploadMedia for linkedin", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "urn:li:share:123",
+          platformUrl: "https://www.linkedin.com/feed/update/urn:li:share:123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn().mockResolvedValue("urn:li:image:img-1"),
+      });
+      mockConnection({
+        platform: "linkedin",
+        platform_user_id: "urn:li:person:abc",
+      });
+      vi.mocked(downloadImage).mockResolvedValue(Buffer.from("image-data"));
+      vi.mocked(deleteImage).mockResolvedValue(undefined);
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Post with image!",
+          status: "draft",
+          media_urls: ["user-123/img1.jpg"],
+          post_publications: [
+            { id: "pub-1", platform: "linkedin", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(adapter.uploadMedia).toHaveBeenCalledWith(
+        "access-token",
+        expect.any(Buffer),
+        "image/jpeg",
+        { authorId: "urn:li:person:abc" },
+      );
     });
 
     it("does not upload media when post has no media_urls", async () => {

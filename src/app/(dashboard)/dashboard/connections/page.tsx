@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConnections, useDisconnect } from "@/lib/queries/connections";
 import type { ConnectionData } from "@/lib/queries/connections";
+import { useSubscription } from "@/lib/queries/billing";
+import { canAccessPlatform } from "@/lib/stripe/plans";
+import type { PlanType } from "@/lib/stripe/plans";
 import type { PlatformType } from "@/lib/adapters/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,12 +17,14 @@ const PLATFORMS: {
   id: PlatformType;
   name: string;
   comingSoon: boolean;
+  usesHandle: boolean;
   icon: React.ReactNode;
 }[] = [
   {
     id: "twitter",
     name: "X",
     comingSoon: false,
+    usesHandle: true,
     icon: (
       <svg
         width="18"
@@ -35,7 +40,8 @@ const PLATFORMS: {
   {
     id: "linkedin",
     name: "LinkedIn",
-    comingSoon: true,
+    comingSoon: false,
+    usesHandle: false,
     icon: (
       <svg
         width="18"
@@ -52,6 +58,7 @@ const PLATFORMS: {
     id: "threads",
     name: "Threads",
     comingSoon: true,
+    usesHandle: true,
     icon: (
       <svg
         width="18"
@@ -71,6 +78,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_state: "OAuth state mismatch. Please try connecting again.",
   token_exchange_failed: "Failed to complete authentication. Please try again.",
   session_expired: "Your session expired. Please log in and try again.",
+  plan_required: "This platform requires a Business plan or higher.",
 };
 
 function ConnectionStatusBadge({ status }: { status: string | null }) {
@@ -89,9 +97,11 @@ function ConnectionStatusBadge({ status }: { status: string | null }) {
 function ConnectionEntry({
   platform,
   connection,
+  plan,
 }: {
   platform: (typeof PLATFORMS)[number];
   connection: ConnectionData | undefined;
+  plan: PlanType | null;
 }) {
   const disconnect = useDisconnect();
 
@@ -114,10 +124,32 @@ function ConnectionEntry({
     );
   }
 
+  // Plan gating: if user's plan doesn't support this platform, show upgrade prompt
+  const hasAccess = plan ? canAccessPlatform(plan, platform.id) : false;
+
   const isConnected = !!connection;
   const isExpired = connection?.status === "expired";
   const isRevoked = connection?.status === "revoked";
   const needsReconnect = isExpired || isRevoked;
+
+  if (!isConnected && !hasAccess) {
+    return (
+      <div className="flex items-center justify-between py-5 opacity-60">
+        <div className="flex items-center gap-4">
+          <span className="text-foreground/60">{platform.icon}</span>
+          <div>
+            <p className="text-[15px] font-serif">{platform.name}</p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30 mt-0.5">
+              Business plan required
+            </p>
+          </div>
+        </div>
+        <Button asChild variant="coral" size="xs">
+          <a href="/pricing">Upgrade</a>
+        </Button>
+      </div>
+    );
+  }
 
   if (!isConnected) {
     return (
@@ -138,6 +170,10 @@ function ConnectionEntry({
     );
   }
 
+  const usernameDisplay = platform.usesHandle
+    ? `@${connection.platform_username}`
+    : connection.platform_username;
+
   return (
     <div className="flex items-center justify-between py-5">
       <div className="flex items-center gap-4">
@@ -148,7 +184,7 @@ function ConnectionEntry({
             <ConnectionStatusBadge status={connection.status} />
           </div>
           <p className="text-[11px] text-muted-foreground/40 mt-0.5">
-            <span>@{connection.platform_username}</span>
+            <span>{usernameDisplay}</span>
             {connection.connected_at && (
               <> &middot; Connected {new Date(connection.connected_at).toLocaleDateString()}</>
             )}
@@ -201,6 +237,8 @@ function ConnectionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: connections, isLoading } = useConnections();
+  const { data: subscription } = useSubscription();
+  const plan = (subscription?.plan as PlanType) ?? null;
   const toastShown = useRef(false);
 
   useEffect(() => {
@@ -242,6 +280,7 @@ function ConnectionsContent() {
                 connection={connections?.find(
                   (c) => c.platform === platform.id,
                 )}
+                plan={plan}
               />
               {idx < PLATFORMS.length - 1 && (
                 <div className="h-px bg-editorial-rule-subtle" />

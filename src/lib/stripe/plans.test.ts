@@ -5,6 +5,7 @@ import {
   PLANS,
   PLAN_LIMITS,
   PLAN_PRICING,
+  PLATFORM_ACCESS,
   getPlanLimits,
   getPriceId,
   getUpgradePath,
@@ -14,6 +15,7 @@ import {
   getPlanDescription,
   planSchema,
   billingCycleSchema,
+  canAccessPlatform,
 } from "./plans";
 
 describe("plans", () => {
@@ -221,6 +223,48 @@ describe("plans", () => {
     it("rejects invalid billing cycles", () => {
       expect(() => billingCycleSchema.parse("weekly")).toThrow();
       expect(() => billingCycleSchema.parse("")).toThrow();
+    });
+  });
+
+  describe("PLATFORM_ACCESS", () => {
+    it("allows all plans for twitter", () => {
+      expect(PLATFORM_ACCESS.twitter).toEqual(["starter", "business", "agency"]);
+    });
+
+    it("allows only business and agency for linkedin", () => {
+      expect(PLATFORM_ACCESS.linkedin).toEqual(["business", "agency"]);
+    });
+
+    it("allows only business and agency for threads", () => {
+      expect(PLATFORM_ACCESS.threads).toEqual(["business", "agency"]);
+    });
+  });
+
+  describe("canAccessPlatform", () => {
+    it("allows starter to access twitter", () => {
+      expect(canAccessPlatform("starter", "twitter")).toBe(true);
+    });
+
+    it("blocks starter from linkedin", () => {
+      expect(canAccessPlatform("starter", "linkedin")).toBe(false);
+    });
+
+    it("blocks starter from threads", () => {
+      expect(canAccessPlatform("starter", "threads")).toBe(false);
+    });
+
+    it("allows business to access linkedin", () => {
+      expect(canAccessPlatform("business", "linkedin")).toBe(true);
+    });
+
+    it("allows business to access twitter", () => {
+      expect(canAccessPlatform("business", "twitter")).toBe(true);
+    });
+
+    it("allows agency to access all platforms", () => {
+      expect(canAccessPlatform("agency", "twitter")).toBe(true);
+      expect(canAccessPlatform("agency", "linkedin")).toBe(true);
+      expect(canAccessPlatform("agency", "threads")).toBe(true);
     });
   });
 

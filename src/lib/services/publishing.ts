@@ -8,6 +8,7 @@ import { decrypt } from "@/lib/utils/encryption";
 import { downloadImage, deleteImage } from "@/lib/services/media";
 import { formatMentionsForPublish } from "@/lib/validators/mentions";
 import { formatTagsForPublish } from "@/lib/validators/tags";
+import { getCharLimitForPlatform } from "@/lib/adapters/platform-config";
 import type { PlatformType } from "@/lib/adapters/types";
 
 export function buildPublishText(
@@ -146,6 +147,7 @@ async function publishToPlatform(
     // Upload media if present
     const mediaIds: string[] = [];
     const mediaUrls = post.media_urls ?? [];
+    const authorId = connection.platform_user_id ?? undefined;
     for (const mediaPath of mediaUrls) {
       const buffer = await downloadImage(mediaPath);
       const ext = mediaPath.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -157,16 +159,20 @@ async function publishToPlatform(
         webp: "image/webp",
       };
       const mimeType = mimeMap[ext] ?? "image/jpeg";
-      const mediaId = await adapter.uploadMedia(accessToken, buffer, mimeType);
+      const mediaId = await adapter.uploadMedia(accessToken, buffer, mimeType, authorId ? { authorId } : undefined);
       mediaIds.push(mediaId);
     }
 
-    const publishText = buildPublishText(post.body, post.mentions ?? [], post.tags ?? [], 280);
-    const payload: { text: string; mediaIds?: string[] } = {
+    const charLimit = getCharLimitForPlatform(platform);
+    const publishText = buildPublishText(post.body, post.mentions ?? [], post.tags ?? [], charLimit);
+    const payload: { text: string; mediaIds?: string[]; authorId?: string } = {
       text: publishText,
     };
     if (mediaIds.length > 0) {
       payload.mediaIds = mediaIds;
+    }
+    if (authorId) {
+      payload.authorId = authorId;
     }
 
     const result = await adapter.publishPost(accessToken, payload);

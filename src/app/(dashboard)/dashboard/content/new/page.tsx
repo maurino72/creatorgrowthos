@@ -9,6 +9,7 @@ import { useCreatePost } from "@/lib/queries/posts";
 import { useGenerateIdeas, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
+import { getCharLimitForPlatforms } from "@/lib/adapters/platform-config";
 import {
   ImageUploadZone,
   type ImageItem,
@@ -17,17 +18,15 @@ import { MentionInput } from "@/components/mention-input";
 import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
 
-const CHAR_LIMIT = 280;
-
-function getCharColor(count: number): string {
-  if (count > CHAR_LIMIT) return "text-red-500";
-  if (count >= 260) return "text-yellow-500";
+function getCharColor(count: number, limit: number): string {
+  if (count > limit) return "text-red-500";
+  if (count >= limit * 0.93) return "text-yellow-500";
   return "text-muted-foreground/50";
 }
 
-function getBarColor(count: number): string {
-  if (count > CHAR_LIMIT) return "#ef4444";
-  if (count >= 260) return "#eab308";
+function getBarColor(count: number, limit: number): string {
+  if (count > limit) return "#ef4444";
+  if (count >= limit * 0.93) return "#eab308";
   return "var(--foreground)";
 }
 
@@ -54,8 +53,9 @@ function NewPostPageInner() {
   const platforms = platform
     ? [platform as "twitter" | "linkedin" | "threads"]
     : [];
+  const charLimit = getCharLimitForPlatforms(platforms);
   const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
-  const isOverLimit = charCount > CHAR_LIMIT;
+  const isOverLimit = charCount > charLimit;
   const canSubmit =
     body.trim().length > 0 &&
     !isOverLimit &&
@@ -177,16 +177,16 @@ function NewPostPageInner() {
           <div
             className="absolute inset-y-0 left-0 transition-all duration-500 ease-out"
             style={{
-              width: `${Math.min((charCount / CHAR_LIMIT) * 100, 100)}%`,
-              backgroundColor: getBarColor(charCount),
+              width: `${Math.min((charCount / charLimit) * 100, 100)}%`,
+              backgroundColor: getBarColor(charCount, charLimit),
               opacity: charCount > 0 ? 0.5 : 0,
             }}
           />
         </div>
         <span
-          className={`text-[11px] font-mono tabular-nums shrink-0 ${getCharColor(charCount)}`}
+          className={`text-[11px] font-mono tabular-nums shrink-0 ${getCharColor(charCount, charLimit)}`}
         >
-          {charCount} / {CHAR_LIMIT}
+          {charCount} / {charLimit}
         </span>
       </div>
 
@@ -217,6 +217,7 @@ function NewPostPageInner() {
           onChange={setMentions}
           bodyLength={body.length}
           tagsCharLength={computeTagsCharLength(tags)}
+          charLimit={charLimit}
           suggestions={suggestMentions.data ?? undefined}
           suggestLoading={suggestMentions.isPending}
         />
@@ -248,6 +249,7 @@ function NewPostPageInner() {
           tags={tags}
           onChange={setTags}
           bodyLength={body.length + computeMentionsCharLength(mentions)}
+          charLimit={charLimit}
           suggestions={suggestHashtags.data ?? undefined}
           suggestLoading={suggestHashtags.isPending}
         />
@@ -457,7 +459,7 @@ function NewPostPageInner() {
         )}
 
         <span
-          className={`ml-auto text-[11px] font-mono tabular-nums ${getCharColor(charCount)}`}
+          className={`ml-auto text-[11px] font-mono tabular-nums ${getCharColor(charCount, charLimit)}`}
         >
           {charCount}
         </span>
