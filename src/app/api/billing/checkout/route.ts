@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStripeClient } from "@/lib/stripe/client";
 import { checkoutSchema } from "@/lib/validators/billing";
-import { getPriceId, TRIAL_PERIOD_DAYS } from "@/lib/stripe/plans";
+import { getPriceId, TRIAL_PERIOD_DAYS, ACTIVE_STATUSES, type SubscriptionStatus } from "@/lib/stripe/plans";
 import {
   getSubscriptionForUser,
   upsertSubscription,
@@ -43,6 +43,16 @@ export async function POST(request: Request) {
     // Get or create Stripe customer
     let customerId: string;
     const existingSub = await getSubscriptionForUser(user.id);
+
+    if (
+      existingSub?.stripe_subscription_id &&
+      ACTIVE_STATUSES.includes(existingSub.status as SubscriptionStatus)
+    ) {
+      return NextResponse.json(
+        { error: "Active subscription exists. Use the upgrade endpoint instead." },
+        { status: 409 }
+      );
+    }
 
     if (existingSub?.stripe_customer_id) {
       customerId = existingSub.stripe_customer_id;

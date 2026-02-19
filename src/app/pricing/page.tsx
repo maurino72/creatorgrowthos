@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useCheckout } from "@/lib/queries/billing";
+import { useCheckout, useUpgrade, useSubscription } from "@/lib/queries/billing";
 import {
   PLANS,
   PLAN_PRICING,
@@ -13,6 +13,7 @@ import {
   type BillingCycle,
   getPlanDisplayName,
   getPlanDescription,
+  isUpgrade,
 } from "@/lib/stripe/plans";
 
 /* ─── Plan feature highlights (shown in cards) ─── */
@@ -244,23 +245,61 @@ function FAQItem({
 function PricingContent() {
   const searchParams = useSearchParams();
   const isBlocked = searchParams.get("blocked") === "true";
+  const { data: subscription } = useSubscription();
+  const hasActiveSub = subscription?.status === "active" || subscription?.status === "trialing" || subscription?.status === "past_due";
+  const currentPlan = hasActiveSub ? (subscription.plan as PlanType) : null;
+  const currentCycle = hasActiveSub ? (subscription.billing_cycle as BillingCycle) : null;
+
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [cycleInitialized, setCycleInitialized] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const checkout = useCheckout();
+  const upgrade = useUpgrade();
+
+  // Default billing cycle to subscriber's current cycle once loaded
+  if (currentCycle && !cycleInitialized) {
+    setBillingCycle(currentCycle);
+    setCycleInitialized(true);
+  }
+
+  function getCtaLabel(plan: PlanType): string {
+    if (!currentPlan) return "Start Free Trial";
+    if (plan === currentPlan) return "Current Plan";
+    const name = getPlanDisplayName(plan);
+    return isUpgrade(currentPlan, plan) ? `Upgrade to ${name}` : `Switch to ${name}`;
+  }
 
   function handleSelectPlan(plan: PlanType) {
-    checkout.mutate(
-      { plan, billing_cycle: billingCycle },
-      {
-        onSuccess: (url) => {
-          if (url) window.location.href = url;
-        },
-        onError: () => {
-          toast.error("Failed to start checkout. Please try again.");
-        },
-      }
-    );
+    if (currentPlan === plan) return;
+
+    if (hasActiveSub) {
+      upgrade.mutate(
+        { plan, billing_cycle: billingCycle },
+        {
+          onSuccess: () => {
+            toast.success(`Plan changed to ${getPlanDisplayName(plan)}`);
+          },
+          onError: () => {
+            toast.error("Failed to change plan. Please try again.");
+          },
+        }
+      );
+    } else {
+      checkout.mutate(
+        { plan, billing_cycle: billingCycle },
+        {
+          onSuccess: (url) => {
+            if (url) window.location.href = url;
+          },
+          onError: () => {
+            toast.error("Failed to start checkout. Please try again.");
+          },
+        }
+      );
+    }
   }
+
+  const isLoading = hasActiveSub ? upgrade.isPending : checkout.isPending;
 
   return (
     <div className="flex flex-col items-center">
@@ -269,12 +308,16 @@ function PricingContent() {
         <h1 className="mb-4 font-serif text-3xl font-normal tracking-tight text-foreground sm:text-4xl">
           {isBlocked
             ? "Your subscription has ended"
-            : "Choose your plan to get started"}
+            : hasActiveSub
+              ? "Change your plan"
+              : "Choose your plan to get started"}
         </h1>
         <p className="text-lg text-muted-foreground">
           {isBlocked
             ? "Resubscribe to regain access to your account and data."
-            : "Start with a 14-day free trial. Cancel anytime."}
+            : hasActiveSub
+              ? "You\u2019ll be prorated for the remainder of your billing period."
+              : "Start with a 14-day free trial. Cancel anytime."}
         </p>
       </div>
 
@@ -384,22 +427,36 @@ function PricingContent() {
 
               {/* CTA */}
               <Button
-                variant={isBusiness ? "coral" : "outline"}
+                variant={currentPlan === plan ? "outline" : isBusiness ? "coral" : "outline"}
                 size="lg"
                 className={cn(
                   "mb-6 w-full",
-                  !isBusiness && "hover:border-primary/40 hover:text-primary"
+                  currentPlan !== plan && !isBusiness && "hover:border-primary/40 hover:text-primary"
                 )}
-                loading={checkout.isPending}
+                loading={isLoading}
+                disabled={currentPlan === plan}
                 onClick={() => handleSelectPlan(plan)}
               >
-                Start Free Trial
+                {getCtaLabel(plan)}
               </Button>
 
-              {/* Trial note */}
-              <p className="mb-5 text-center text-[11px] text-muted-foreground/70">
-                14-day free trial &middot; No credit card required
-              </p>
+              {/* Trial note / Current plan badge */}
+              {currentPlan === plan ? (
+                <div className="mb-5 flex items-center justify-center gap-1.5">
+                  <CheckIcon className="text-success" />
+                  <span className="text-[11px] font-medium text-success">
+                    Your current plan
+                  </span>
+                </div>
+              ) : !hasActiveSub ? (
+                <p className="mb-5 text-center text-[11px] text-muted-foreground/70">
+                  14-day free trial &middot; No credit card required
+                </p>
+              ) : (
+                <p className="mb-5 text-center text-[11px] text-muted-foreground/70">
+                  Changes apply immediately
+                </p>
+              )}
 
               {/* Divider */}
               <div className="mb-5 h-px bg-border/50" />
@@ -505,15 +562,16 @@ function PricingContent() {
                   return (
                     <td key={plan} className="pt-8 text-center">
                       <Button
-                        variant={isBusiness ? "coral" : "outline"}
+                        variant={currentPlan === plan ? "outline" : isBusiness ? "coral" : "outline"}
                         size="sm"
                         className={cn(
-                          !isBusiness && "hover:border-primary/40 hover:text-primary"
+                          currentPlan !== plan && !isBusiness && "hover:border-primary/40 hover:text-primary"
                         )}
-                        loading={checkout.isPending}
+                        loading={isLoading}
+                        disabled={currentPlan === plan}
                         onClick={() => handleSelectPlan(plan)}
                       >
-                        Start Free Trial
+                        {getCtaLabel(plan)}
                       </Button>
                     </td>
                   );
@@ -552,12 +610,13 @@ function PricingContent() {
             <path d="m9 12 2 2 4-4" />
           </svg>
           <span className="text-xs font-medium uppercase tracking-[0.15em]">
-            Secure checkout
+            {hasActiveSub ? "Secure billing" : "Secure checkout"}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          No charge until your 14-day trial ends. Cancel anytime from your
-          billing settings.
+          {hasActiveSub
+            ? "Plan changes are prorated automatically. Manage anytime from your billing settings."
+            : "No charge until your 14-day trial ends. Cancel anytime from your billing settings."}
         </p>
       </div>
     </div>

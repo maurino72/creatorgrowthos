@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PlanType, BillingCycle } from "@/lib/stripe/plans";
 
 export const billingKeys = {
@@ -88,9 +88,36 @@ export function useInvoices() {
   });
 }
 
+async function upgradeSubscription(input: {
+  plan: PlanType;
+  billing_cycle: BillingCycle;
+}) {
+  const response = await fetch("/api/billing/upgrade", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error ?? "Failed to upgrade subscription");
+  }
+  return response.json();
+}
+
 export function useCheckout() {
   return useMutation({
     mutationFn: createCheckout,
+  });
+}
+
+export function useUpgrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: upgradeSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.subscription });
+      queryClient.invalidateQueries({ queryKey: billingKeys.usage });
+    },
   });
 }
 

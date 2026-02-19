@@ -164,3 +164,17 @@ export const ACTIVE_STATUSES: SubscriptionStatus[] = [
   "trialing",
   "past_due",
 ];
+
+const PLAN_TIER: Record<PlanType, number> = {
+  starter: 0,
+  business: 1,
+  agency: 2,
+};
+
+export function isUpgrade(from: PlanType, to: PlanType): boolean {
+  return PLAN_TIER[to] > PLAN_TIER[from];
+}
+
+export function isDowngrade(from: PlanType, to: PlanType): boolean {
+  return PLAN_TIER[to] < PLAN_TIER[from];
+}

@@ -297,7 +297,7 @@ describe("updateSession middleware", () => {
       expect(response.status).toBe(200);
     });
 
-    it("redirects user with active subscription from /pricing to /dashboard", async () => {
+    it("allows user with active subscription to access /pricing", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
@@ -307,8 +307,7 @@ describe("updateSession middleware", () => {
       const request = mockRequest("/pricing");
       const response = await updateSession(request);
 
-      expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toContain("/dashboard");
+      expect(response.status).toBe(200);
     });
   });
 });

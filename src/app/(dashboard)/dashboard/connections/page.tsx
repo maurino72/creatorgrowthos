@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConnections, useDisconnect } from "@/lib/queries/connections";
@@ -240,6 +240,10 @@ function ConnectionsContent() {
   const { data: subscription } = useSubscription();
   const plan = (subscription?.plan as PlanType) ?? null;
   const toastShown = useRef(false);
+  // Prevent hydration mismatch: Suspense fallback renders skeletons on server,
+  // so first client render must also show skeletons until after mount.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (toastShown.current) return;
@@ -266,7 +270,7 @@ function ConnectionsContent() {
 
   return (
     <div>
-      {isLoading
+      {!mounted || isLoading
         ? Array.from({ length: 3 }).map((_, i) => (
             <div key={i}>
               <ConnectionSkeleton />

@@ -16,6 +16,8 @@ import {
   planSchema,
   billingCycleSchema,
   canAccessPlatform,
+  isUpgrade,
+  isDowngrade,
 } from "./plans";
 
 describe("plans", () => {
@@ -265,6 +267,58 @@ describe("plans", () => {
       expect(canAccessPlatform("agency", "twitter")).toBe(true);
       expect(canAccessPlatform("agency", "linkedin")).toBe(true);
       expect(canAccessPlatform("agency", "threads")).toBe(true);
+    });
+  });
+
+  describe("isUpgrade", () => {
+    it("returns true for starter → business", () => {
+      expect(isUpgrade("starter", "business")).toBe(true);
+    });
+
+    it("returns true for starter → agency", () => {
+      expect(isUpgrade("starter", "agency")).toBe(true);
+    });
+
+    it("returns true for business → agency", () => {
+      expect(isUpgrade("business", "agency")).toBe(true);
+    });
+
+    it("returns false for same plan", () => {
+      expect(isUpgrade("starter", "starter")).toBe(false);
+      expect(isUpgrade("business", "business")).toBe(false);
+      expect(isUpgrade("agency", "agency")).toBe(false);
+    });
+
+    it("returns false for downgrades", () => {
+      expect(isUpgrade("business", "starter")).toBe(false);
+      expect(isUpgrade("agency", "starter")).toBe(false);
+      expect(isUpgrade("agency", "business")).toBe(false);
+    });
+  });
+
+  describe("isDowngrade", () => {
+    it("returns true for business → starter", () => {
+      expect(isDowngrade("business", "starter")).toBe(true);
+    });
+
+    it("returns true for agency → starter", () => {
+      expect(isDowngrade("agency", "starter")).toBe(true);
+    });
+
+    it("returns true for agency → business", () => {
+      expect(isDowngrade("agency", "business")).toBe(true);
+    });
+
+    it("returns false for same plan", () => {
+      expect(isDowngrade("starter", "starter")).toBe(false);
+      expect(isDowngrade("business", "business")).toBe(false);
+      expect(isDowngrade("agency", "agency")).toBe(false);
+    });
+
+    it("returns false for upgrades", () => {
+      expect(isDowngrade("starter", "business")).toBe(false);
+      expect(isDowngrade("starter", "agency")).toBe(false);
+      expect(isDowngrade("business", "agency")).toBe(false);
     });
   });
 

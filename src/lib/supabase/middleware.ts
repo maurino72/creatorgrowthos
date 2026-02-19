@@ -130,12 +130,6 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // On /pricing with valid subscription → redirect to /dashboard
-      if (hasValidSub && pathname === "/pricing") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
-        return NextResponse.redirect(url);
-      }
     }
   }
 

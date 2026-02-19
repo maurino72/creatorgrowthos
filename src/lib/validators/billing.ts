@@ -7,3 +7,10 @@ export const checkoutSchema = z.object({
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+export const upgradeSchema = z.object({
+  plan: planSchema,
+  billing_cycle: billingCycleSchema,
+});
+
+export type UpgradeInput = z.infer<typeof upgradeSchema>;

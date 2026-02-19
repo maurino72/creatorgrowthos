@@ -1,8 +1,9 @@
 "use client";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useCheckout } from "@/lib/queries/billing";
-import { getPlanDisplayName, type PlanType } from "@/lib/stripe/plans";
+import { useCheckout, useUpgrade, useSubscription } from "@/lib/queries/billing";
+import { getPlanDisplayName, type PlanType, type BillingCycle } from "@/lib/stripe/plans";
 
 interface UpgradePromptProps {
   feature: string;
@@ -19,18 +20,48 @@ export function UpgradePrompt({
   currentUsage,
   onDismiss,
 }: UpgradePromptProps) {
+  const { data: subscription } = useSubscription();
   const checkout = useCheckout();
+  const upgrade = useUpgrade();
   const planName = getPlanDisplayName(upgradeTo as PlanType);
 
+  const hasActiveSub =
+    subscription?.status === "active" ||
+    subscription?.status === "trialing" ||
+    subscription?.status === "past_due";
+
+  const isLoading = hasActiveSub ? upgrade.isPending : checkout.isPending;
+
   function handleUpgrade() {
-    checkout.mutate(
-      { plan: upgradeTo as PlanType, billing_cycle: "monthly" },
-      {
-        onSuccess: (url) => {
-          if (url) window.location.href = url;
-        },
-      }
-    );
+    const plan = upgradeTo as PlanType;
+
+    if (hasActiveSub) {
+      const billingCycle = (subscription.billing_cycle as BillingCycle) ?? "monthly";
+      upgrade.mutate(
+        { plan, billing_cycle: billingCycle },
+        {
+          onSuccess: () => {
+            toast.success(`Upgraded to ${planName}`);
+            onDismiss();
+          },
+          onError: () => {
+            toast.error("Failed to upgrade. Please try again.");
+          },
+        }
+      );
+    } else {
+      checkout.mutate(
+        { plan, billing_cycle: "monthly" },
+        {
+          onSuccess: (url) => {
+            if (url) window.location.href = url;
+          },
+          onError: () => {
+            toast.error("Failed to start checkout. Please try again.");
+          },
+        }
+      );
+    }
   }
 
   return (
@@ -55,7 +86,7 @@ export function UpgradePrompt({
           variant="coral"
           size="sm"
           onClick={handleUpgrade}
-          loading={checkout.isPending}
+          loading={isLoading}
         >
           Upgrade to {planName}
         </Button>

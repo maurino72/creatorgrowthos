@@ -4,10 +4,24 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { UpgradePrompt } from "./upgrade-prompt";
 
+const mockCheckoutMutate = vi.fn();
+const mockUpgradeMutate = vi.fn();
+const mockSubscriptionData = {
+  current: null as Record<string, unknown> | null,
+};
+
 vi.mock("@/lib/queries/billing", () => ({
   useCheckout: () => ({
-    mutate: vi.fn(),
+    mutate: mockCheckoutMutate,
     isPending: false,
+  }),
+  useUpgrade: () => ({
+    mutate: mockUpgradeMutate,
+    isPending: false,
+  }),
+  useSubscription: () => ({
+    data: mockSubscriptionData.current,
+    isLoading: false,
   }),
 }));
 
@@ -27,6 +41,7 @@ function createWrapper() {
 describe("UpgradePrompt", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSubscriptionData.current = null;
   });
 
   it("renders with feature name and upgrade target", () => {
@@ -87,5 +102,83 @@ describe("UpgradePrompt", () => {
     );
 
     expect(screen.getByText(/30\/30/)).toBeInTheDocument();
+  });
+
+  describe("with no active subscription", () => {
+    it("calls useCheckout with monthly when clicking upgrade", () => {
+      render(
+        <UpgradePrompt
+          feature="AI Ideation"
+          upgradeTo="business"
+          onDismiss={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(
+        screen.getByRole("button", { name: /Upgrade to Business/i })
+      );
+
+      expect(mockCheckoutMutate).toHaveBeenCalledWith(
+        { plan: "business", billing_cycle: "monthly" },
+        expect.anything()
+      );
+      expect(mockUpgradeMutate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("with active subscription", () => {
+    beforeEach(() => {
+      mockSubscriptionData.current = {
+        plan: "starter",
+        status: "active",
+        billing_cycle: "yearly",
+      };
+    });
+
+    it("calls useUpgrade with subscription billing cycle", () => {
+      render(
+        <UpgradePrompt
+          feature="AI Ideation"
+          upgradeTo="business"
+          onDismiss={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(
+        screen.getByRole("button", { name: /Upgrade to Business/i })
+      );
+
+      expect(mockUpgradeMutate).toHaveBeenCalledWith(
+        { plan: "business", billing_cycle: "yearly" },
+        expect.anything()
+      );
+      expect(mockCheckoutMutate).not.toHaveBeenCalled();
+    });
+
+    it("calls onDismiss on successful upgrade", () => {
+      const onDismiss = vi.fn();
+      mockUpgradeMutate.mockImplementation(
+        (_input: unknown, opts: { onSuccess?: () => void }) => {
+          opts.onSuccess?.();
+        }
+      );
+
+      render(
+        <UpgradePrompt
+          feature="AI Ideation"
+          upgradeTo="business"
+          onDismiss={onDismiss}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(
+        screen.getByRole("button", { name: /Upgrade to Business/i })
+      );
+
+      expect(onDismiss).toHaveBeenCalled();
+    });
   });
 });

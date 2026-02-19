@@ -150,6 +150,110 @@ describe("POST /api/billing/checkout", () => {
     );
   });
 
+  it("returns 409 when user has active subscription", async () => {
+    mockAuth();
+    vi.mocked(getSubscriptionForUser).mockResolvedValue({
+      id: "sub-1",
+      user_id: TEST_USER.id,
+      stripe_customer_id: "cus_existing",
+      stripe_subscription_id: "sub_stripe_123",
+      plan: "starter",
+      status: "active",
+      billing_cycle: "monthly",
+      current_period_start: null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      canceled_at: null,
+      trial_end: null,
+      created_at: null,
+      updated_at: null,
+    });
+
+    const response = await POST(
+      createRequest({ plan: "business", billing_cycle: "monthly" })
+    );
+    expect(response.status).toBe(409);
+    const data = await response.json();
+    expect(data.error).toContain("upgrade");
+  });
+
+  it("returns 409 when user has trialing subscription", async () => {
+    mockAuth();
+    vi.mocked(getSubscriptionForUser).mockResolvedValue({
+      id: "sub-1",
+      user_id: TEST_USER.id,
+      stripe_customer_id: "cus_existing",
+      stripe_subscription_id: "sub_stripe_123",
+      plan: "starter",
+      status: "trialing",
+      billing_cycle: "monthly",
+      current_period_start: null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      canceled_at: null,
+      trial_end: null,
+      created_at: null,
+      updated_at: null,
+    });
+
+    const response = await POST(
+      createRequest({ plan: "business", billing_cycle: "monthly" })
+    );
+    expect(response.status).toBe(409);
+  });
+
+  it("returns 409 when user has past_due subscription", async () => {
+    mockAuth();
+    vi.mocked(getSubscriptionForUser).mockResolvedValue({
+      id: "sub-1",
+      user_id: TEST_USER.id,
+      stripe_customer_id: "cus_existing",
+      stripe_subscription_id: "sub_stripe_123",
+      plan: "starter",
+      status: "past_due",
+      billing_cycle: "monthly",
+      current_period_start: null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      canceled_at: null,
+      trial_end: null,
+      created_at: null,
+      updated_at: null,
+    });
+
+    const response = await POST(
+      createRequest({ plan: "business", billing_cycle: "monthly" })
+    );
+    expect(response.status).toBe(409);
+  });
+
+  it("allows checkout for canceled subscriber (re-subscribe)", async () => {
+    mockAuth();
+    const stripe = mockStripe();
+    vi.mocked(getSubscriptionForUser).mockResolvedValue({
+      id: "sub-1",
+      user_id: TEST_USER.id,
+      stripe_customer_id: "cus_existing",
+      stripe_subscription_id: "sub_stripe_123",
+      plan: "starter",
+      status: "canceled",
+      billing_cycle: "monthly",
+      current_period_start: null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      canceled_at: null,
+      trial_end: null,
+      created_at: null,
+      updated_at: null,
+    });
+
+    const response = await POST(
+      createRequest({ plan: "business", billing_cycle: "monthly" })
+    );
+    expect(response.status).toBe(200);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalled();
+  });
+
   it("returns 500 with detail when Stripe customer creation fails", async () => {
     mockAuth();
     const stripe = mockStripe();
