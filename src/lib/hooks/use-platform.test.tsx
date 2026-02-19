@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
@@ -136,7 +136,7 @@ describe("usePlatform", () => {
     expect(result.current.activeConnections).toHaveLength(1);
   });
 
-  it("setPlatform updates local state without router.replace", () => {
+  it("setPlatform updates shared cache without router.replace", async () => {
     vi.mocked(useConnections).mockReturnValue({
       data: [
         { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
@@ -156,10 +156,12 @@ describe("usePlatform", () => {
       result.current.setPlatform("linkedin");
     });
 
-    expect(result.current.platform).toBe("linkedin");
+    await waitFor(() => {
+      expect(result.current.platform).toBe("linkedin");
+    });
   });
 
-  it("setPlatform does not call router.replace", () => {
+  it("setPlatform does not call router.replace", async () => {
     vi.mocked(useConnections).mockReturnValue({
       data: [
         { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
@@ -178,10 +180,12 @@ describe("usePlatform", () => {
 
     // No router mock needed — the hook doesn't use useRouter anymore
     // This test ensures no navigation side effects
-    expect(result.current.platform).toBe("linkedin");
+    await waitFor(() => {
+      expect(result.current.platform).toBe("linkedin");
+    });
   });
 
-  it("uses URL param for initial value then local state for updates", () => {
+  it("uses URL param for initial value then cache for updates", async () => {
     vi.mocked(useConnections).mockReturnValue({
       data: [
         { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
@@ -201,6 +205,44 @@ describe("usePlatform", () => {
       result.current.setPlatform("twitter");
     });
 
-    expect(result.current.platform).toBe("twitter");
+    await waitFor(() => {
+      expect(result.current.platform).toBe("twitter");
+    });
+  });
+
+  it("setPlatform in one instance propagates to another sharing the same QueryClient", async () => {
+    vi.mocked(useConnections).mockReturnValue({
+      data: [
+        { id: "1", platform: "twitter", status: "active", platform_username: "alice" },
+        { id: "2", platform: "linkedin", status: "active", platform_username: "bob" },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useConnections>);
+    mockGet.mockReturnValue(null);
+
+    // Both hooks share the same QueryClient (simulating sidebar + page)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+    const { result: sidebar } = renderHook(() => usePlatform(), { wrapper });
+    const { result: page } = renderHook(() => usePlatform(), { wrapper });
+
+    // Both start at first active connection
+    expect(sidebar.current.platform).toBe("twitter");
+    expect(page.current.platform).toBe("twitter");
+
+    // Sidebar switches to linkedin
+    act(() => {
+      sidebar.current.setPlatform("linkedin");
+    });
+
+    // Page must see the update too (this fails with useState)
+    await waitFor(() => {
+      expect(sidebar.current.platform).toBe("linkedin");
+      expect(page.current.platform).toBe("linkedin");
+    });
   });
 });

@@ -1,14 +1,29 @@
 "use client";
 
-import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConnections } from "@/lib/queries/connections";
 import type { ConnectionData } from "@/lib/queries/connections";
 
+export const platformKeys = {
+  selected: ["platform", "selected"] as const,
+};
+
 export function usePlatform() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { data: connections, isLoading } = useConnections();
-  const [localPlatform, setLocalPlatform] = useState<string | null>(null);
+
+  const { data: cachedPlatform } = useQuery<string | null>({
+    queryKey: platformKeys.selected,
+    queryFn: () => null,
+    initialData: null,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
   const activeConnections = (connections ?? []).filter(
     (c: ConnectionData) => c.status === "active",
@@ -26,13 +41,13 @@ export function usePlatform() {
       ? activeConnections[0].platform
       : null;
 
-  // Local override takes precedence over URL param / derived
-  const platform = localPlatform ?? derivedPlatform;
+  // Cache override takes precedence over URL param / derived
+  const platform = cachedPlatform ?? derivedPlatform;
 
   const hasConnections = activeConnections.length > 0;
 
   function setPlatform(newPlatform: string) {
-    setLocalPlatform(newPlatform);
+    queryClient.setQueryData(platformKeys.selected, newPlatform);
   }
 
   return {
