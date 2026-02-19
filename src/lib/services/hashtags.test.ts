@@ -40,9 +40,9 @@ describe("suggestHashtags", () => {
 
   it("returns parsed hashtag suggestions", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify(suggestions));
 
@@ -53,9 +53,9 @@ describe("suggestHashtags", () => {
 
   it("calls OpenAI with temperature 0.3", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify(suggestions));
 
@@ -68,9 +68,9 @@ describe("suggestHashtags", () => {
 
   it("includes creator profile when available", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify(suggestions));
     vi.mocked(getCreatorProfile).mockResolvedValue({
@@ -92,9 +92,9 @@ describe("suggestHashtags", () => {
 
   it("logs the AI call on success", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify(suggestions));
 
@@ -111,9 +111,9 @@ describe("suggestHashtags", () => {
 
   it("handles wrapped response format { suggestions: [...] }", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify({ suggestions }));
 
@@ -146,9 +146,9 @@ describe("suggestHashtags", () => {
 
   it("handles wrapped response format { hashtags: [...] }", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify({ hashtags: suggestions }));
 
@@ -159,9 +159,9 @@ describe("suggestHashtags", () => {
 
   it("handles wrapped response format { tags: [...] }", async () => {
     const suggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     mockChatCompletion(JSON.stringify({ tags: suggestions }));
 
@@ -171,7 +171,7 @@ describe("suggestHashtags", () => {
   });
 
   it("handles response with only 1 suggestion", async () => {
-    const suggestions = [{ tag: "react", relevance: "high" }];
+    const suggestions = [{ tag: "React", relevance: "high" }];
     mockChatCompletion(JSON.stringify({ suggestions }));
 
     const result = await suggestHashtags(TEST_USER_ID, "React");

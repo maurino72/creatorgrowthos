@@ -31,9 +31,11 @@ vi.mock("@/lib/queries/posts", () => ({
   },
 }));
 
-vi.mock("@/lib/queries/connections", () => ({
-  useConnections: vi.fn(() => ({
-    data: [
+vi.mock("@/lib/hooks/use-platform", () => ({
+  usePlatform: vi.fn(() => ({
+    platform: "twitter",
+    setPlatform: vi.fn(),
+    activeConnections: [
       {
         id: "conn-1",
         platform: "twitter",
@@ -42,6 +44,7 @@ vi.mock("@/lib/queries/connections", () => ({
       },
     ],
     isLoading: false,
+    hasConnections: true,
   })),
 }));
 
@@ -68,6 +71,7 @@ vi.mock("@/lib/queries/ai", () => ({
 
 import { useCreatePost } from "@/lib/queries/posts";
 import { useGenerateIdeas } from "@/lib/queries/ai";
+import { usePlatform } from "@/lib/hooks/use-platform";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -119,24 +123,32 @@ describe("New post editor page", () => {
     expect(screen.getByText("5 / 280")).toBeInTheDocument();
   });
 
-  it("shows connected platforms as checkboxes", async () => {
+  it("does not show platform selector — uses platform from context", async () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    expect(screen.getByLabelText(/twitter/i)).toBeInTheDocument();
+    // No platform checkboxes should be rendered
+    expect(screen.queryByLabelText(/twitter/i)).not.toBeInTheDocument();
+    // No "Platforms" section label
+    expect(screen.queryByText("Platforms")).not.toBeInTheDocument();
   });
 
-  it("shows warning when no platforms connected", async () => {
-    const { useConnections } = await import("@/lib/queries/connections");
-    vi.mocked(useConnections).mockReturnValue({
-      data: [],
+  it("disables submit when no platform is available from context", async () => {
+    vi.mocked(usePlatform).mockReturnValue({
+      platform: null,
+      setPlatform: vi.fn(),
+      activeConnections: [],
       isLoading: false,
+      hasConnections: false,
     } as never);
 
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    expect(screen.getByText(/no platforms connected/i)).toBeInTheDocument();
+    const textarea = screen.getByPlaceholderText(/what's on your mind/i);
+    fireEvent.change(textarea, { target: { value: "Hello world" } });
+
+    expect(screen.getByRole("button", { name: /publish now/i })).toBeDisabled();
   });
 
   it("renders Save Draft button", async () => {

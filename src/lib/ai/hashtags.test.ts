@@ -8,7 +8,7 @@ import {
 describe("hashtagSuggestionSchema", () => {
   it("accepts valid suggestion", () => {
     const result = hashtagSuggestionSchema.safeParse({
-      tag: "react",
+      tag: "React",
       relevance: "high",
     });
     expect(result.success).toBe(true);
@@ -23,14 +23,14 @@ describe("hashtagSuggestionSchema", () => {
 
   it("rejects missing relevance", () => {
     const result = hashtagSuggestionSchema.safeParse({
-      tag: "react",
+      tag: "React",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects invalid relevance value", () => {
     const result = hashtagSuggestionSchema.safeParse({
-      tag: "react",
+      tag: "React",
       relevance: "super",
     });
     expect(result.success).toBe(false);
@@ -39,7 +39,7 @@ describe("hashtagSuggestionSchema", () => {
   it("accepts all valid relevance levels", () => {
     for (const relevance of ["high", "medium", "low"]) {
       const result = hashtagSuggestionSchema.safeParse({
-        tag: "react",
+        tag: "React",
         relevance,
       });
       expect(result.success).toBe(true);
@@ -65,7 +65,7 @@ describe("hashtagSuggestionsArraySchema", () => {
   });
 
   it("accepts a single suggestion (min 1)", () => {
-    const suggestions = [{ tag: "react", relevance: "high" }];
+    const suggestions = [{ tag: "React", relevance: "high" }];
     expect(hashtagSuggestionsArraySchema.safeParse(suggestions).success).toBe(true);
   });
 

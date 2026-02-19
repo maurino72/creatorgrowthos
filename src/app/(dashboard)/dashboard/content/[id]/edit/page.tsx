@@ -6,7 +6,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { usePost, useUpdatePost, useDeletePost, usePublishPost, useClassifyPost, useUpdateClassifications } from "@/lib/queries/posts";
 import { INTENTS, CONTENT_TYPES } from "@/lib/ai/taxonomy";
-import { useConnections } from "@/lib/queries/connections";
 import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
 import { useImproveContent, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
@@ -276,7 +275,6 @@ export default function EditPostPage() {
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
   const publishPost = usePublishPost();
-  const { data: connections } = useConnections();
   const improveContent = useImproveContent();
   const suggestHashtags = useSuggestHashtags();
   const suggestMentions = useSuggestMentions();
@@ -288,7 +286,6 @@ export default function EditPostPage() {
   const [mentions, setMentions] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [initialized, setInitialized] = useState(false);
@@ -298,11 +295,6 @@ export default function EditPostPage() {
       setBody(post.body ?? "");
       setMentions((post as { mentions?: string[] }).mentions ?? []);
       setTags((post as { tags?: string[] }).tags ?? []);
-      setSelectedPlatforms(
-        post.post_publications?.map(
-          (p: { platform: string }) => p.platform,
-        ) ?? [],
-      );
       if (post.scheduled_at) {
         setScheduleEnabled(true);
         setScheduledAt(
@@ -326,27 +318,20 @@ export default function EditPostPage() {
     }
   }, [signedUrls, images.length, initialized]);
 
-  const activeConnections =
-    connections?.filter((c) => c.status === "active") ?? [];
   const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
   const isOverLimit = charCount > CHAR_LIMIT;
   const isReadOnly = post?.status === "published";
   const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
   const hasUploading = images.some((i) => i.uploading);
+  const existingPlatforms = (
+    post?.post_publications?.map((p: { platform: string }) => p.platform) ?? []
+  ) as ("twitter" | "linkedin" | "threads")[];
   const canSubmit =
     body.trim().length > 0 &&
     !isOverLimit &&
-    selectedPlatforms.length > 0 &&
+    existingPlatforms.length > 0 &&
     !updatePost.isPending &&
     !hasUploading;
-
-  function togglePlatform(platform: string) {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform],
-    );
-  }
 
   function handleSave() {
     updatePost.mutate(
@@ -354,7 +339,7 @@ export default function EditPostPage() {
         id: postId,
         data: {
           body,
-          platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
+          platforms: existingPlatforms,
           scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
           media_urls: uploadedPaths.length > 0 ? uploadedPaths : null,
           mentions: mentions.length > 0 ? mentions : null,
@@ -556,50 +541,6 @@ export default function EditPostPage() {
             onChange={() => {}}
             disabled
           />
-        </div>
-      )}
-
-      {/* ── Platforms ── */}
-      {!isReadOnly && (
-        <div className="mb-8">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-3">
-            Platforms
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {activeConnections.map((conn) => (
-              <label
-                key={conn.platform}
-                className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-3 py-1.5 text-sm transition-all duration-200 select-none ${
-                  selectedPlatforms.includes(conn.platform)
-                    ? "border-primary/40 text-foreground"
-                    : "border-input text-muted-foreground/50 hover:border-input hover:text-foreground/80"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedPlatforms.includes(conn.platform)}
-                  onChange={() => togglePlatform(conn.platform)}
-                  className="sr-only"
-                />
-                {selectedPlatforms.includes(conn.platform) && (
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 7l3 3 5-5" />
-                  </svg>
-                )}
-                <span className="capitalize">{conn.platform}</span>
-              </label>
-            ))}
-          </div>
         </div>
       )}
 

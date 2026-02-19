@@ -3,14 +3,23 @@ import { z } from "zod";
 export const MAX_TAGS_PER_POST = 5;
 
 export function normalizeTag(raw: string): string {
-  return raw.trim().replace(/^#+/, "").toLowerCase();
+  const stripped = raw.trim().replace(/^#+/, "");
+  // Split on hyphens, capitalize first letter of each segment, join
+  return stripped
+    .split("-")
+    .map((segment) =>
+      segment.length > 0
+        ? segment.charAt(0).toUpperCase() + segment.slice(1)
+        : "",
+    )
+    .join("");
 }
 
 export const tagSchema = z
   .string()
   .min(1)
   .max(30)
-  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Tag must be lowercase alphanumeric with optional hyphens");
+  .regex(/^[A-Z][a-zA-Z0-9]*$/, "Tag must be CamelCase alphanumeric starting with uppercase");
 
 export const tagsArraySchema = z.array(tagSchema).max(MAX_TAGS_PER_POST);
 

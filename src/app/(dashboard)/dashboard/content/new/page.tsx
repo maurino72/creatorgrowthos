@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { usePlatform } from "@/lib/hooks/use-platform";
 import { useCreatePost } from "@/lib/queries/posts";
-import { useConnections } from "@/lib/queries/connections";
 import { useGenerateIdeas, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
@@ -31,10 +31,10 @@ function getBarColor(count: number): string {
   return "var(--foreground)";
 }
 
-export default function NewPostPage() {
+function NewPostPageInner() {
   const router = useRouter();
   const createPost = useCreatePost();
-  const { data: connections, isLoading: connectionsLoading } = useConnections();
+  const { platform } = usePlatform();
   const generateIdeas = useGenerateIdeas();
 
   const suggestHashtags = useSuggestHashtags();
@@ -44,7 +44,6 @@ export default function NewPostPage() {
   const [mentions, setMentions] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(false);
@@ -52,14 +51,15 @@ export default function NewPostPage() {
 
   const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
   const hasUploading = images.some((i) => i.uploading);
-  const activeConnections =
-    connections?.filter((c) => c.status === "active") ?? [];
+  const platforms = platform
+    ? [platform as "twitter" | "linkedin" | "threads"]
+    : [];
   const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
   const isOverLimit = charCount > CHAR_LIMIT;
   const canSubmit =
     body.trim().length > 0 &&
     !isOverLimit &&
-    selectedPlatforms.length > 0 &&
+    platforms.length > 0 &&
     !createPost.isPending &&
     !hasUploading;
 
@@ -67,21 +67,13 @@ export default function NewPostPage() {
   const showIdeas =
     (ideasOpen || generateIdeas.isSuccess) && generateIdeas.data;
 
-  function togglePlatform(platform: string) {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform],
-    );
-  }
-
   async function handleSaveDraft() {
-    if (!body.trim() || selectedPlatforms.length === 0) return;
+    if (!body.trim() || platforms.length === 0) return;
 
     createPost.mutate(
       {
         body,
-        platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
+        platforms,
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
         ...(mentions.length > 0 ? { mentions } : {}),
         ...(tags.length > 0 ? { tags } : {}),
@@ -102,7 +94,7 @@ export default function NewPostPage() {
     createPost.mutate(
       {
         body,
-        platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
+        platforms,
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
         ...(mentions.length > 0 ? { mentions } : {}),
         ...(tags.length > 0 ? { tags } : {}),
@@ -134,7 +126,7 @@ export default function NewPostPage() {
     createPost.mutate(
       {
         body,
-        platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
+        platforms,
         scheduled_at: new Date(scheduledAt).toISOString(),
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
         ...(mentions.length > 0 ? { mentions } : {}),
@@ -402,68 +394,6 @@ export default function NewPostPage() {
         </div>
       )}
 
-      {/* ── Platforms ── */}
-      <div className="mb-8">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-3">
-          Platforms
-        </p>
-        {!connectionsLoading && activeConnections.length === 0 ? (
-          <p className="text-sm text-muted-foreground/60">
-            No platforms connected.{" "}
-            <Link
-              href="/dashboard/connections"
-              className="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground transition-colors"
-            >
-              Connect a platform
-            </Link>{" "}
-            to start publishing.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {activeConnections.map((conn) => (
-              <label
-                key={conn.platform}
-                className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-3 py-1.5 text-sm transition-all duration-200 select-none ${
-                  selectedPlatforms.includes(conn.platform)
-                    ? "border-primary/40 text-foreground"
-                    : "border-input text-muted-foreground/50 hover:border-input hover:text-foreground/80"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedPlatforms.includes(conn.platform)}
-                  onChange={() => togglePlatform(conn.platform)}
-                  className="sr-only"
-                  aria-label={
-                    conn.platform.charAt(0).toUpperCase() +
-                    conn.platform.slice(1)
-                  }
-                />
-                {selectedPlatforms.includes(conn.platform) && (
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 7l3 3 5-5" />
-                  </svg>
-                )}
-                <span className="capitalize">{conn.platform}</span>
-                <span className="text-[11px] text-muted-foreground/30">
-                  @{conn.platform_username}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* ── Schedule ── */}
       <div className="mb-10">
         <label className="flex items-center gap-2.5 text-sm cursor-pointer group">
@@ -499,7 +429,7 @@ export default function NewPostPage() {
           onClick={handleSaveDraft}
           disabled={
             !body.trim() ||
-            selectedPlatforms.length === 0 ||
+            platforms.length === 0 ||
             createPost.isPending
           }
         >
@@ -533,5 +463,13 @@ export default function NewPostPage() {
         </span>
       </div>
     </div>
+  );
+}
+
+export default function NewPostPage() {
+  return (
+    <Suspense>
+      <NewPostPageInner />
+    </Suspense>
   );
 }
