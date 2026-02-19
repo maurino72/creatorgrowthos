@@ -7,7 +7,7 @@ export function PlatformIcon({
 }) {
   if (platform === "twitter") {
     return (
-      <span data-testid="platform-twitter" title="Twitter">
+      <span data-testid="platform-twitter" title="X">
         <svg
           width={size}
           height={size}

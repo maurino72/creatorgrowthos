@@ -18,7 +18,7 @@ const PLATFORMS: {
 }[] = [
   {
     id: "twitter",
-    name: "Twitter",
+    name: "X",
     comingSoon: false,
     icon: (
       <svg
@@ -67,7 +67,7 @@ const PLATFORMS: {
 ];
 
 const ERROR_MESSAGES: Record<string, string> = {
-  access_denied: "You denied access to your Twitter account.",
+  access_denied: "You denied access to your X account.",
   invalid_state: "OAuth state mismatch. Please try connecting again.",
   token_exchange_failed: "Failed to complete authentication. Please try again.",
   session_expired: "Your session expired. Please log in and try again.",
@@ -211,7 +211,10 @@ function ConnectionsContent() {
 
     if (connected) {
       toastShown.current = true;
-      const name = connected.charAt(0).toUpperCase() + connected.slice(1);
+      const platformDef = PLATFORMS.find((p) => p.id === connected);
+      const name =
+        platformDef?.name ??
+        connected.charAt(0).toUpperCase() + connected.slice(1);
       toast.success(`${name} connected successfully!`);
       router.replace("/dashboard/connections");
     } else if (error) {

@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
 
         <H3>1.2 Connected Platform Data</H3>
         <p>
-          When you connect a social media account (such as Twitter/X), we
+          When you connect a social media account (such as X), we
           collect and store:
         </p>
         <ul>
@@ -158,7 +158,7 @@ export default function PrivacyPolicyPage() {
 
         <H3>4.1 Social Media Platforms</H3>
         <p>
-          We connect to social media platforms (currently Twitter/X) using their
+          We connect to social media platforms (currently X) using their
           official APIs and OAuth 2.0 with PKCE for secure authorization. These
           platforms have their own privacy policies governing how they handle
           your data.

@@ -100,7 +100,7 @@ describe("Connections page", () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("Twitter")).toBeInTheDocument();
+    expect(screen.getByText("X")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /connect/i })).toBeInTheDocument();
   });
 
@@ -185,9 +185,7 @@ describe("Connections page", () => {
     const Page = await importPage();
     render(<Page />, { wrapper: createWrapper() });
 
-    expect(toast.success).toHaveBeenCalledWith(
-      expect.stringContaining("Twitter"),
-    );
+    expect(toast.success).toHaveBeenCalledWith("X connected successfully!");
   });
 
   it("shows error toast when error param is present", async () => {

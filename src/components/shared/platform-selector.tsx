@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const PLATFORM_LABELS: Record<string, string> = {
-  twitter: "Twitter",
+  twitter: "X",
   linkedin: "LinkedIn",
   threads: "Threads",
 };

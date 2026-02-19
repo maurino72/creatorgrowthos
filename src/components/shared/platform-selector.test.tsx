@@ -37,7 +37,7 @@ describe("PlatformSelector", () => {
 
     render(<PlatformSelector />);
 
-    expect(screen.getByText("Twitter")).toBeInTheDocument();
+    expect(screen.getByText("X")).toBeInTheDocument();
     expect(screen.getByTestId("platform-twitter")).toBeInTheDocument();
   });
 

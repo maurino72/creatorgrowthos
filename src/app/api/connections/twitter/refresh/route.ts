@@ -20,7 +20,7 @@ export async function POST(_request: Request) {
   const connection = await getConnectionByPlatform(user.id, "twitter");
   if (!connection) {
     return NextResponse.json(
-      { error: "No Twitter connection found" },
+      { error: "No X connection found" },
       { status: 404 },
     );
   }

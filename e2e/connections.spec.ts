@@ -17,7 +17,7 @@ test.describe("Connections", () => {
   test("platform cards are visible", async ({ page }) => {
     await page.goto("/dashboard/connections");
 
-    await expect(page.getByText("Twitter")).toBeVisible();
+    await expect(page.getByText("X")).toBeVisible();
     await expect(page.getByText("LinkedIn")).toBeVisible();
     await expect(page.getByText("Threads")).toBeVisible();
   });
@@ -71,7 +71,7 @@ test.describe("Connections", () => {
     await page.goto("/dashboard/connections?connected=twitter");
 
     // Toast should appear
-    await expect(page.getByText("Twitter connected successfully!")).toBeVisible({
+    await expect(page.getByText("X connected successfully!")).toBeVisible({
       timeout: 5000,
     });
   });
@@ -80,7 +80,7 @@ test.describe("Connections", () => {
     await page.goto("/dashboard/connections?error=access_denied");
 
     await expect(
-      page.getByText("You denied access to your Twitter account."),
+      page.getByText("You denied access to your X account."),
     ).toBeVisible({ timeout: 5000 });
   });
 

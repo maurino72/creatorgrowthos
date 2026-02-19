@@ -27,7 +27,7 @@ describe("Sidebar", () => {
   it("renders platform selector in desktop sidebar", () => {
     render(<Sidebar />);
     // PlatformSelector shows platform name — will appear in desktop sidebar
-    expect(screen.getAllByText("Twitter").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("X").length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not render Connections nav item", () => {

@@ -555,7 +555,7 @@ function PlatformsSection() {
       ) : (
         <>
           <SettingRow
-            label="Twitter / X"
+            label="X"
             description={
               twitterConn
                 ? `@${twitterConn.platform_username}`
