@@ -36,21 +36,44 @@ export async function createPost(userId: string, data: CreatePostData) {
   const supabase = createAdminClient();
   const status = data.scheduled_at ? "scheduled" : "draft";
 
+  const insertPayload = {
+    user_id: userId,
+    body: data.body,
+    status,
+    scheduled_at: data.scheduled_at ?? null,
+    media_urls: data.media_urls ?? [],
+    tags: data.tags ?? [],
+    mentions: data.mentions ?? [],
+  };
+
+  console.log("[createPost] inserting post", {
+    userId,
+    bodyLength: data.body.length,
+    status,
+    tags: data.tags,
+    mentions: data.mentions,
+    mediaUrls: data.media_urls?.length ?? 0,
+    platforms: data.platforms,
+  });
+
   const { data: post, error } = await supabase
     .from("posts")
-    .insert({
-      user_id: userId,
-      body: data.body,
-      status,
-      scheduled_at: data.scheduled_at ?? null,
-      media_urls: data.media_urls ?? [],
-      tags: data.tags ?? [],
-      mentions: data.mentions ?? [],
-    })
+    .insert(insertPayload)
     .select("*")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("[createPost] posts insert failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      insertPayload: { ...insertPayload, body: insertPayload.body.slice(0, 50) },
+    });
+    throw new Error(`posts insert: ${error.code} — ${error.message} (hint: ${error.hint}, details: ${error.details})`);
+  }
+
+  console.log("[createPost] post created", { postId: post.id });
 
   // Create post_publications for each platform
   const publications = data.platforms.map((platform) => ({
@@ -64,7 +87,17 @@ export async function createPost(userId: string, data: CreatePostData) {
     .from("post_publications")
     .insert(publications);
 
-  if (pubError) throw new Error(pubError.message);
+  if (pubError) {
+    console.error("[createPost] post_publications insert failed", {
+      code: pubError.code,
+      message: pubError.message,
+      details: pubError.details,
+      hint: pubError.hint,
+      postId: post.id,
+      platforms: data.platforms,
+    });
+    throw new Error(`post_publications insert: ${pubError.code} — ${pubError.message}`);
+  }
 
   return post;
 }

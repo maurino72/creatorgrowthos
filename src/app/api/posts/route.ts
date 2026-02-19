@@ -71,7 +71,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ post }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[POST /api/posts]", message, err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[POST /api/posts] error:", {
+      message,
+      stack,
+      userId: user.id,
+      platforms: parsed.data.platforms,
+      bodyPreview: parsed.data.body.slice(0, 50),
+      tags: parsed.data.tags,
+      mentions: parsed.data.mentions,
+    });
     return NextResponse.json(
       { error: "Failed to create post", detail: message },
       { status: 500 },
