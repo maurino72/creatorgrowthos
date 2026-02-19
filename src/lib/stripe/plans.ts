@@ -138,7 +138,7 @@ export function getPlanDescription(plan: PlanType): string {
   return PLAN_DESCRIPTIONS[plan];
 }
 
-export const TRIAL_PERIOD_DAYS = 14;
+export const TRIAL_PERIOD_DAYS = 0;
 
 export type SubscriptionStatus =
   | "active"

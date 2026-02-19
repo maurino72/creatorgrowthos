@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: TRIAL_PERIOD_DAYS,
+        ...(TRIAL_PERIOD_DAYS > 0 && { trial_period_days: TRIAL_PERIOD_DAYS }),
         metadata: { user_id: user.id },
       },
       success_url: `${appUrl}/dashboard?checkout=success`,

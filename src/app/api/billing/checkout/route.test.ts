@@ -112,7 +112,7 @@ describe("POST /api/billing/checkout", () => {
       expect.objectContaining({
         mode: "subscription",
         subscription_data: expect.objectContaining({
-          trial_period_days: 14,
+          metadata: { user_id: TEST_USER.id },
         }),
       })
     );
