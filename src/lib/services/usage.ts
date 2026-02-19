@@ -79,7 +79,7 @@ export async function incrementUsage(userId: string, field: UsageField) {
   const usage = await getUsageForSubscription(userId, subscription);
 
   const supabase = createAdminClient();
-  const currentValue = (usage as Record<string, number>)[field] ?? 0;
+  const currentValue = (usage as unknown as Record<string, number>)[field] ?? 0;
 
   const { data, error } = await supabase
     .from("usage_tracking")
@@ -155,7 +155,7 @@ export async function canPerformAction(
     if (limit === -1) return { allowed: true };
 
     const usage = await getUsageForSubscription(userId, subscription);
-    const currentCount = (usage as Record<string, number>)[mapping.field] ?? 0;
+    const currentCount = (usage as unknown as Record<string, number>)[mapping.field] ?? 0;
 
     if (currentCount >= limit) {
       return {
@@ -192,7 +192,7 @@ export async function getRemainingQuota(
   if (limit === -1) return -1;
 
   const usage = await getUsageForSubscription(userId, subscription);
-  const currentCount = (usage as Record<string, number>)[mapping.field] ?? 0;
+  const currentCount = (usage as unknown as Record<string, number>)[mapping.field] ?? 0;
 
   return Math.max(0, limit - currentCount);
 }
