@@ -45,6 +45,8 @@ export async function getOrCreateUsagePeriod(
 ) {
   const supabase = createAdminClient();
 
+  // ignoreDuplicates: true means existing rows return 0 rows,
+  // so we use maybeSingle and fall back to a select if needed
   const { data, error } = await supabase
     .from("usage_tracking")
     .upsert(
@@ -57,13 +59,24 @@ export async function getOrCreateUsagePeriod(
         insights_count: 0,
         content_improvements_count: 0,
       },
-      { onConflict: "user_id,period_start" , ignoreDuplicates: true }
+      { onConflict: "user_id,period_start", ignoreDuplicates: true }
     )
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data;
+  if (data) return data;
+
+  // Row already existed — fetch it
+  const { data: existing, error: fetchError } = await supabase
+    .from("usage_tracking")
+    .select()
+    .eq("user_id", userId)
+    .eq("period_start", periodStart)
+    .single();
+
+  if (fetchError) throw new Error(fetchError.message);
+  return existing;
 }
 
 async function getUsageForSubscription(userId: string, subscription: NonNullable<Awaited<ReturnType<typeof getSubscriptionForUser>>>) {

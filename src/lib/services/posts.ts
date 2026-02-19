@@ -34,7 +34,7 @@ export interface GetPostsOptions {
 
 export async function createPost(userId: string, data: CreatePostData) {
   const supabase = createAdminClient();
-  const status = data.scheduled_at ? "scheduled" : "draft";
+  const status = data.scheduled_at ? ("scheduled" as const) : ("draft" as const);
 
   const insertPayload = {
     user_id: userId,

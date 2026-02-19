@@ -23,6 +23,16 @@ Rules:
 - When fixing bugs, first write a test that reproduces the bug, then fix it.
 - The plan (from plan mode) should include what tests will be written and what they will assert.
 
+### Realistic Mocks
+
+**Mocks MUST replicate real service behavior, including error cases.** A mock that always succeeds hides production bugs.
+
+- **Default to failure, not success.** Mock methods should return errors by default (e.g., Supabase `.single()` → PGRST116 error for 0 rows). Tests explicitly override to success only for the paths they exercise. This way, if production code calls the wrong method, the test breaks.
+- **Separate chains per query.** When a function makes multiple DB calls (e.g., upsert then fallback select), use separate mock chains via `mockReturnValueOnce()` — not one shared object for all calls. Each query in production gets its own builder; tests should mirror that.
+- **Assert which methods were called.** Don't just check the return value — verify the code used the right Supabase method (e.g., `expect(chain.maybeSingle).toHaveBeenCalled()` + `expect(chain.single).not.toHaveBeenCalled()`).
+- **Test both paths of conditional flows.** If code has a fallback (try A, if null do B), write tests for both: A succeeds, and A returns null → B succeeds.
+- **Test error propagation.** Every external call that can fail should have a test asserting the error is thrown/handled correctly.
+
 ## Commit Rules
 
 - **NEVER include `Co-Authored-By` lines in commit messages.** No AI attribution footers of any kind.
