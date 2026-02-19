@@ -18,6 +18,13 @@ import {
 } from "@/lib/queries/settings";
 import { useConnections } from "@/lib/queries/connections";
 import {
+  useSubscription,
+  useUsage,
+  useInvoices,
+  usePortal,
+} from "@/lib/queries/billing";
+import { getPlanDisplayName, type PlanType } from "@/lib/stripe/plans";
+import {
   WRITING_STYLES,
   DIGEST_DAYS,
   THEMES,
@@ -38,6 +45,7 @@ const SECTIONS = [
   { id: "ai", label: "AI & Intelligence", icon: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z" },
   { id: "notifications", label: "Notifications", icon: "M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z" },
   { id: "appearance", label: "Appearance", icon: "M12 3a9 9 0 0 0 0 18c.7 0 1.38-.08 2.04-.22a6 6 0 0 1-2.04-4.51V15a3 3 0 0 1 3-3h1.27A9 9 0 0 0 12 3Z" },
+  { id: "billing", label: "Billing", icon: "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 14H4V6h16v12ZM4 9h16v2H4V9Z" },
   { id: "data", label: "Data & Privacy", icon: "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4Z" },
   { id: "about", label: "About", icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z" },
 ] as const;
@@ -1098,6 +1106,260 @@ function AboutSection() {
   );
 }
 
+/* ─── Billing Section ─── */
+
+const BILLING_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  active: { label: "Active", color: "bg-success-muted text-success ring-1 ring-inset ring-success/20" },
+  trialing: { label: "Trial", color: "bg-info-muted text-info ring-1 ring-inset ring-info/20" },
+  past_due: { label: "Past Due", color: "bg-warning-muted text-warning ring-1 ring-inset ring-warning/20" },
+  canceled: { label: "Canceled", color: "bg-destructive-muted text-destructive ring-1 ring-inset ring-destructive/20" },
+  unpaid: { label: "Unpaid", color: "bg-destructive-muted text-destructive ring-1 ring-inset ring-destructive/20" },
+};
+
+function UsageMeter({
+  label,
+  used,
+  limit,
+}: {
+  label: string;
+  used: number;
+  limit: number;
+}) {
+  const isUnlimited = limit === -1;
+  const percentage = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
+  const isNearLimit = !isUnlimited && percentage >= 80;
+
+  return (
+    <div className="py-2.5">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-sm text-foreground">{label}</span>
+        <span className="text-xs font-mono tabular-nums text-muted-foreground/50">
+          {isUnlimited ? `${used} (Unlimited)` : `${used} / ${limit}`}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted-foreground/10">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            isUnlimited
+              ? "bg-primary/20"
+              : isNearLimit
+                ? "bg-warning"
+                : "bg-primary/60"
+          )}
+          style={{ width: isUnlimited ? "8%" : `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function formatBillingCurrency(amountCents: number): string {
+  return `$${(amountCents / 100).toFixed(2)}`;
+}
+
+function formatBillingDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getDaysRemaining(dateStr: string): number {
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / 86400000));
+}
+
+function BillingSection() {
+  const { data: subscription, isLoading: subLoading } = useSubscription();
+  const { data: usage, isLoading: usageLoading } = useUsage();
+  const { data: invoices, isLoading: invoicesLoading } = useInvoices();
+  const portal = usePortal();
+
+  const isLoading = subLoading || usageLoading || invoicesLoading;
+
+  function handleManage() {
+    portal.mutate(undefined, {
+      onSuccess: (url) => {
+        if (url) window.location.href = url;
+      },
+    });
+  }
+
+  return (
+    <SectionBlock
+      title="Billing & Subscription"
+      description="Manage your plan, usage, and billing details"
+    >
+      {isLoading ? (
+        <div className="space-y-4 py-3.5">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ) : !subscription ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-muted-foreground/50">
+            No active subscription. Choose a plan to get started.
+          </p>
+          <Button asChild variant="coral" size="sm" className="mt-3">
+            <Link href="/pricing">View Plans</Link>
+          </Button>
+        </div>
+      ) : (
+        <>
+          {/* Current Plan */}
+          <div className="py-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm font-medium">
+                  {getPlanDisplayName(subscription.plan as PlanType)}
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-medium",
+                    BILLING_STATUS_LABELS[subscription.status]?.color ??
+                      "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {BILLING_STATUS_LABELS[subscription.status]?.label ??
+                    subscription.status}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManage}
+                loading={portal.isPending}
+              >
+                Manage Subscription
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              {subscription.billing_cycle === "yearly"
+                ? "Annual billing"
+                : "Monthly billing"}
+              {subscription.current_period_end &&
+                ` · Renews ${formatBillingDate(subscription.current_period_end)}`}
+            </p>
+          </div>
+
+          {/* Trial notice */}
+          {subscription.status === "trialing" && subscription.trial_end && (
+            <div className="my-2 rounded-lg border border-info/20 bg-info-muted px-3 py-2.5">
+              <p className="text-xs text-info">
+                <strong>{getDaysRemaining(subscription.trial_end)} days remaining</strong>{" "}
+                in your free trial. Your card will be charged on{" "}
+                {formatBillingDate(subscription.trial_end)}.
+              </p>
+            </div>
+          )}
+
+          {/* Cancel notice */}
+          {subscription.cancel_at_period_end && (
+            <div className="my-2 rounded-lg border border-warning/20 bg-warning-muted px-3 py-2.5">
+              <p className="text-xs text-warning">
+                Your subscription will end on{" "}
+                {subscription.current_period_end
+                  ? formatBillingDate(subscription.current_period_end)
+                  : "the end of your billing period"}
+                .
+              </p>
+            </div>
+          )}
+
+          {/* Usage */}
+          {usage && (
+            <>
+              <Divider />
+              <div className="py-1">
+                <h3 className="pt-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
+                  Usage This Period
+                </h3>
+                <UsageMeter
+                  label="Posts"
+                  used={usage.posts_used}
+                  limit={usage.posts_limit}
+                />
+                <UsageMeter
+                  label="AI Improvements"
+                  used={usage.ai_improvements_used}
+                  limit={usage.ai_improvements_limit}
+                />
+                <UsageMeter
+                  label="Insights"
+                  used={usage.insights_used}
+                  limit={usage.insights_limit}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Invoices */}
+          {invoices && invoices.length > 0 && (
+            <>
+              <Divider />
+              <div className="py-1">
+                <h3 className="pt-2 pb-2 text-[9px] uppercase tracking-[0.25em] text-editorial-label">
+                  Billing History
+                </h3>
+                <div className="space-y-1.5">
+                  {(invoices as Array<{
+                    id: string;
+                    amount: number;
+                    status: string;
+                    invoice_url?: string;
+                    created_at?: string;
+                  }>).map((invoice) => (
+                    <div
+                      key={invoice.id}
+                      className="flex items-center justify-between rounded border border-border/30 px-3 py-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-mono tabular-nums font-medium">
+                          {formatBillingCurrency(invoice.amount)}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                            invoice.status === "paid"
+                              ? "bg-success-muted text-success"
+                              : "bg-secondary text-muted-foreground"
+                          )}
+                        >
+                          {invoice.status === "paid" ? "Paid" : invoice.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {invoice.created_at && (
+                          <span className="text-[11px] font-mono tabular-nums text-muted-foreground/40">
+                            {formatBillingDate(invoice.created_at)}
+                          </span>
+                        )}
+                        {invoice.invoice_url && (
+                          <a
+                            href={invoice.invoice_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-primary hover:underline"
+                          >
+                            View
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </SectionBlock>
+  );
+}
+
 /* ─── Loading Skeleton ─── */
 
 function SettingsSkeleton() {
@@ -1295,6 +1557,8 @@ export default function SettingsPage() {
                   onUpdate={(s) => handlePrefUpdate("appearance", s)}
                 />
               )}
+
+              {activeSection === "billing" && <BillingSection />}
 
               {activeSection === "data" && (
                 <DataPrivacySection

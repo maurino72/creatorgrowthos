@@ -1,6 +1,37 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const SUBSCRIPTION_EXEMPT_PATHS = [
+  "/pricing",
+  "/api/billing/",
+  "/api/webhooks/stripe",
+  "/auth/",
+];
+
+const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due"];
+
+function isSubscriptionExempt(pathname: string): boolean {
+  return SUBSCRIPTION_EXEMPT_PATHS.some((path) => pathname.startsWith(path));
+}
+
+function isSubscriptionValid(
+  subscription: { status: string; current_period_end: string | null } | null,
+): boolean {
+  if (!subscription) return false;
+
+  if (ACTIVE_SUBSCRIPTION_STATUSES.includes(subscription.status)) return true;
+
+  if (
+    subscription.status === "canceled" &&
+    subscription.current_period_end &&
+    new Date(subscription.current_period_end) > new Date()
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -31,8 +62,13 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Redirect unauthenticated users away from dashboard and onboarding
-  if (!user && (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding"))) {
+  // Redirect unauthenticated users away from dashboard, onboarding, and pricing
+  if (
+    !user &&
+    (pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/onboarding") ||
+      pathname === "/pricing")
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -45,8 +81,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Onboarding routing for authenticated users on protected pages
-  if (user && (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding"))) {
+  // Onboarding + subscription routing for authenticated users on protected pages
+  if (
+    user &&
+    (pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/onboarding") ||
+      pathname === "/pricing")
+  ) {
     // Check onboarding status
     const { data: profile } = await supabase
       .from("profiles")
@@ -56,8 +97,8 @@ export async function updateSession(request: NextRequest) {
 
     const isOnboarded = profile?.onboarded_at != null;
 
-    // Not onboarded + trying to access dashboard → redirect to onboarding
-    if (!isOnboarded && pathname.startsWith("/dashboard")) {
+    // Not onboarded + trying to access dashboard or pricing → redirect to onboarding
+    if (!isOnboarded && (pathname.startsWith("/dashboard") || pathname === "/pricing")) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
@@ -68,6 +109,31 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
+    }
+
+    // Subscription check for onboarded users accessing dashboard
+    if (isOnboarded && (pathname.startsWith("/dashboard") || pathname === "/pricing")) {
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("status, current_period_end")
+        .eq("user_id", user.id)
+        .single();
+
+      const hasValidSub = isSubscriptionValid(subscription);
+
+      // On /dashboard without valid subscription → redirect to /pricing
+      if (!hasValidSub && pathname.startsWith("/dashboard")) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/pricing";
+        return NextResponse.redirect(url);
+      }
+
+      // On /pricing with valid subscription → redirect to /dashboard
+      if (hasValidSub && pathname === "/pricing") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
     }
   }
 

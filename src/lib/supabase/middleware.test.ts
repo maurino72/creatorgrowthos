@@ -39,22 +39,42 @@ function mockRequest(pathname: string) {
 function mockSupabaseUser(
   user: { id: string } | null,
   profile?: { onboarded_at: string | null } | null,
+  subscription?: { status: string; current_period_end: string | null } | null,
 ) {
+  const tableData: Record<string, unknown> = {};
+
+  if (profile !== undefined) {
+    tableData["profiles"] = {
+      data: profile,
+      error: profile ? null : { code: "PGRST116", message: "Not found" },
+    };
+  }
+
+  if (subscription !== undefined) {
+    tableData["subscriptions"] = {
+      data: subscription,
+      error: subscription
+        ? null
+        : { code: "PGRST116", message: "Not found" },
+    };
+  }
+
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user } }),
     },
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: profile ?? null,
-            error: profile
-              ? null
-              : { code: "PGRST116", message: "Not found" },
+    from: vi.fn().mockImplementation((table: string) => {
+      const result = tableData[table] ?? {
+        data: null,
+        error: { code: "PGRST116", message: "Not found" },
+      };
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue(result),
           }),
         }),
-      }),
+      };
     }),
   };
 
@@ -105,7 +125,11 @@ describe("updateSession middleware", () => {
   });
 
   it("redirects onboarded user from /onboarding to /dashboard", async () => {
-    mockSupabaseUser({ id: "user-1" }, { onboarded_at: "2024-01-01" });
+    mockSupabaseUser(
+      { id: "user-1" },
+      { onboarded_at: "2024-01-01" },
+      { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+    );
     const request = mockRequest("/onboarding");
     const response = await updateSession(request);
 
@@ -127,5 +151,151 @@ describe("updateSession middleware", () => {
     const response = await updateSession(request);
 
     expect(response.status).toBe(200);
+  });
+
+  // Subscription gate tests
+  describe("subscription gate", () => {
+    it("redirects onboarded user without subscription from /dashboard to /pricing", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        null,
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/pricing");
+    });
+
+    it("allows onboarded user with active subscription to access /dashboard", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("allows onboarded user with trialing subscription to access /dashboard", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "trialing", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("allows canceled subscription within period to access /dashboard", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "canceled", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("redirects canceled subscription past period end to /pricing", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "canceled", current_period_end: new Date(Date.now() - 86400000).toISOString() },
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/pricing");
+    });
+
+    it("redirects unpaid subscription to /pricing", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "unpaid", current_period_end: null },
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/pricing");
+    });
+
+    it("allows authenticated user to access /pricing without subscription", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        null,
+      );
+
+      const request = mockRequest("/pricing");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("allows access to /api/billing/ without subscription", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        null,
+      );
+
+      const request = mockRequest("/api/billing/checkout");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("allows access to /api/webhooks/stripe without subscription", async () => {
+      mockSupabaseUser(null);
+
+      const request = mockRequest("/api/webhooks/stripe");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("allows past_due subscription to access /dashboard (grace period)", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "past_due", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("redirects user with active subscription from /pricing to /dashboard", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+
+      const request = mockRequest("/pricing");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/dashboard");
+    });
   });
 });

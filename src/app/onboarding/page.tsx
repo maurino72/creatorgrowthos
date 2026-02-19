@@ -118,7 +118,7 @@ function OnboardingContent() {
 
   function handleComplete() {
     completeOnboarding.mutate(undefined, {
-      onSuccess: () => router.push("/dashboard"),
+      onSuccess: () => router.push("/pricing"),
     });
   }
 
@@ -193,15 +193,12 @@ function OnboardingContent() {
             onComplete={handleComplete}
             onCreatePost={() => {
               completeOnboarding.mutate(undefined, {
-                onSuccess: () => router.push("/dashboard/content/new"),
+                onSuccess: () => router.push("/pricing"),
               });
             }}
-            onUseIdea={(hook: string) => {
+            onUseIdea={() => {
               completeOnboarding.mutate(undefined, {
-                onSuccess: () =>
-                  router.push(
-                    `/dashboard/content/new?body=${encodeURIComponent(hook)}`,
-                  ),
+                onSuccess: () => router.push("/pricing"),
               });
             }}
           />

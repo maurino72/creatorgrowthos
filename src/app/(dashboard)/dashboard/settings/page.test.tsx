@@ -133,8 +133,62 @@ vi.mock("@/lib/queries/connections", () => ({
   })),
 }));
 
+const mockPortalMutate = vi.fn();
+
+vi.mock("@/lib/queries/billing", () => ({
+  useSubscription: vi.fn(() => ({
+    data: {
+      plan: "business",
+      status: "active",
+      billing_cycle: "monthly",
+      stripe_customer_id: "cus_123",
+      current_period_start: "2026-02-01T00:00:00Z",
+      current_period_end: "2026-03-01T00:00:00Z",
+      cancel_at_period_end: false,
+      trial_end: null,
+    },
+    isLoading: false,
+  })),
+  useUsage: vi.fn(() => ({
+    data: {
+      posts_used: 42,
+      posts_limit: 100,
+      ai_improvements_used: 8,
+      ai_improvements_limit: -1,
+      insights_used: 3,
+      insights_limit: -1,
+      period_end: "2026-03-01T00:00:00Z",
+    },
+    isLoading: false,
+  })),
+  useInvoices: vi.fn(() => ({
+    data: [
+      {
+        id: "inv_1",
+        amount: 4900,
+        status: "paid",
+        invoice_url: "https://stripe.com/inv/1",
+        created_at: "2026-01-15T00:00:00Z",
+      },
+      {
+        id: "inv_2",
+        amount: 4900,
+        status: "paid",
+        invoice_url: "https://stripe.com/inv/2",
+        created_at: "2025-12-15T00:00:00Z",
+      },
+    ],
+    isLoading: false,
+  })),
+  usePortal: vi.fn(() => ({
+    mutate: mockPortalMutate,
+    isPending: false,
+  })),
+}));
+
 import SettingsPage from "./page";
 import { useSettings } from "@/lib/queries/settings";
+import { useSubscription, useUsage, useInvoices } from "@/lib/queries/billing";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -185,6 +239,7 @@ describe("SettingsPage", () => {
       "AI & Intelligence",
       "Notifications",
       "Appearance",
+      "Billing",
       "Data & Privacy",
       "About",
     ];
@@ -733,5 +788,121 @@ describe("SettingsPage", () => {
         "Built for creators who want to grow intentionally.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // ─── Billing Section ───
+
+  it("shows Billing in section navigation", () => {
+    renderSettings();
+    expect(screen.getByRole("button", { name: "Billing" })).toBeInTheDocument();
+  });
+
+  it("renders billing section with plan info", () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    expect(screen.getByText("Billing & Subscription")).toBeInTheDocument();
+    expect(screen.getByText("Business")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("renders usage meters in billing section", () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    expect(screen.getByText("Posts")).toBeInTheDocument();
+    expect(screen.getByText("42 / 100")).toBeInTheDocument();
+    expect(screen.getByText("AI Improvements")).toBeInTheDocument();
+    expect(screen.getByText("8 (Unlimited)")).toBeInTheDocument();
+  });
+
+  it("renders invoice history in billing section", () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    // Both invoices are $49.00
+    const amounts = screen.getAllByText("$49.00");
+    expect(amounts.length).toBe(2);
+    // Should show "Paid" badges
+    const paidBadges = screen.getAllByText("Paid");
+    expect(paidBadges.length).toBe(2);
+    // Should have View links
+    const viewLinks = screen.getAllByText("View");
+    expect(viewLinks.length).toBe(2);
+  });
+
+  it("calls portal mutation when Manage Subscription clicked", () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    fireEvent.click(screen.getByText("Manage Subscription"));
+    expect(mockPortalMutate).toHaveBeenCalled();
+  });
+
+  it("shows trial notice when status is trialing", () => {
+    vi.mocked(useSubscription).mockReturnValue({
+      data: {
+        plan: "business",
+        status: "trialing",
+        billing_cycle: "monthly",
+        stripe_customer_id: "cus_123",
+        current_period_end: "2026-03-01T00:00:00Z",
+        cancel_at_period_end: false,
+        trial_end: "2026-03-05T00:00:00Z",
+      },
+      isLoading: false,
+    } as ReturnType<typeof useSubscription>);
+
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    expect(screen.getByText(/days remaining/)).toBeInTheDocument();
+    expect(screen.getByText("Trial")).toBeInTheDocument();
+  });
+
+  it("shows cancel notice when cancel_at_period_end is true", () => {
+    vi.mocked(useSubscription).mockReturnValue({
+      data: {
+        plan: "business",
+        status: "active",
+        billing_cycle: "monthly",
+        stripe_customer_id: "cus_123",
+        current_period_end: "2026-03-01T00:00:00Z",
+        cancel_at_period_end: true,
+        trial_end: null,
+      },
+      isLoading: false,
+    } as ReturnType<typeof useSubscription>);
+
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    expect(screen.getByText(/subscription will end on/)).toBeInTheDocument();
+  });
+
+  it("shows billing skeleton when loading", () => {
+    vi.mocked(useSubscription).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof useSubscription>);
+    vi.mocked(useUsage).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof useUsage>);
+    vi.mocked(useInvoices).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof useInvoices>);
+
+    const { container } = renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    // Should show skeleton elements
+    const skeletons = container.querySelectorAll("[class*='animate-pulse']");
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it("shows empty state when no subscription", () => {
+    vi.mocked(useSubscription).mockReturnValue({
+      data: null,
+      isLoading: false,
+    } as ReturnType<typeof useSubscription>);
+
+    renderSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    expect(screen.getByText(/No active subscription/)).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { createPostSchema } from "@/lib/validators/posts";
 import { createPost, getPostsForUser } from "@/lib/services/posts";
 import { getConnectionByPlatform } from "@/lib/services/connections";
 import { sendPostCreated, sendPostScheduled } from "@/lib/inngest/send";
+import { canPerformAction, incrementUsage } from "@/lib/services/usage";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -26,6 +27,19 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Check plan limits
+    const limitCheck = await canPerformAction(user.id, "create_post");
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Post limit reached",
+          upgrade_to: limitCheck.upgrade_to,
+          reason: limitCheck.reason,
+        },
+        { status: 403 },
+      );
+    }
+
     // Verify user has active connections for selected platforms
     for (const platform of parsed.data.platforms) {
       const connection = await getConnectionByPlatform(user.id, platform);
@@ -38,6 +52,11 @@ export async function POST(request: Request) {
     }
 
     const post = await createPost(user.id, parsed.data);
+
+    // Increment usage counter (fire-and-forget)
+    incrementUsage(user.id, "posts_count").catch((err) =>
+      console.error("[usage] Failed to increment posts_count:", err),
+    );
 
     // Send Inngest events (fire-and-forget)
     sendPostCreated(post.id, user.id).catch((err) =>

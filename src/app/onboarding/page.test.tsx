@@ -554,7 +554,7 @@ describe("Onboarding page", () => {
       ).toBeInTheDocument();
     });
 
-    it("completes onboarding and redirects to dashboard", async () => {
+    it("completes onboarding and redirects to pricing", async () => {
       mockCompleteOnboarding.mockImplementation(
         (_: undefined, options: { onSuccess: () => void }) => {
           options.onSuccess();
@@ -567,10 +567,10 @@ describe("Onboarding page", () => {
       fireEvent.click(screen.getByText("Go to Dashboard"));
 
       expect(mockCompleteOnboarding).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+      expect(mockPush).toHaveBeenCalledWith("/pricing");
     });
 
-    it("completes onboarding and redirects to new post page", async () => {
+    it("completes onboarding and redirects to pricing from create", async () => {
       mockCompleteOnboarding.mockImplementation(
         (_: undefined, options: { onSuccess: () => void }) => {
           options.onSuccess();
@@ -583,10 +583,10 @@ describe("Onboarding page", () => {
       fireEvent.click(screen.getByText("Create from scratch"));
 
       expect(mockCompleteOnboarding).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/content/new");
+      expect(mockPush).toHaveBeenCalledWith("/pricing");
     });
 
-    it("uses idea and redirects with hook content", async () => {
+    it("uses idea and redirects to pricing", async () => {
       mockCompleteOnboarding.mockImplementation(
         (_: undefined, options: { onSuccess: () => void }) => {
           options.onSuccess();
@@ -611,9 +611,7 @@ describe("Onboarding page", () => {
       fireEvent.click(useButtons[0]);
 
       expect(mockCompleteOnboarding).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith(
-        `/dashboard/content/new?body=${encodeURIComponent("My test hook content")}`,
-      );
+      expect(mockPush).toHaveBeenCalledWith("/pricing");
     });
   });
 

@@ -559,6 +559,112 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_customer_id: string
+          stripe_subscription_id: string | null
+          plan: string
+          status: string
+          billing_cycle: string
+          current_period_start: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          trial_end: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_customer_id: string
+          stripe_subscription_id?: string | null
+          plan: string
+          status: string
+          billing_cycle: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          trial_end?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string | null
+          plan?: string
+          status?: string
+          billing_cycle?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          trial_end?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_tracking: {
+        Row: {
+          id: string
+          user_id: string
+          period_start: string
+          period_end: string
+          posts_count: number
+          ai_requests_count: number
+          insights_count: number
+          content_improvements_count: number
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          period_start: string
+          period_end: string
+          posts_count?: number
+          ai_requests_count?: number
+          insights_count?: number
+          content_improvements_count?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          period_start?: string
+          period_end?: string
+          posts_count?: number
+          ai_requests_count?: number
+          insights_count?: number
+          content_improvements_count?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -571,6 +677,7 @@ export type Database = {
       platform_type: "twitter" | "linkedin" | "threads"
       post_status: "draft" | "scheduled" | "published" | "failed" | "deleted"
       publication_status: "pending" | "published" | "failed"
+      subscription_status: "active" | "canceled" | "past_due" | "trialing" | "unpaid" | "incomplete"
     }
     CompositeTypes: {
       [_ in never]: never

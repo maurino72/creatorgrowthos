@@ -71,6 +71,16 @@ const menuItems = (
         Settings
       </Link>
     </DropdownMenuItem>
+    <DropdownMenuItem asChild className="cursor-pointer">
+      <Link href="/dashboard/settings/billing">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="14" height="10" rx="2" />
+          <path d="M2 8h14" />
+          <path d="M5 12h3" />
+        </svg>
+        Billing
+      </Link>
+    </DropdownMenuItem>
     <DropdownMenuSeparator />
     <DropdownMenuItem asChild className="cursor-pointer">
       <Link href="/privacy">

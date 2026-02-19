@@ -13,6 +13,11 @@ vi.mock("@/lib/services/connections", () => ({
   getConnectionByPlatform: vi.fn(),
 }));
 
+vi.mock("@/lib/services/usage", () => ({
+  canPerformAction: vi.fn().mockResolvedValue({ allowed: true }),
+  incrementUsage: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { createClient } from "@/lib/supabase/server";
 import { createPost, getPostsForUser } from "@/lib/services/posts";
 import { getConnectionByPlatform } from "@/lib/services/connections";
