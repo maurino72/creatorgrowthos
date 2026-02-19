@@ -32,6 +32,12 @@ export async function POST(request: Request) {
 
   try {
     const priceId = getPriceId(plan, billing_cycle);
+    if (!priceId) {
+      return NextResponse.json(
+        { error: "Price ID not configured for this plan" },
+        { status: 500 }
+      );
+    }
     const stripe = getStripeClient();
 
     // Get or create Stripe customer

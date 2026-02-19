@@ -14,6 +14,14 @@ vi.mock("@/lib/services/subscriptions", () => ({
   upsertSubscription: vi.fn(),
 }));
 
+vi.mock("@/lib/stripe/plans", async () => {
+  const actual = await vi.importActual("@/lib/stripe/plans");
+  return {
+    ...actual,
+    getPriceId: vi.fn().mockReturnValue("price_test_123"),
+  };
+});
+
 import { createClient } from "@/lib/supabase/server";
 import { getStripeClient } from "@/lib/stripe/client";
 import { getSubscriptionForUser } from "@/lib/services/subscriptions";

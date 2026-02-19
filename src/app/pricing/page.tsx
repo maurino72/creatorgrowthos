@@ -2,6 +2,7 @@
 
 import { Fragment, Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCheckout } from "@/lib/queries/billing";
@@ -253,6 +254,9 @@ function PricingContent() {
       {
         onSuccess: (url) => {
           if (url) window.location.href = url;
+        },
+        onError: () => {
+          toast.error("Failed to start checkout. Please try again.");
         },
       }
     );
