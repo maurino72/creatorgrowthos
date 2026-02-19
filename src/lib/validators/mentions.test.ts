@@ -55,16 +55,16 @@ describe("mentionSchema", () => {
     expect(mentionSchema.safeParse("a").success).toBe(true);
   });
 
-  it("accepts handle at exactly 15 characters", () => {
-    expect(mentionSchema.safeParse("a".repeat(15)).success).toBe(true);
+  it("accepts handle at exactly 30 characters", () => {
+    expect(mentionSchema.safeParse("a".repeat(30)).success).toBe(true);
   });
 
   it("rejects empty string", () => {
     expect(mentionSchema.safeParse("").success).toBe(false);
   });
 
-  it("rejects handle over 15 characters", () => {
-    expect(mentionSchema.safeParse("a".repeat(16)).success).toBe(false);
+  it("rejects handle over 30 characters", () => {
+    expect(mentionSchema.safeParse("a".repeat(31)).success).toBe(false);
   });
 
   it("rejects handle with uppercase", () => {

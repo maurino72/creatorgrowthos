@@ -9,8 +9,8 @@ export function normalizeMention(raw: string): string {
 export const mentionSchema = z
   .string()
   .min(1)
-  .max(15)
-  .regex(/^[a-z0-9_]+$/, "Handle must be lowercase alphanumeric with underscores, 1-15 chars");
+  .max(30)
+  .regex(/^[a-z0-9_]+$/, "Handle must be lowercase alphanumeric with underscores");
 
 export const mentionsArraySchema = z.array(mentionSchema).max(MAX_MENTIONS_PER_POST);
 
