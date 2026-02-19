@@ -1,5 +1,8 @@
 import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
+
+type PlatformType = Database["public"]["Enums"]["platform_type"];
 import { insightsArraySchema, MIN_POSTS } from "@/lib/ai/insights";
 import {
   buildInsightsPrompt,
@@ -25,6 +28,7 @@ export class InsufficientDataError extends Error {
 export interface GetInsightsOptions {
   status?: string;
   type?: string;
+  platform?: PlatformType;
   limit?: number;
 }
 
@@ -121,6 +125,7 @@ export async function generateInsights(userId: string, platform?: string) {
         action: insight.action,
         confidence: insight.confidence,
         status: "active",
+        platform: (platform as PlatformType) ?? null,
         generated_at: new Date().toISOString(),
         expires_at: expiresAt,
       })
@@ -139,7 +144,7 @@ export async function getInsightsForUser(
   options: GetInsightsOptions = {},
 ) {
   const supabase = createAdminClient();
-  const { status = "active", type, limit = 10 } = options;
+  const { status = "active", type, platform, limit = 10 } = options;
 
   let query = supabase
     .from("insights")
@@ -151,6 +156,9 @@ export async function getInsightsForUser(
   }
   if (type) {
     query = query.eq("type", type);
+  }
+  if (platform) {
+    query = query.eq("platform", platform);
   }
 
   const { data, error } = await query

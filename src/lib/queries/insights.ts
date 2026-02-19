@@ -8,13 +8,14 @@ import {
 
 export const insightKeys = {
   all: ["insights"] as const,
-  list: (filters: { status?: string; type?: string; limit?: number }) =>
+  list: (filters: { status?: string; type?: string; platform?: string; limit?: number }) =>
     ["insights", "list", filters] as const,
 };
 
 export interface InsightFilters {
   status?: string;
   type?: string;
+  platform?: string;
   limit?: number;
 }
 
@@ -23,6 +24,7 @@ async function fetchInsights(filters?: InsightFilters) {
   if (filters?.status) params.set("status", filters.status);
   else params.set("status", "active");
   if (filters?.type) params.set("type", filters.type);
+  if (filters?.platform) params.set("platform", filters.platform);
   if (filters?.limit) params.set("limit", String(filters.limit));
 
   const url = `/api/insights?${params}`;

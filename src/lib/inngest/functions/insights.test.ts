@@ -89,7 +89,7 @@ describe("generate-user-insights", () => {
     await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
 
     expect(step.run).toHaveBeenCalledWith("generate", expect.any(Function));
-    expect(generateInsights).toHaveBeenCalledWith("user-1");
+    expect(generateInsights).toHaveBeenCalledWith("user-1", undefined);
 
     expect(step.sendEvent).toHaveBeenCalledWith(
       "send-completion",
@@ -101,6 +101,23 @@ describe("generate-user-insights", () => {
         },
       }),
     );
+  });
+
+  it("forwards platform from event data to generateInsights", async () => {
+    const step = createMockStep();
+    const event = {
+      name: "ai/insights.requested" as const,
+      data: { userId: "user-1", trigger: "manual", platform: "twitter" },
+    };
+
+    vi.mocked(generateInsights).mockResolvedValue([
+      { id: "insight-1" },
+    ] as Awaited<ReturnType<typeof generateInsights>>);
+
+    const handler = generateUserInsights["fn"];
+    await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
+
+    expect(generateInsights).toHaveBeenCalledWith("user-1", "twitter");
   });
 
   it("propagates errors for retry", async () => {

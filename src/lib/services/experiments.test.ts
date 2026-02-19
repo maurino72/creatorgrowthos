@@ -131,6 +131,59 @@ describe("suggestExperiments", () => {
     expect(getAggregatedData).toHaveBeenCalledWith("user-1", "twitter");
   });
 
+  it("stores platform on each inserted experiment", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    const chain = mockSupabaseForSuggest();
+    mockChatCompletion(JSON.stringify(validSuggestions));
+
+    // Make insert trackable
+    const insertCalls: unknown[] = [];
+    chain.insert = vi.fn().mockImplementation((data: unknown) => {
+      insertCalls.push(data);
+      return {
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: "exp-1", type: "format_test", status: "suggested" },
+            error: null,
+          }),
+        }),
+      };
+    });
+
+    await suggestExperiments("user-1", "twitter");
+
+    expect(insertCalls).toHaveLength(2);
+    for (const call of insertCalls) {
+      expect(call).toMatchObject({ platform: "twitter" });
+    }
+  });
+
+  it("stores null platform when not provided", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(baseContext);
+    const chain = mockSupabaseForSuggest();
+    mockChatCompletion(JSON.stringify(validSuggestions));
+
+    const insertCalls: unknown[] = [];
+    chain.insert = vi.fn().mockImplementation((data: unknown) => {
+      insertCalls.push(data);
+      return {
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: "exp-1", type: "format_test", status: "suggested" },
+            error: null,
+          }),
+        }),
+      };
+    });
+
+    await suggestExperiments("user-1");
+
+    expect(insertCalls).toHaveLength(2);
+    for (const call of insertCalls) {
+      expect(call).toMatchObject({ platform: null });
+    }
+  });
+
   it("throws InsufficientDataError when <MIN_EXPERIMENT_POSTS", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue({
       ...baseContext,
@@ -230,6 +283,36 @@ describe("getExperimentsForUser", () => {
 
     await getExperimentsForUser("user-1", { status: "accepted" });
     expect(chain.eq).toHaveBeenCalledWith("status", "accepted");
+  });
+
+  it("filters by platform", async () => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnValue({ data: [], error: null }),
+    };
+    vi.mocked(createAdminClient).mockReturnValue(chain as never);
+
+    await getExperimentsForUser("user-1", { platform: "twitter" });
+    expect(chain.eq).toHaveBeenCalledWith("platform", "twitter");
+  });
+
+  it("skips platform filter when not provided", async () => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnValue({ data: [], error: null }),
+    };
+    vi.mocked(createAdminClient).mockReturnValue(chain as never);
+
+    await getExperimentsForUser("user-1", { status: "suggested" });
+
+    const eqCalls = chain.eq.mock.calls.map((c: unknown[]) => c[0]);
+    expect(eqCalls).not.toContain("platform");
   });
 });
 

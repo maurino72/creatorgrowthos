@@ -53,6 +53,17 @@ describe("GET /api/experiments", () => {
     expect(res.status).toBe(200);
     expect(body.experiments).toHaveLength(1);
   });
+
+  it("passes platform query param to service", async () => {
+    mockAuth({ id: "user-1" });
+    vi.mocked(getExperimentsForUser).mockResolvedValue([]);
+    const { GET } = await importRoute();
+    const req = new Request("http://localhost/api/experiments?platform=twitter");
+    await GET(req);
+    expect(getExperimentsForUser).toHaveBeenCalledWith("user-1", expect.objectContaining({
+      platform: "twitter",
+    }));
+  });
 });
 
 describe("POST /api/experiments", () => {

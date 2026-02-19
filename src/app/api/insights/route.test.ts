@@ -83,7 +83,21 @@ describe("GET /api/insights", () => {
     expect(getInsightsForUser).toHaveBeenCalledWith("user-1", {
       status: undefined,
       type: undefined,
+      platform: undefined,
       limit: 10,
     });
+  });
+
+  it("passes platform query param to service", async () => {
+    mockAuth({ id: "user-1" });
+    vi.mocked(getInsightsForUser).mockResolvedValue([]);
+
+    const { GET } = await importRoute();
+    const request = new Request("http://localhost/api/insights?platform=twitter");
+    await GET(request);
+
+    expect(getInsightsForUser).toHaveBeenCalledWith("user-1", expect.objectContaining({
+      platform: "twitter",
+    }));
   });
 });

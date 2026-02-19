@@ -144,6 +144,7 @@ function InsightsPageInner() {
   const { data: insights, isLoading } = useInsights({
     status: activeStatus,
     type: activeType,
+    platform: platformFilter,
   });
   const generateInsights = useGenerateInsights();
 

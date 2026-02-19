@@ -114,9 +114,10 @@ function ExperimentsPageInner() {
   const { platform } = usePlatform();
   const platformFilter = platform ?? undefined;
 
-  const { data: experiments, isLoading } = useExperiments(
-    activeStatus ? { status: activeStatus } : undefined,
-  );
+  const { data: experiments, isLoading } = useExperiments({
+    status: activeStatus,
+    platform: platformFilter,
+  });
   const suggestExperiments = useSuggestExperiments();
 
   return (

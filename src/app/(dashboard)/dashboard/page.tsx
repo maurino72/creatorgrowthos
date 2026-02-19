@@ -324,6 +324,7 @@ function DashboardContent() {
   );
   const { data: insights, isLoading: insightsLoading } = useInsights({
     limit: 3,
+    platform: platformFilter,
   });
   const generateInsights = useGenerateInsights();
   const { data: timeSeries } = useMetricsTimeSeries(days, platformFilter);

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 import {
   getExperimentsForUser,
   suggestExperiments,
   InsufficientDataError,
 } from "@/lib/services/experiments";
+
+type PlatformType = Database["public"]["Enums"]["platform_type"];
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -18,12 +21,13 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") ?? undefined;
+  const platform = (searchParams.get("platform") ?? undefined) as PlatformType | undefined;
   const limit = searchParams.get("limit")
     ? Number(searchParams.get("limit"))
     : undefined;
 
   try {
-    const experiments = await getExperimentsForUser(user.id, { status, limit });
+    const experiments = await getExperimentsForUser(user.id, { status, platform, limit });
     return NextResponse.json({ experiments });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch experiments";

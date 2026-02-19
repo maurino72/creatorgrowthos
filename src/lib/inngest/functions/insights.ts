@@ -39,10 +39,10 @@ export const generateUserInsights = inngest.createFunction(
   },
   { event: "ai/insights.requested" },
   async ({ event, step }) => {
-    const { userId } = event.data;
+    const { userId, platform } = event.data;
 
     const insights = await step.run("generate", async () => {
-      return generateInsights(userId);
+      return generateInsights(userId, platform);
     });
 
     const insightIds = insights.map((i) => i.id);

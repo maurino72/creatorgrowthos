@@ -470,6 +470,7 @@ export type Database = {
           action: string | null
           confidence: string
           status: string
+          platform: Database["public"]["Enums"]["platform_type"] | null
           generated_at: string | null
           expires_at: string | null
           created_at: string | null
@@ -484,6 +485,7 @@ export type Database = {
           action?: string | null
           confidence: string
           status?: string
+          platform?: Database["public"]["Enums"]["platform_type"] | null
           generated_at?: string | null
           expires_at?: string | null
           created_at?: string | null
@@ -498,6 +500,7 @@ export type Database = {
           action?: string | null
           confidence?: string
           status?: string
+          platform?: Database["public"]["Enums"]["platform_type"] | null
           generated_at?: string | null
           expires_at?: string | null
           created_at?: string | null
@@ -520,6 +523,7 @@ export type Database = {
           hypothesis: string
           description: string
           status: string
+          platform: Database["public"]["Enums"]["platform_type"] | null
           results: Json | null
           suggested_at: string | null
           started_at: string | null
@@ -533,6 +537,7 @@ export type Database = {
           hypothesis: string
           description: string
           status?: string
+          platform?: Database["public"]["Enums"]["platform_type"] | null
           results?: Json | null
           suggested_at?: string | null
           started_at?: string | null
@@ -546,6 +551,7 @@ export type Database = {
           hypothesis?: string
           description?: string
           status?: string
+          platform?: Database["public"]["Enums"]["platform_type"] | null
           results?: Json | null
           suggested_at?: string | null
           started_at?: string | null

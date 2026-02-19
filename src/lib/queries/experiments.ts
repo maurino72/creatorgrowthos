@@ -8,18 +8,20 @@ import {
 
 export const experimentKeys = {
   all: ["experiments"] as const,
-  list: (filters: { status?: string; limit?: number }) =>
+  list: (filters: { status?: string; platform?: string; limit?: number }) =>
     ["experiments", "list", filters] as const,
 };
 
 export interface ExperimentFilters {
   status?: string;
+  platform?: string;
   limit?: number;
 }
 
 async function fetchExperiments(filters?: ExperimentFilters) {
   const params = new URLSearchParams();
   if (filters?.status) params.set("status", filters.status);
+  if (filters?.platform) params.set("platform", filters.platform);
   if (filters?.limit) params.set("limit", String(filters.limit));
 
   const response = await fetch(`/api/experiments?${params}`);

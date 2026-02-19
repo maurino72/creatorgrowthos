@@ -168,6 +168,33 @@ describe("generateInsights", () => {
     expect(getAggregatedData).toHaveBeenCalledWith("user-1", "twitter");
   });
 
+  it("stores platform on each inserted insight", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
+    mockChatCompletion(MOCK_AI_RESPONSE);
+    const chain = mockSupabase();
+
+    await generateInsights("user-1", "twitter");
+
+    // insert is called for each insight (3 in MOCK_AI_RESPONSE)
+    expect(chain.insert).toHaveBeenCalledTimes(3);
+    for (const call of chain.insert.mock.calls) {
+      expect(call[0]).toMatchObject({ platform: "twitter" });
+    }
+  });
+
+  it("stores null platform when not provided", async () => {
+    vi.mocked(getAggregatedData).mockResolvedValue(MOCK_CONTEXT);
+    mockChatCompletion(MOCK_AI_RESPONSE);
+    const chain = mockSupabase();
+
+    await generateInsights("user-1");
+
+    expect(chain.insert).toHaveBeenCalledTimes(3);
+    for (const call of chain.insert.mock.calls) {
+      expect(call[0]).toMatchObject({ platform: null });
+    }
+  });
+
   it("throws InsufficientDataError when less than 20 posts", async () => {
     vi.mocked(getAggregatedData).mockResolvedValue({
       ...MOCK_CONTEXT,
@@ -302,6 +329,30 @@ describe("getInsightsForUser", () => {
     await getInsightsForUser("user-1", { type: "anomaly" });
 
     expect(chain.eq).toHaveBeenCalledWith("type", "anomaly");
+  });
+
+  it("filters by platform", async () => {
+    const chain = mockSupabase();
+    chain.order = vi.fn().mockReturnValue({
+      limit: vi.fn().mockReturnValue({ data: [], error: null }),
+    });
+
+    await getInsightsForUser("user-1", { platform: "twitter" });
+
+    expect(chain.eq).toHaveBeenCalledWith("platform", "twitter");
+  });
+
+  it("skips platform filter when not provided", async () => {
+    const chain = mockSupabase();
+    chain.order = vi.fn().mockReturnValue({
+      limit: vi.fn().mockReturnValue({ data: [], error: null }),
+    });
+
+    await getInsightsForUser("user-1", { status: "active" });
+
+    // eq should be called for user_id and status, but NOT platform
+    const eqCalls = chain.eq.mock.calls.map((c: unknown[]) => c[0]);
+    expect(eqCalls).not.toContain("platform");
   });
 
   it("throws on database error", async () => {

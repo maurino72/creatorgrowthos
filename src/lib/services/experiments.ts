@@ -1,5 +1,8 @@
 import { chatCompletion, extractJsonPayload } from "@/lib/ai/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
+
+type PlatformType = Database["public"]["Enums"]["platform_type"];
 import { experimentSuggestionsArraySchema } from "@/lib/ai/experiments";
 import {
   buildExperimentsPrompt,
@@ -26,6 +29,7 @@ export class InsufficientDataError extends Error {
 
 export interface GetExperimentsOptions {
   status?: string;
+  platform?: PlatformType;
   limit?: number;
 }
 
@@ -117,6 +121,7 @@ export async function suggestExperiments(userId: string, platform?: string) {
         hypothesis: suggestion.hypothesis,
         description: suggestion.description,
         status: "suggested",
+        platform: (platform as PlatformType) ?? null,
         results: { recommended_action: suggestion.recommended_action, confidence: suggestion.confidence },
         suggested_at: new Date().toISOString(),
       })
@@ -135,7 +140,7 @@ export async function getExperimentsForUser(
   options: GetExperimentsOptions = {},
 ) {
   const supabase = createAdminClient();
-  const { status, limit = 10 } = options;
+  const { status, platform, limit = 10 } = options;
 
   let query = supabase
     .from("experiments")
@@ -144,6 +149,9 @@ export async function getExperimentsForUser(
 
   if (status) {
     query = query.eq("status", status);
+  }
+  if (platform) {
+    query = query.eq("platform", platform);
   }
 
   const { data, error } = await query

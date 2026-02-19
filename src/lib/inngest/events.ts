@@ -88,7 +88,7 @@ type AiClassifyCompleted = {
 };
 
 type AiInsightsRequested = {
-  data: { userId: string; trigger: string };
+  data: { userId: string; trigger: string; platform?: string };
 };
 
 type AiInsightsCompleted = {
