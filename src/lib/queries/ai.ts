@@ -2,6 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import type { HashtagSuggestion } from "@/lib/ai/hashtags";
+import type { MentionSuggestion } from "@/lib/ai/mentions";
 
 export function useGenerateIdeas() {
   return useMutation({
@@ -31,6 +32,23 @@ export function useSuggestHashtags() {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to suggest hashtags");
+      }
+      return (await response.json()).suggestions;
+    },
+  });
+}
+
+export function useSuggestMentions() {
+  return useMutation({
+    mutationFn: async (content: string): Promise<MentionSuggestion[]> => {
+      const response = await fetch("/api/ai/mentions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to suggest mentions");
       }
       return (await response.json()).suggestions;
     },

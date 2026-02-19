@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { PlatformType } from "@/lib/adapters/types";
 import { mediaUrlsSchema } from "./media";
+import { mentionsArraySchema } from "./mentions";
 import { tagsArraySchema } from "./tags";
 
 const platformTypes: [PlatformType, ...PlatformType[]] = [
@@ -22,6 +23,7 @@ export const createPostSchema = z.object({
   scheduled_at: futureDate.optional(),
   media_urls: mediaUrlsSchema.optional(),
   tags: tagsArraySchema.optional(),
+  mentions: mentionsArraySchema.optional(),
 });
 
 export const updatePostSchema = z.object({
@@ -30,6 +32,7 @@ export const updatePostSchema = z.object({
   scheduled_at: futureDate.nullable().optional(),
   media_urls: mediaUrlsSchema.nullable().optional(),
   tags: tagsArraySchema.nullable().optional(),
+  mentions: mentionsArraySchema.nullable().optional(),
 });
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;

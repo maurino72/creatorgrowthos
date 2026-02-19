@@ -272,6 +272,7 @@ export type Database = {
           id: string
           intent: string | null
           media_urls: string[] | null
+          mentions: string[]
           published_at: string | null
           scheduled_at: string | null
           status: Database["public"]["Enums"]["post_status"] | null
@@ -290,6 +291,7 @@ export type Database = {
           id?: string
           intent?: string | null
           media_urls?: string[] | null
+          mentions?: string[]
           published_at?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
@@ -308,6 +310,7 @@ export type Database = {
           id?: string
           intent?: string | null
           media_urls?: string[] | null
+          mentions?: string[]
           published_at?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null

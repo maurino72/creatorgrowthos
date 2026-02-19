@@ -8,6 +8,7 @@ export interface CreatePostData {
   scheduled_at?: string;
   media_urls?: string[];
   tags?: string[];
+  mentions?: string[];
 }
 
 export interface UpdatePostData {
@@ -16,6 +17,7 @@ export interface UpdatePostData {
   scheduled_at?: string | null;
   media_urls?: string[] | null;
   tags?: string[] | null;
+  mentions?: string[] | null;
 }
 
 export interface GetPostsOptions {
@@ -24,6 +26,7 @@ export interface GetPostsOptions {
   content_type?: string;
   topic?: string;
   tag?: string;
+  mention?: string;
   platform?: string;
   limit?: number;
   offset?: number;
@@ -42,6 +45,7 @@ export async function createPost(userId: string, data: CreatePostData) {
       scheduled_at: data.scheduled_at ?? null,
       media_urls: data.media_urls ?? [],
       tags: data.tags ?? [],
+      mentions: data.mentions ?? [],
     })
     .select("*")
     .single();
@@ -70,7 +74,7 @@ export async function getPostsForUser(
   options: GetPostsOptions = {},
 ) {
   const supabase = createAdminClient();
-  const { status, intent, content_type, topic, tag, platform, limit = 20, offset = 0 } = options;
+  const { status, intent, content_type, topic, tag, mention, platform, limit = 20, offset = 0 } = options;
 
   const selectClause = platform
     ? "*, post_publications!inner(*)"
@@ -101,6 +105,9 @@ export async function getPostsForUser(
   }
   if (tag) {
     query = query.contains("tags", [tag]);
+  }
+  if (mention) {
+    query = query.contains("mentions", [mention]);
   }
 
   const { data, error } = await query.range(offset, offset + limit - 1);
@@ -148,6 +155,10 @@ export async function updatePost(
 
   if (data.tags !== undefined) {
     updates.tags = data.tags ?? [];
+  }
+
+  if (data.mentions !== undefined) {
+    updates.mentions = data.mentions ?? [];
   }
 
   // Handle status transitions based on scheduled_at

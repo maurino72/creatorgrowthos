@@ -180,7 +180,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse({
       body: "Hello",
       platforms: ["twitter"],
-      tags: ["react", "nextjs"],
+      tags: ["React", "NextJs"],
     });
     expect(result.success).toBe(true);
   });
@@ -189,7 +189,7 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse({
       body: "Hello",
       platforms: ["twitter"],
-      tags: ["a", "b", "c", "d", "e"],
+      tags: ["A", "B", "C", "D", "E"],
     });
     expect(result.success).toBe(true);
   });
@@ -198,16 +198,63 @@ describe("createPostSchema", () => {
     const result = createPostSchema.safeParse({
       body: "Hello",
       platforms: ["twitter"],
-      tags: ["a", "b", "c", "d", "e", "f"],
+      tags: ["A", "B", "C", "D", "E", "F"],
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects invalid tag format", () => {
+  it("rejects invalid tag format (must start with uppercase)", () => {
     const result = createPostSchema.safeParse({
       body: "Hello",
       platforms: ["twitter"],
-      tags: ["INVALID"],
+      tags: ["invalid"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts mentions as optional", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.mentions).toBeUndefined();
+    }
+  });
+
+  it("accepts valid mentions array", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      mentions: ["dan_abramov", "vercel"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts up to 5 mentions", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      mentions: ["a", "b", "c", "d", "e"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects more than 5 mentions", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      mentions: ["a", "b", "c", "d", "e", "f"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid mention format (must be lowercase)", () => {
+    const result = createPostSchema.safeParse({
+      body: "Hello",
+      platforms: ["twitter"],
+      mentions: ["INVALID"],
     });
     expect(result.success).toBe(false);
   });
@@ -311,7 +358,7 @@ describe("updatePostSchema", () => {
 
   it("accepts tags update", () => {
     const result = updatePostSchema.safeParse({
-      tags: ["react", "nextjs"],
+      tags: ["React", "NextJs"],
     });
     expect(result.success).toBe(true);
   });
@@ -326,9 +373,33 @@ describe("updatePostSchema", () => {
     }
   });
 
-  it("rejects invalid tags on update", () => {
+  it("rejects invalid tags on update (must start with uppercase, no all-caps)", () => {
     const result = updatePostSchema.safeParse({
-      tags: ["INVALID"],
+      tags: ["invalid"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts mentions update", () => {
+    const result = updatePostSchema.safeParse({
+      mentions: ["dan_abramov", "vercel"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null mentions to clear mentions", () => {
+    const result = updatePostSchema.safeParse({
+      mentions: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.mentions).toBeNull();
+    }
+  });
+
+  it("rejects invalid mentions on update", () => {
+    const result = updatePostSchema.safeParse({
+      mentions: ["INVALID"],
     });
     expect(result.success).toBe(false);
   });

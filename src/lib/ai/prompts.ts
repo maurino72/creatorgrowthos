@@ -579,7 +579,7 @@ const HASHTAGS_SYSTEM_PROMPT = `You are a social media hashtag strategist. Your 
 - Suggest 3-5 hashtags that are specific to the content
 - Prefer niche hashtags over generic ones (#BuildInPublic > #coding)
 - Consider the creator's niche and audience when suggesting
-- Return lowercase, hyphenated tags (no # prefix)
+- Return CamelCase tags (no # prefix, e.g. "BuildInPublic", "WebDev")
 
 ## Relevance Levels
 
@@ -593,14 +593,14 @@ Return ONLY valid JSON — an array of 3 to 5 objects with this exact structure:
 
 [
   {
-    "tag": "<lowercase-hyphenated-tag>",
+    "tag": "<CamelCaseTag>",
     "relevance": "<one of: high, medium, low>"
   }
 ]
 
 ## Rules
 
-- Tags must be lowercase, alphanumeric with optional hyphens
+- Tags must be CamelCase alphanumeric (start with uppercase, no hyphens)
 - No spaces, no # prefix, no special characters
 - Prefer specific niche tags over generic ones
 - Vary relevance levels across suggestions
@@ -632,6 +632,77 @@ export function buildSuggestHashtagsPrompt(
     system: HASHTAGS_SYSTEM_PROMPT,
     user,
     fullPrompt: `${HASHTAGS_SYSTEM_PROMPT}\n\n${user}`,
+  };
+}
+
+// --- Mention Suggestions prompt ---
+
+export const SUGGEST_MENTIONS_TEMPLATE = "suggest_mentions";
+export const SUGGEST_MENTIONS_VERSION = "1.0";
+
+const MENTIONS_SYSTEM_PROMPT = `You are a social media mention strategist. Your job is to suggest real, well-known accounts to @mention in a post to boost visibility, engagement, and relevance.${CREATOR_PROFILE_INSTRUCTION}
+
+## Your Role
+
+- Suggest 1-5 real accounts that are relevant to the post content
+- Only suggest accounts that actually exist and are well-known in the relevant niche
+- Include a reason explaining WHY mentioning each account adds value
+- Return lowercase handles without the @ prefix (e.g. "dan_abramov", "vercel")
+
+## Relevance Levels
+
+- **high**: Directly related to the topic — the person/org is a key voice or builder in that space
+- **medium**: Related to the broader theme — known in the industry but not the core topic
+- **low**: Tangentially related — could amplify reach but connection to content is loose
+
+## Response Format
+
+Return ONLY valid JSON — an array of 1 to 5 objects with this exact structure:
+
+[
+  {
+    "handle": "<lowercase_handle>",
+    "relevance": "<one of: high, medium, low>",
+    "reason": "<why mentioning this account adds value>"
+  }
+]
+
+## Rules
+
+- Handles must be lowercase with only letters, numbers, and underscores (Twitter handle rules)
+- No @ prefix in the handle field
+- Only suggest real, existing accounts — never fabricate handles
+- Consider the creator's niche and audience when suggesting
+- Vary relevance levels across suggestions
+- The reason should be specific: explain the connection between the content and the account
+- Do not include any explanation, markdown, or text outside the JSON array.`;
+
+export interface MentionsPromptResult {
+  system: string;
+  user: string;
+  fullPrompt: string;
+}
+
+export function buildSuggestMentionsPrompt(
+  content: string,
+  creatorProfile?: CreatorProfileContext,
+): MentionsPromptResult {
+  const userParts: string[] = [];
+
+  if (creatorProfile) {
+    userParts.push(formatCreatorProfile(creatorProfile));
+    userParts.push("");
+  }
+
+  userParts.push("## Post Content");
+  userParts.push(content);
+
+  const user = userParts.join("\n");
+
+  return {
+    system: MENTIONS_SYSTEM_PROMPT,
+    user,
+    fullPrompt: `${MENTIONS_SYSTEM_PROMPT}\n\n${user}`,
   };
 }
 

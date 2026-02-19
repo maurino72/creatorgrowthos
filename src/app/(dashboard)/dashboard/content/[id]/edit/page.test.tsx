@@ -55,6 +55,12 @@ vi.mock("@/lib/queries/ai", () => ({
     data: null,
     isSuccess: false,
   })),
+  useSuggestMentions: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    data: null,
+    isSuccess: false,
+  })),
 }));
 
 import { usePost } from "@/lib/queries/posts";

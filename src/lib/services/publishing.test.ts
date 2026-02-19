@@ -90,38 +90,74 @@ function mockConnection(overrides: Record<string, unknown> = {}) {
 }
 
 describe("buildPublishText", () => {
-  it("returns body alone when no tags", () => {
-    expect(buildPublishText("Hello world!", [], 280)).toBe("Hello world!");
+  it("returns body alone when no mentions or tags", () => {
+    expect(buildPublishText("Hello world!", [], [], 280)).toBe("Hello world!");
   });
 
   it("appends tags when they fit within limit", () => {
-    expect(buildPublishText("Hello!", ["react", "nextjs"], 280)).toBe(
-      "Hello! #react #nextjs",
+    expect(buildPublishText("Hello!", [], ["React", "NextJs"], 280)).toBe(
+      "Hello! #React #NextJs",
     );
   });
 
   it("trims tags from the end when over limit", () => {
     const body = "a".repeat(270);
-    // " #react" = 7 chars, total would be 277 — fits
-    // " #nextjs" = 8 more = 285 — doesn't fit
-    expect(buildPublishText(body, ["react", "nextjs"], 280)).toBe(
-      body + " #react",
+    // " #React" = 7 chars, total would be 277 — fits
+    // " #NextJs" = 8 more = 285 — doesn't fit
+    expect(buildPublishText(body, [], ["React", "NextJs"], 280)).toBe(
+      body + " #React",
     );
   });
 
   it("drops all tags when body fills the limit", () => {
     const body = "a".repeat(280);
-    expect(buildPublishText(body, ["react", "nextjs"], 280)).toBe(body);
+    expect(buildPublishText(body, [], ["React", "NextJs"], 280)).toBe(body);
   });
 
   it("handles body exactly at limit minus one tag", () => {
-    // body = 273 chars, " #react" = 7 chars, total = 280 — fits exactly
+    // body = 273 chars, " #React" = 7 chars, total = 280 — fits exactly
     const body = "a".repeat(273);
-    expect(buildPublishText(body, ["react"], 280)).toBe(body + " #react");
+    expect(buildPublishText(body, [], ["React"], 280)).toBe(body + " #React");
   });
 
-  it("handles empty body", () => {
-    expect(buildPublishText("", ["react"], 280)).toBe(" #react");
+  it("handles empty body with tags", () => {
+    expect(buildPublishText("", [], ["React"], 280)).toBe(" #React");
+  });
+
+  it("appends mentions before tags", () => {
+    expect(
+      buildPublishText("Great post", ["dan_abramov"], ["React"], 280),
+    ).toBe("Great post @dan_abramov #React");
+  });
+
+  it("appends multiple mentions before tags", () => {
+    expect(
+      buildPublishText("Hello", ["vercel", "nextjs"], ["React", "WebDev"], 280),
+    ).toBe("Hello @vercel @nextjs #React #WebDev");
+  });
+
+  it("trims tags first when over limit (mentions have higher priority)", () => {
+    const body = "a".repeat(260);
+    // body=260, " @vercel"=8 → 268, " #React"=7 → 275 fits, " #NextJs"=8 → 283 doesn't
+    expect(
+      buildPublishText(body, ["vercel"], ["React", "NextJs"], 280),
+    ).toBe(body + " @vercel #React");
+  });
+
+  it("trims mentions when even they exceed limit", () => {
+    const body = "a".repeat(270);
+    // body=270, " @vercel"=8 → 278, " @nextjs"=8 → 286 doesn't fit
+    expect(
+      buildPublishText(body, ["vercel", "nextjs"], [], 280),
+    ).toBe(body + " @vercel");
+  });
+
+  it("handles empty body with mentions only", () => {
+    expect(buildPublishText("", ["dan_abramov"], [], 280)).toBe(" @dan_abramov");
+  });
+
+  it("handles empty body with mentions and tags", () => {
+    expect(buildPublishText("", ["vercel"], ["React"], 280)).toBe(" @vercel #React");
   });
 });
 
@@ -484,7 +520,7 @@ describe("publishing service", () => {
           user_id: TEST_USER_ID,
           body: "Hello world!",
           status: "draft",
-          tags: ["react", "nextjs"],
+          tags: ["React", "NextJs"],
           post_publications: [
             { id: "pub-1", platform: "twitter", status: "pending" },
           ],
@@ -498,7 +534,37 @@ describe("publishing service", () => {
 
       expect(results[0].success).toBe(true);
       expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
-        text: "Hello world! #react #nextjs",
+        text: "Hello world! #React #NextJs",
+      });
+    });
+
+    it("appends mentions before tags when publishing", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter();
+      mockConnection();
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Great post",
+          status: "draft",
+          mentions: ["dan_abramov"],
+          tags: ["React"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(results[0].success).toBe(true);
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Great post @dan_abramov #React",
       });
     });
 

@@ -64,9 +64,9 @@ describe("useGenerateIdeas", () => {
 describe("useSuggestHashtags", () => {
   it("calls POST /api/ai/hashtags with content", async () => {
     const mockSuggestions = [
-      { tag: "react", relevance: "high" },
-      { tag: "nextjs", relevance: "medium" },
-      { tag: "webdev", relevance: "low" },
+      { tag: "React", relevance: "high" },
+      { tag: "NextJs", relevance: "medium" },
+      { tag: "WebDev", relevance: "low" },
     ];
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
@@ -97,6 +97,51 @@ describe("useSuggestHashtags", () => {
 
     const { useSuggestHashtags } = await import("./ai");
     const { result } = renderHook(() => useSuggestHashtags(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toContain("Content is required");
+  });
+});
+
+describe("useSuggestMentions", () => {
+  it("calls POST /api/ai/mentions with content", async () => {
+    const mockSuggestions = [
+      { handle: "dan_abramov", relevance: "high", reason: "React core team" },
+      { handle: "vercel", relevance: "medium", reason: "Next.js creator" },
+    ];
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ suggestions: mockSuggestions }),
+    } as Response);
+
+    const { useSuggestMentions } = await import("./ai");
+    const { result } = renderHook(() => useSuggestMentions(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("Building with React and Next.js");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(global.fetch).toHaveBeenCalledWith("/api/ai/mentions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "Building with React and Next.js" }),
+    });
+    expect(result.current.data).toEqual(mockSuggestions);
+  });
+
+  it("throws on error response", async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Content is required" }),
+    } as Response);
+
+    const { useSuggestMentions } = await import("./ai");
+    const { result } = renderHook(() => useSuggestMentions(), {
       wrapper: createWrapper(),
     });
 

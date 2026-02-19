@@ -6,12 +6,14 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useCreatePost } from "@/lib/queries/posts";
 import { useConnections } from "@/lib/queries/connections";
-import { useGenerateIdeas, useSuggestHashtags } from "@/lib/queries/ai";
+import { useGenerateIdeas, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
+import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
 import {
   ImageUploadZone,
   type ImageItem,
 } from "@/components/image-upload-zone";
+import { MentionInput } from "@/components/mention-input";
 import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
 
@@ -36,8 +38,10 @@ export default function NewPostPage() {
   const generateIdeas = useGenerateIdeas();
 
   const suggestHashtags = useSuggestHashtags();
+  const suggestMentions = useSuggestMentions();
 
   const [body, setBody] = useState("");
+  const [mentions, setMentions] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -50,7 +54,7 @@ export default function NewPostPage() {
   const hasUploading = images.some((i) => i.uploading);
   const activeConnections =
     connections?.filter((c) => c.status === "active") ?? [];
-  const charCount = body.length + computeTagsCharLength(tags);
+  const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
   const isOverLimit = charCount > CHAR_LIMIT;
   const canSubmit =
     body.trim().length > 0 &&
@@ -79,6 +83,7 @@ export default function NewPostPage() {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
+        ...(mentions.length > 0 ? { mentions } : {}),
         ...(tags.length > 0 ? { tags } : {}),
       },
       {
@@ -99,6 +104,7 @@ export default function NewPostPage() {
         body,
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
+        ...(mentions.length > 0 ? { mentions } : {}),
         ...(tags.length > 0 ? { tags } : {}),
       },
       {
@@ -131,6 +137,7 @@ export default function NewPostPage() {
         platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
         scheduled_at: new Date(scheduledAt).toISOString(),
         ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
+        ...(mentions.length > 0 ? { mentions } : {}),
         ...(tags.length > 0 ? { tags } : {}),
       },
       {
@@ -191,6 +198,38 @@ export default function NewPostPage() {
         </span>
       </div>
 
+      {/* ── Mentions ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50">
+            Mentions
+          </p>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              if (body.trim()) {
+                suggestMentions.mutate(body, {
+                  onError: (err: Error) => toast.error(err.message),
+                });
+              }
+            }}
+            loading={suggestMentions.isPending}
+            disabled={!body.trim()}
+          >
+            Suggest Mentions
+          </Button>
+        </div>
+        <MentionInput
+          mentions={mentions}
+          onChange={setMentions}
+          bodyLength={body.length}
+          tagsCharLength={computeTagsCharLength(tags)}
+          suggestions={suggestMentions.data ?? undefined}
+          suggestLoading={suggestMentions.isPending}
+        />
+      </div>
+
       {/* ── Tags ── */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -216,7 +255,7 @@ export default function NewPostPage() {
         <TagInput
           tags={tags}
           onChange={setTags}
-          bodyLength={body.length}
+          bodyLength={body.length + computeMentionsCharLength(mentions)}
           suggestions={suggestHashtags.data ?? undefined}
           suggestLoading={suggestHashtags.isPending}
         />

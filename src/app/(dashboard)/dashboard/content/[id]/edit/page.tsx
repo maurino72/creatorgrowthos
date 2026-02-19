@@ -8,10 +8,12 @@ import { usePost, useUpdatePost, useDeletePost, usePublishPost, useClassifyPost,
 import { INTENTS, CONTENT_TYPES } from "@/lib/ai/taxonomy";
 import { useConnections } from "@/lib/queries/connections";
 import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
-import { useImproveContent, useSuggestHashtags } from "@/lib/queries/ai";
+import { useImproveContent, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
+import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
 import { useSignedUrls } from "@/lib/queries/media";
 import { ImageUploadZone, type ImageItem } from "@/components/image-upload-zone";
+import { MentionInput } from "@/components/mention-input";
 import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -277,11 +279,13 @@ export default function EditPostPage() {
   const { data: connections } = useConnections();
   const improveContent = useImproveContent();
   const suggestHashtags = useSuggestHashtags();
+  const suggestMentions = useSuggestMentions();
 
   const existingMediaPaths: string[] = post?.media_urls ?? [];
   const { data: signedUrls } = useSignedUrls(existingMediaPaths);
 
   const [body, setBody] = useState("");
+  const [mentions, setMentions] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -292,6 +296,7 @@ export default function EditPostPage() {
   useEffect(() => {
     if (post && !initialized) {
       setBody(post.body ?? "");
+      setMentions((post as { mentions?: string[] }).mentions ?? []);
       setTags((post as { tags?: string[] }).tags ?? []);
       setSelectedPlatforms(
         post.post_publications?.map(
@@ -323,7 +328,7 @@ export default function EditPostPage() {
 
   const activeConnections =
     connections?.filter((c) => c.status === "active") ?? [];
-  const charCount = body.length + computeTagsCharLength(tags);
+  const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
   const isOverLimit = charCount > CHAR_LIMIT;
   const isReadOnly = post?.status === "published";
   const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
@@ -352,6 +357,7 @@ export default function EditPostPage() {
           platforms: selectedPlatforms as ("twitter" | "linkedin" | "threads")[],
           scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
           media_urls: uploadedPaths.length > 0 ? uploadedPaths : null,
+          mentions: mentions.length > 0 ? mentions : null,
           tags: tags.length > 0 ? tags : null,
         },
       },
@@ -463,6 +469,41 @@ export default function EditPostPage() {
         </span>
       </div>
 
+      {/* ── Mentions ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50">
+            Mentions
+          </p>
+          {!isReadOnly && (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => {
+                if (body.trim()) {
+                  suggestMentions.mutate(body, {
+                    onError: (err: Error) => toast.error(err.message),
+                  });
+                }
+              }}
+              loading={suggestMentions.isPending}
+              disabled={!body.trim()}
+            >
+              Suggest Mentions
+            </Button>
+          )}
+        </div>
+        <MentionInput
+          mentions={mentions}
+          onChange={setMentions}
+          bodyLength={body.length}
+          tagsCharLength={computeTagsCharLength(tags)}
+          disabled={isReadOnly}
+          suggestions={suggestMentions.data ?? undefined}
+          suggestLoading={suggestMentions.isPending}
+        />
+      </div>
+
       {/* ── Tags ── */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -490,7 +531,7 @@ export default function EditPostPage() {
         <TagInput
           tags={tags}
           onChange={setTags}
-          bodyLength={body.length}
+          bodyLength={body.length + computeMentionsCharLength(mentions)}
           disabled={isReadOnly}
           suggestions={suggestHashtags.data ?? undefined}
           suggestLoading={suggestHashtags.isPending}

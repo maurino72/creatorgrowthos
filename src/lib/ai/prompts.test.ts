@@ -13,6 +13,9 @@ import {
   IMPROVE_CONTENT_VERSION,
   buildImprovePrompt,
   buildExperimentsPrompt,
+  SUGGEST_MENTIONS_TEMPLATE,
+  SUGGEST_MENTIONS_VERSION,
+  buildSuggestMentionsPrompt,
   formatCreatorProfile,
   type CreatorProfileContext,
 } from "./prompts";
@@ -377,6 +380,75 @@ describe("buildImprovePrompt", () => {
   it("works with empty top posts", () => {
     const r = buildImprovePrompt(content, []);
     expect(r.user).toMatch(/no previous posts/i);
+  });
+});
+
+describe("mentions prompt constants", () => {
+  it("exports SUGGEST_MENTIONS_TEMPLATE", () => {
+    expect(SUGGEST_MENTIONS_TEMPLATE).toBe("suggest_mentions");
+  });
+
+  it("exports SUGGEST_MENTIONS_VERSION", () => {
+    expect(SUGGEST_MENTIONS_VERSION).toBe("1.0");
+  });
+});
+
+describe("buildSuggestMentionsPrompt", () => {
+  const content = "Building a React app with Next.js Server Components";
+  const result = buildSuggestMentionsPrompt(content);
+
+  it("returns system and user messages", () => {
+    expect(result).toHaveProperty("system");
+    expect(result).toHaveProperty("user");
+    expect(typeof result.system).toBe("string");
+    expect(typeof result.user).toBe("string");
+  });
+
+  it("system message describes mention strategist role", () => {
+    expect(result.system).toContain("mention");
+  });
+
+  it("system message instructs JSON output", () => {
+    expect(result.system).toMatch(/json/i);
+  });
+
+  it("system message includes relevance levels", () => {
+    expect(result.system).toContain("high");
+    expect(result.system).toContain("medium");
+    expect(result.system).toContain("low");
+  });
+
+  it("system message requires reason field", () => {
+    expect(result.system).toContain("reason");
+  });
+
+  it("system message requires real accounts", () => {
+    expect(result.system).toMatch(/real/i);
+  });
+
+  it("user message contains the post content", () => {
+    expect(result.user).toContain("React app with Next.js");
+  });
+
+  it("returns fullPrompt combining system and user", () => {
+    expect(result.fullPrompt).toContain(result.system);
+    expect(result.fullPrompt).toContain(result.user);
+  });
+
+  it("includes creator profile in user message when provided", () => {
+    const profile: CreatorProfileContext = {
+      niches: ["tech_software"],
+      goals: ["build_authority"],
+      targetAudience: "Developers",
+    };
+    const r = buildSuggestMentionsPrompt(content, profile);
+    expect(r.user).toContain("Creator Profile");
+    expect(r.user).toContain("Tech / Software");
+  });
+
+  it("works without creator profile", () => {
+    const r = buildSuggestMentionsPrompt(content);
+    expect(r.user).not.toContain("Creator Profile");
   });
 });
 
