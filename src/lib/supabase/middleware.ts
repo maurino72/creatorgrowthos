@@ -122,7 +122,9 @@ export async function updateSession(request: NextRequest) {
       const hasValidSub = isSubscriptionValid(subscription);
 
       // On /dashboard without valid subscription → redirect to /pricing
-      if (!hasValidSub && pathname.startsWith("/dashboard")) {
+      // Skip redirect when returning from Stripe checkout (webhook may still be processing)
+      const isCheckoutReturn = request.nextUrl.searchParams.get("checkout") === "success";
+      if (!hasValidSub && pathname.startsWith("/dashboard") && !isCheckoutReturn) {
         const url = request.nextUrl.clone();
         url.pathname = "/pricing";
         return NextResponse.redirect(url);

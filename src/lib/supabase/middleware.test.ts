@@ -284,6 +284,19 @@ describe("updateSession middleware", () => {
       expect(response.status).toBe(200);
     });
 
+    it("allows checkout return to /dashboard without subscription (webhook pending)", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        null,
+      );
+
+      const request = mockRequest("/dashboard?checkout=success");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
     it("redirects user with active subscription from /pricing to /dashboard", async () => {
       mockSupabaseUser(
         { id: "user-1" },
