@@ -33,6 +33,14 @@ Rules:
 - **Test both paths of conditional flows.** If code has a fallback (try A, if null do B), write tests for both: A succeeds, and A returns null → B succeeds.
 - **Test error propagation.** Every external call that can fail should have a test asserting the error is thrown/handled correctly.
 
+## Pre-Push Checklist
+
+**Before pushing to remote, you MUST run `npm run build` and verify it succeeds.** A broken build deployed to Vercel wastes time and blocks the user. Never push without a passing build.
+
+1. Run all tests: `npx vitest run` — all must pass.
+2. Run the build: `npm run build` — must complete with no TypeScript or compilation errors.
+3. If the build fails, fix the errors before committing/pushing. Do NOT push a broken build.
+
 ## Commit Rules
 
 - **NEVER include `Co-Authored-By` lines in commit messages.** No AI attribution footers of any kind.
