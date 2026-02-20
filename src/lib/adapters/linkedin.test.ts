@@ -255,7 +255,7 @@ describe("LinkedInAdapter", () => {
 
       // Required versioning headers
       const headers = options?.headers as Record<string, string>;
-      expect(headers["LinkedIn-Version"]).toBe("202502");
+      expect(headers["LinkedIn-Version"]).toBe("202601");
       expect(headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
 
       const body = JSON.parse(options?.body as string);
@@ -365,7 +365,7 @@ describe("LinkedInAdapter", () => {
       const [initUrl, initOpts] = fetchSpy.mock.calls[0];
       expect(initUrl).toBe("https://api.linkedin.com/rest/images?action=initializeUpload");
       const initHeaders = initOpts?.headers as Record<string, string>;
-      expect(initHeaders["LinkedIn-Version"]).toBe("202502");
+      expect(initHeaders["LinkedIn-Version"]).toBe("202601");
       const initBody = JSON.parse(initOpts?.body as string);
       expect(initBody.initializeUploadRequest.owner).toBe("urn:li:person:abc");
 
@@ -426,7 +426,7 @@ describe("LinkedInAdapter", () => {
       );
       expect(options?.method).toBe("DELETE");
       const headers = options?.headers as Record<string, string>;
-      expect(headers["LinkedIn-Version"]).toBe("202502");
+      expect(headers["LinkedIn-Version"]).toBe("202601");
     });
 
     it("throws on non-OK response", async () => {
@@ -463,7 +463,7 @@ describe("LinkedInAdapter", () => {
         "https://api.linkedin.com/rest/socialMetadata/urn%3Ali%3Ashare%3A123456",
       );
       const headers = options?.headers as Record<string, string>;
-      expect(headers["LinkedIn-Version"]).toBe("202502");
+      expect(headers["LinkedIn-Version"]).toBe("202601");
       expect(headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
     });
 

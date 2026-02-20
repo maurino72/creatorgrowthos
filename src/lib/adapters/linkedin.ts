@@ -15,7 +15,7 @@ const LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
 const LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts";
 const LINKEDIN_IMAGES_URL = "https://api.linkedin.com/rest/images";
 const LINKEDIN_SOCIAL_METADATA_URL = "https://api.linkedin.com/rest/socialMetadata";
-const LINKEDIN_VERSION = "202502";
+const LINKEDIN_VERSION = "202601";
 const SCOPES = "openid profile email w_member_social";
 
 export class LinkedInAdapter implements PlatformAdapter {
