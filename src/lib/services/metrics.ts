@@ -334,12 +334,12 @@ const DAY = 24 * HOUR;
 export function getMetricsFetchInterval(publishedAt: Date): number | null {
   const ageMs = Date.now() - publishedAt.getTime();
 
-  if (ageMs < 8 * HOUR) return 15 * 60 * 1000;  // < 8h: every 15 min
-  if (ageMs < DAY) return 2 * HOUR;              // 8h-24h: every 2h
-  if (ageMs < 3 * DAY) return 6 * HOUR;          // 1-3d: every 6h
-  if (ageMs < 7 * DAY) return 12 * HOUR;         // 3-7d: every 12h
-  if (ageMs < 30 * DAY) return DAY;              // 7-30d: every 24h
-  return null;                                    // > 30d: stop
+  if (ageMs < 8 * HOUR) return 30 * 60 * 1000;  // < 8h: every 30 min
+  if (ageMs < DAY) return 4 * HOUR;              // 8h-24h: every 4h
+  if (ageMs < 3 * DAY) return 12 * HOUR;         // 1-3d: every 12h
+  if (ageMs < 7 * DAY) return DAY;               // 3-7d: every 24h
+  if (ageMs < 14 * DAY) return 2 * DAY;          // 7-14d: every 48h
+  return null;                                    // > 14d: stop
 }
 
 export interface PublicationDueForMetrics {
@@ -354,14 +354,14 @@ export interface PublicationDueForMetrics {
 export async function getPublicationsDueForMetrics(): Promise<PublicationDueForMetrics[]> {
   const supabase = createAdminClient();
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * DAY).toISOString();
+  const fourteenDaysAgo = new Date(Date.now() - 14 * DAY).toISOString();
 
   // Get all published publications within 30 days
   const { data: publications, error: pubError } = await supabase
     .from("post_publications")
     .select("id, platform, platform_post_id, published_at, posts!inner(id, user_id)")
     .eq("status", "published")
-    .gte("published_at", thirtyDaysAgo)
+    .gte("published_at", fourteenDaysAgo)
     .not("platform_post_id", "is", null);
 
   if (pubError) throw new Error(pubError.message);

@@ -30,7 +30,7 @@ export const startMetricsCollection = inngest.createFunction(
 // Cron: every 15 min, find publications due for a fetch and dispatch events
 export const collectMetrics = inngest.createFunction(
   { id: "collect-metrics" },
-  { cron: "*/15 * * * *" },
+  { cron: "*/30 * * * *" },
   async ({ step }) => {
     const due = await step.run("get-due-publications", async () => {
       return getPublicationsDueForMetrics();

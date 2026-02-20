@@ -503,33 +503,33 @@ describe("metrics service", () => {
   });
 
   describe("getMetricsFetchInterval", () => {
-    it("returns 15 min for posts < 8h old", () => {
+    it("returns 30 min for posts < 8h old", () => {
       const publishedAt = new Date(Date.now() - 4 * 60 * 60 * 1000); // 4h ago
-      expect(getMetricsFetchInterval(publishedAt)).toBe(15 * 60 * 1000);
+      expect(getMetricsFetchInterval(publishedAt)).toBe(30 * 60 * 1000);
     });
 
-    it("returns 2h for posts 8-24h old", () => {
+    it("returns 4h for posts 8-24h old", () => {
       const publishedAt = new Date(Date.now() - 12 * 60 * 60 * 1000); // 12h ago
-      expect(getMetricsFetchInterval(publishedAt)).toBe(2 * 60 * 60 * 1000);
+      expect(getMetricsFetchInterval(publishedAt)).toBe(4 * 60 * 60 * 1000);
     });
 
-    it("returns 6h for posts 1-3d old", () => {
+    it("returns 12h for posts 1-3d old", () => {
       const publishedAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2d ago
-      expect(getMetricsFetchInterval(publishedAt)).toBe(6 * 60 * 60 * 1000);
-    });
-
-    it("returns 12h for posts 3-7d old", () => {
-      const publishedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000); // 5d ago
       expect(getMetricsFetchInterval(publishedAt)).toBe(12 * 60 * 60 * 1000);
     });
 
-    it("returns 24h for posts 7-30d old", () => {
-      const publishedAt = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000); // 14d ago
+    it("returns 24h for posts 3-7d old", () => {
+      const publishedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000); // 5d ago
       expect(getMetricsFetchInterval(publishedAt)).toBe(24 * 60 * 60 * 1000);
     });
 
-    it("returns null for posts > 30d old", () => {
-      const publishedAt = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000); // 35d ago
+    it("returns 48h for posts 7-14d old", () => {
+      const publishedAt = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000); // 10d ago
+      expect(getMetricsFetchInterval(publishedAt)).toBe(2 * 24 * 60 * 60 * 1000);
+    });
+
+    it("returns null for posts > 14d old", () => {
+      const publishedAt = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000); // 15d ago
       expect(getMetricsFetchInterval(publishedAt)).toBeNull();
     });
   });
@@ -564,14 +564,14 @@ describe("metrics service", () => {
           id: "pub-1",
           platform: "twitter",
           platform_post_id: "tw-123",
-          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago → 15min interval
+          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago → 30min interval
           posts: { id: "post-1", user_id: "user-1" },
         },
       ];
       const metricData = [
         {
           post_publication_id: "pub-1",
-          observed_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5min ago
+          observed_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10min ago < 30min interval
         },
       ];
       chain.not.mockResolvedValueOnce({ data: pubData, error: null });
@@ -589,14 +589,14 @@ describe("metrics service", () => {
           id: "pub-1",
           platform: "twitter",
           platform_post_id: "tw-123",
-          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago → 15min interval
+          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago → 30min interval
           posts: { id: "post-1", user_id: "user-1" },
         },
       ];
       const metricData = [
         {
           post_publication_id: "pub-1",
-          observed_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(), // 20min ago > 15min interval
+          observed_at: new Date(Date.now() - 35 * 60 * 1000).toISOString(), // 35min ago > 30min interval
         },
       ];
       chain.not.mockResolvedValueOnce({ data: pubData, error: null });
