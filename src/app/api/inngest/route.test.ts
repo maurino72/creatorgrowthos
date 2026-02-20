@@ -14,10 +14,10 @@ describe("/api/inngest route", () => {
     expect(typeof route.PUT).toBe("function");
   });
 
-  it("registers all 11 Inngest functions", async () => {
+  it("registers all 16 Inngest functions", async () => {
     const functions = await import("@/lib/inngest/functions");
     const exports = Object.keys(functions);
-    expect(exports).toHaveLength(11);
+    expect(exports).toHaveLength(16);
     expect(exports).toEqual(
       expect.arrayContaining([
         "publishScheduledPost",
@@ -31,6 +31,11 @@ describe("/api/inngest route", () => {
         "generateWeeklyInsights",
         "generateUserInsights",
         "cleanupOrphanMedia",
+        "collectLinkedInMetrics",
+        "collectTwitterMetrics",
+        "fetchLinkedInFollowers",
+        "fetchTwitterFollowers",
+        "cleanupStaleMetrics",
       ]),
     );
   });

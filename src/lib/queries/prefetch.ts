@@ -3,6 +3,7 @@ import { metricKeys } from "./metrics";
 import { postKeys } from "./posts";
 import { insightKeys } from "./insights";
 import { experimentKeys } from "./experiments";
+import { analyticsKeys } from "./analytics";
 
 async function fetchJson(url: string) {
   const res = await fetch(url);
@@ -69,6 +70,24 @@ export function prefetchInsights(
   queryClient.prefetchQuery({
     queryKey: insightKeys.list({ status: "active", platform }),
     queryFn: () => fetchJson(`/api/insights?${params}`).then((d) => d.insights),
+  });
+}
+
+export function prefetchAnalytics(
+  queryClient: QueryClient,
+  platform?: string,
+) {
+  queryClient.prefetchQuery({
+    queryKey: analyticsKeys.overview("30d"),
+    queryFn: () => fetchJson("/api/analytics/overview?period=30d"),
+  });
+
+  const params = new URLSearchParams({ period: "30d" });
+  if (platform) params.set("platform", platform);
+
+  queryClient.prefetchQuery({
+    queryKey: analyticsKeys.followers("30d", platform),
+    queryFn: () => fetchJson(`/api/analytics/followers?${params}`),
   });
 }
 

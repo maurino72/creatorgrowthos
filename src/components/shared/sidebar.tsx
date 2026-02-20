@@ -10,6 +10,7 @@ import { appUrl } from "@/lib/urls";
 import {
   prefetchDashboard,
   prefetchContent,
+  prefetchAnalytics,
   prefetchInsights,
   prefetchExperiments,
 } from "@/lib/queries/prefetch";
@@ -45,6 +46,14 @@ const icons = {
       <circle cx="9" cy="9" r="2" />
     </svg>
   ),
+  analytics: (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 15V9" />
+      <path d="M7 15V5" />
+      <path d="M11 15V8" />
+      <path d="M15 15V3" />
+    </svg>
+  ),
   experiments: (
     <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M7 2h4l2 5H5L7 2Z" />
@@ -60,6 +69,7 @@ function buildNavItems(slug: string) {
   return [
     { label: "Dashboard", href: appUrl.dashboard(slug as "x"), icon: icons.dashboard, prefetch: prefetchDashboard as PrefetchFn },
     { label: "Content", href: appUrl.content(slug as "x"), icon: icons.content, prefetch: prefetchContent as PrefetchFn },
+    { label: "Analytics", href: appUrl.analytics(slug as "x"), icon: icons.analytics, prefetch: prefetchAnalytics as PrefetchFn },
     { label: "Insights", href: appUrl.insights(slug as "x"), icon: icons.insights, prefetch: prefetchInsights as PrefetchFn },
     { label: "Experiments", href: appUrl.experiments(slug as "x"), icon: icons.experiments, prefetch: prefetchExperiments as PrefetchFn },
   ];

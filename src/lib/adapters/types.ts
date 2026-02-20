@@ -51,6 +51,12 @@ export interface RawMetricSnapshot {
   clicks?: number;
   profileVisits?: number;
   followsFromPost?: number;
+  quotes?: number;
+  bookmarks?: number;
+  uniqueReach?: number;
+  videoPlays?: number;
+  videoWatchTimeMs?: number;
+  videoUniqueViewers?: number;
   observedAt: Date;
 }
 

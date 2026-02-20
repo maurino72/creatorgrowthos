@@ -602,6 +602,135 @@ export class TwitterAdapter implements PlatformAdapter {
     };
   }
 
+  // ─── Batch Metrics ──────────────────────────────────────────────────
+
+  async fetchBatchMetrics(
+    accessToken: string,
+    tweetIds: string[],
+  ): Promise<
+    {
+      platformPostId: string;
+      impressions: number;
+      likes: number;
+      replies: number;
+      reposts: number;
+      quotes: number;
+      bookmarks: number;
+    }[]
+  > {
+    if (tweetIds.length === 0) return [];
+
+    const results: {
+      platformPostId: string;
+      impressions: number;
+      likes: number;
+      replies: number;
+      reposts: number;
+      quotes: number;
+      bookmarks: number;
+    }[] = [];
+
+    // Batch into groups of 100
+    for (let i = 0; i < tweetIds.length; i += 100) {
+      const batch = tweetIds.slice(i, i + 100);
+      const ids = batch.join(",");
+
+      const response = await fetch(
+        `${TWITTER_TWEETS_URL}?ids=${ids}&tweet.fields=public_metrics,created_at`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        const detail =
+          (error as Record<string, string>).detail ??
+          (error as Record<string, string>).title ??
+          response.statusText;
+        throw new Error(`Batch metrics failed: ${detail}`);
+      }
+
+      const json = (await response.json()) as {
+        data?: {
+          id: string;
+          public_metrics?: {
+            impression_count?: number;
+            like_count?: number;
+            reply_count?: number;
+            retweet_count?: number;
+            quote_count?: number;
+            bookmark_count?: number;
+          };
+        }[];
+      };
+
+      for (const tweet of json.data ?? []) {
+        const pm = tweet.public_metrics;
+        results.push({
+          platformPostId: tweet.id,
+          impressions: pm?.impression_count ?? 0,
+          likes: pm?.like_count ?? 0,
+          replies: pm?.reply_count ?? 0,
+          reposts: pm?.retweet_count ?? 0,
+          quotes: pm?.quote_count ?? 0,
+          bookmarks: pm?.bookmark_count ?? 0,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // ─── Follower Count ─────────────────────────────────────────────────
+
+  async fetchFollowerCount(
+    accessToken: string,
+    userId: string,
+  ): Promise<{
+    followerCount: number;
+    followingCount: number;
+    tweetCount: number;
+  }> {
+    const response = await fetch(
+      `https://api.x.com/2/users/${userId}?user.fields=public_metrics`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail =
+        (error as Record<string, string>).detail ??
+        (error as Record<string, string>).title ??
+        response.statusText;
+      throw new Error(`Fetch follower count failed: ${detail}`);
+    }
+
+    const json = (await response.json()) as {
+      data: {
+        id: string;
+        public_metrics: {
+          followers_count: number;
+          following_count: number;
+          tweet_count: number;
+          listed_count: number;
+        };
+      };
+    };
+
+    return {
+      followerCount: json.data.public_metrics.followers_count,
+      followingCount: json.data.public_metrics.following_count,
+      tweetCount: json.data.public_metrics.tweet_count,
+    };
+  }
+
   private parseTokenResponse(json: {
     access_token: string;
     refresh_token?: string;

@@ -12,6 +12,11 @@ import {
   generateWeeklyInsights,
   generateUserInsights,
   cleanupOrphanMedia,
+  collectLinkedInMetrics,
+  collectTwitterMetrics,
+  fetchLinkedInFollowers,
+  fetchTwitterFollowers,
+  cleanupStaleMetrics,
 } from "@/lib/inngest/functions";
 
 export const { GET, POST, PUT } = serve({
@@ -28,5 +33,10 @@ export const { GET, POST, PUT } = serve({
     generateWeeklyInsights,
     generateUserInsights,
     cleanupOrphanMedia,
+    collectLinkedInMetrics,
+    collectTwitterMetrics,
+    fetchLinkedInFollowers,
+    fetchTwitterFollowers,
+    cleanupStaleMetrics,
   ],
 });

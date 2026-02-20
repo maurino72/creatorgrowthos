@@ -932,4 +932,187 @@ describe("TwitterAdapter", () => {
       ).rejects.toThrow("Set alt text failed");
     });
   });
+
+  // ─── Batch Metrics ──────────────────────────────────────────────────
+
+  describe("fetchBatchMetrics", () => {
+    it("fetches metrics for multiple tweets in a single API call", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "tweet-1",
+                text: "Hello",
+                public_metrics: {
+                  impression_count: 1000,
+                  like_count: 50,
+                  reply_count: 5,
+                  retweet_count: 10,
+                  quote_count: 2,
+                  bookmark_count: 7,
+                },
+              },
+              {
+                id: "tweet-2",
+                text: "World",
+                public_metrics: {
+                  impression_count: 2000,
+                  like_count: 100,
+                  reply_count: 15,
+                  retweet_count: 20,
+                  quote_count: 5,
+                  bookmark_count: 12,
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchBatchMetrics("token", ["tweet-1", "tweet-2"]);
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("/2/tweets?ids=tweet-1,tweet-2");
+      expect(url).toContain("tweet.fields=public_metrics");
+
+      expect(result).toHaveLength(2);
+      expect(result[0].platformPostId).toBe("tweet-1");
+      expect(result[0].impressions).toBe(1000);
+      expect(result[0].likes).toBe(50);
+      expect(result[0].replies).toBe(5);
+      expect(result[0].reposts).toBe(10);
+      expect(result[0].quotes).toBe(2);
+      expect(result[0].bookmarks).toBe(7);
+      expect(result[1].platformPostId).toBe("tweet-2");
+      expect(result[1].impressions).toBe(2000);
+    });
+
+    it("batches over 100 IDs into multiple requests", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // 150 tweet IDs = 2 batches (100 + 50)
+      const ids = Array.from({ length: 150 }, (_, i) => `tweet-${i}`);
+
+      // Mock first batch
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: ids.slice(0, 100).map((id) => ({
+              id,
+              text: "t",
+              public_metrics: {
+                impression_count: 1,
+                like_count: 0,
+                reply_count: 0,
+                retweet_count: 0,
+                quote_count: 0,
+                bookmark_count: 0,
+              },
+            })),
+          }),
+          { status: 200 },
+        ),
+      );
+
+      // Mock second batch
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: ids.slice(100).map((id) => ({
+              id,
+              text: "t",
+              public_metrics: {
+                impression_count: 2,
+                like_count: 0,
+                reply_count: 0,
+                retweet_count: 0,
+                quote_count: 0,
+                bookmark_count: 0,
+              },
+            })),
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchBatchMetrics("token", ids);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(result).toHaveLength(150);
+      // First batch items
+      expect(result[0].impressions).toBe(1);
+      // Second batch items
+      expect(result[100].impressions).toBe(2);
+    });
+
+    it("returns empty array when no IDs provided", async () => {
+      const result = await adapter.fetchBatchMetrics("token", []);
+      expect(result).toEqual([]);
+    });
+
+    it("handles missing data field gracefully", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({}), { status: 200 }),
+      );
+
+      const result = await adapter.fetchBatchMetrics("token", ["tweet-1"]);
+      expect(result).toEqual([]);
+    });
+
+    it("throws on non-OK response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Too Many Requests" }), { status: 429 }),
+      );
+
+      await expect(
+        adapter.fetchBatchMetrics("token", ["tweet-1"]),
+      ).rejects.toThrow("Batch metrics failed");
+    });
+  });
+
+  // ─── Follower Count ─────────────────────────────────────────────────
+
+  describe("fetchFollowerCount", () => {
+    it("fetches user public_metrics to get follower count", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
+              id: "user-123",
+              public_metrics: {
+                followers_count: 12500,
+                following_count: 340,
+                tweet_count: 8721,
+                listed_count: 89,
+              },
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchFollowerCount("token", "user-123");
+
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("/2/users/user-123");
+      expect(url).toContain("user.fields=public_metrics");
+
+      expect(result.followerCount).toBe(12500);
+      expect(result.followingCount).toBe(340);
+      expect(result.tweetCount).toBe(8721);
+    });
+
+    it("throws on non-OK response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "User not found" }), { status: 404 }),
+      );
+
+      await expect(
+        adapter.fetchFollowerCount("token", "user-123"),
+      ).rejects.toThrow("Fetch follower count failed");
+    });
+  });
 });

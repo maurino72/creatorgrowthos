@@ -148,6 +148,160 @@ export type Database = {
           },
         ]
       }
+      metric_snapshots: {
+        Row: {
+          id: string
+          user_id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          post_id: string | null
+          platform_post_id: string
+          impressions: number | null
+          unique_reach: number | null
+          reactions: number | null
+          comments: number | null
+          shares: number | null
+          quotes: number | null
+          bookmarks: number | null
+          video_plays: number | null
+          video_watch_time_ms: number | null
+          video_unique_viewers: number | null
+          fetched_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          post_id?: string | null
+          platform_post_id: string
+          impressions?: number | null
+          unique_reach?: number | null
+          reactions?: number | null
+          comments?: number | null
+          shares?: number | null
+          quotes?: number | null
+          bookmarks?: number | null
+          video_plays?: number | null
+          video_watch_time_ms?: number | null
+          video_unique_viewers?: number | null
+          fetched_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          platform?: Database["public"]["Enums"]["platform_type"]
+          post_id?: string | null
+          platform_post_id?: string
+          impressions?: number | null
+          unique_reach?: number | null
+          reactions?: number | null
+          comments?: number | null
+          shares?: number | null
+          quotes?: number | null
+          bookmarks?: number | null
+          video_plays?: number | null
+          video_watch_time_ms?: number | null
+          video_unique_viewers?: number | null
+          fetched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metric_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metric_snapshots_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follower_snapshots: {
+        Row: {
+          id: string
+          user_id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          follower_count: number
+          new_followers: number | null
+          snapshot_date: string
+          fetched_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          follower_count: number
+          new_followers?: number | null
+          snapshot_date: string
+          fetched_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          platform?: Database["public"]["Enums"]["platform_type"]
+          follower_count?: number
+          new_followers?: number | null
+          snapshot_date?: string
+          fetched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follower_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metric_fetch_log: {
+        Row: {
+          id: string
+          user_id: string
+          platform: string
+          platform_post_id: string | null
+          fetch_type: string
+          status: string
+          error_message: string | null
+          api_calls_used: number
+          fetched_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          platform: string
+          platform_post_id?: string | null
+          fetch_type: string
+          status: string
+          error_message?: string | null
+          api_calls_used?: number
+          fetched_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          platform?: string
+          platform_post_id?: string | null
+          fetch_type?: string
+          status?: string
+          error_message?: string | null
+          api_calls_used?: number
+          fetched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metric_fetch_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_connections: {
         Row: {
           access_token_enc: string | null

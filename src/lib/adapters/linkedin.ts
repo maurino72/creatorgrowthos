@@ -15,8 +15,27 @@ const LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
 const LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts";
 const LINKEDIN_IMAGES_URL = "https://api.linkedin.com/rest/images";
 const LINKEDIN_SOCIAL_METADATA_URL = "https://api.linkedin.com/rest/socialMetadata";
+const LINKEDIN_POST_ANALYTICS_URL = "https://api.linkedin.com/rest/memberCreatorPostAnalytics";
+const LINKEDIN_VIDEO_ANALYTICS_URL = "https://api.linkedin.com/rest/memberCreatorVideoAnalytics";
+const LINKEDIN_FOLLOWERS_URL = "https://api.linkedin.com/rest/memberFollowersCount";
 const LINKEDIN_VERSION = "202601";
-const SCOPES = "openid profile email w_member_social";
+
+const POST_METRIC_TYPES = ["IMPRESSION", "MEMBERS_REACHED", "REACTION", "COMMENT", "RESHARE"] as const;
+const SCOPES = "openid profile email w_member_social r_member_postAnalytics r_member_profileAnalytics";
+
+const ANALYTICS_SCOPES = ["r_member_postAnalytics", "r_member_profileAnalytics"] as const;
+
+export function hasAnalyticsScopes(scopes: string[] | null | undefined): boolean {
+  if (!scopes || scopes.length === 0) return false;
+  return ANALYTICS_SCOPES.every((s) => scopes.includes(s));
+}
+
+export class AnalyticsScopeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AnalyticsScopeError";
+  }
+}
 
 export class LinkedInAdapter implements PlatformAdapter {
   private get clientId(): string {
@@ -309,6 +328,228 @@ export class LinkedInAdapter implements PlatformAdapter {
       profileVisits: undefined,
       observedAt: new Date(),
     };
+  }
+
+  // ─── Post Analytics (memberCreatorPostAnalytics) ─────────────────────
+
+  async fetchPostAnalytics(
+    accessToken: string,
+    shareUrn: string,
+  ): Promise<{
+    impressions: number;
+    uniqueReach: number;
+    reactions: number;
+    comments: number;
+    shares: number;
+  }> {
+    const encodedUrn = encodeURIComponent(shareUrn);
+    const results: Record<string, number> = {};
+
+    for (const metricType of POST_METRIC_TYPES) {
+      const url = `${LINKEDIN_POST_ANALYTICS_URL}?q=entity&entity=(share:${encodedUrn})&queryType=${metricType}&aggregation=TOTAL`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...this.versionHeaders(),
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new AnalyticsScopeError(
+            "LinkedIn analytics scopes not granted. Please reconnect your LinkedIn account.",
+          );
+        }
+        const error = await response.json().catch(() => ({}));
+        const detail = (error as Record<string, string>).message ?? response.statusText;
+        throw new Error(`Post analytics failed: ${detail}`);
+      }
+
+      const json = (await response.json()) as {
+        elements: { count: number }[];
+      };
+
+      results[metricType] = json.elements?.[0]?.count ?? 0;
+    }
+
+    return {
+      impressions: results.IMPRESSION ?? 0,
+      uniqueReach: results.MEMBERS_REACHED ?? 0,
+      reactions: results.REACTION ?? 0,
+      comments: results.COMMENT ?? 0,
+      shares: results.RESHARE ?? 0,
+    };
+  }
+
+  async fetchAggregatedAnalytics(
+    accessToken: string,
+    dateRange?: { start: Date; end: Date },
+  ): Promise<{
+    impressions: number;
+    uniqueReach: number;
+    reactions: number;
+    comments: number;
+    shares: number;
+  }> {
+    const results: Record<string, number> = {};
+
+    for (const metricType of POST_METRIC_TYPES) {
+      let url = `${LINKEDIN_POST_ANALYTICS_URL}?q=me&queryType=${metricType}&aggregation=TOTAL`;
+
+      if (dateRange) {
+        const s = dateRange.start;
+        const e = dateRange.end;
+        url += `&dateRange=(start:(day:${s.getUTCDate()},month:${s.getUTCMonth() + 1},year:${s.getUTCFullYear()}),end:(day:${e.getUTCDate()},month:${e.getUTCMonth() + 1},year:${e.getUTCFullYear()}))`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...this.versionHeaders(),
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new AnalyticsScopeError(
+            "LinkedIn analytics scopes not granted. Please reconnect your LinkedIn account.",
+          );
+        }
+        const error = await response.json().catch(() => ({}));
+        const detail = (error as Record<string, string>).message ?? response.statusText;
+        throw new Error(`Aggregated analytics failed: ${detail}`);
+      }
+
+      const json = (await response.json()) as {
+        elements: { count: number }[];
+      };
+
+      results[metricType] = json.elements?.[0]?.count ?? 0;
+    }
+
+    return {
+      impressions: results.IMPRESSION ?? 0,
+      uniqueReach: results.MEMBERS_REACHED ?? 0,
+      reactions: results.REACTION ?? 0,
+      comments: results.COMMENT ?? 0,
+      shares: results.RESHARE ?? 0,
+    };
+  }
+
+  // ─── Video Analytics (memberCreatorVideoAnalytics) ─────────────────
+
+  async fetchVideoAnalytics(
+    accessToken: string,
+    shareUrn: string,
+  ): Promise<{
+    videoPlays: number;
+    videoWatchTimeMs: number;
+    videoUniqueViewers: number;
+  }> {
+    const encodedUrn = encodeURIComponent(shareUrn);
+    const videoMetricTypes = ["VIDEO_PLAY", "VIDEO_WATCH_TIME", "VIDEO_VIEWER"] as const;
+    const results: Record<string, number> = {};
+
+    for (const metricType of videoMetricTypes) {
+      const url = `${LINKEDIN_VIDEO_ANALYTICS_URL}?q=entity&entity=(share:${encodedUrn})&queryType=${metricType}&aggregation=TOTAL`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...this.versionHeaders(),
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new AnalyticsScopeError(
+            "LinkedIn analytics scopes not granted. Please reconnect your LinkedIn account.",
+          );
+        }
+        const error = await response.json().catch(() => ({}));
+        const detail = (error as Record<string, string>).message ?? response.statusText;
+        throw new Error(`Video analytics failed: ${detail}`);
+      }
+
+      const json = (await response.json()) as {
+        elements: { count: number }[];
+      };
+
+      results[metricType] = json.elements?.[0]?.count ?? 0;
+    }
+
+    return {
+      videoPlays: results.VIDEO_PLAY ?? 0,
+      videoWatchTimeMs: results.VIDEO_WATCH_TIME ?? 0,
+      videoUniqueViewers: results.VIDEO_VIEWER ?? 0,
+    };
+  }
+
+  // ─── Follower Statistics (memberFollowersCount) ───────────────────
+
+  async fetchFollowerStats(
+    accessToken: string,
+  ): Promise<{ followerCount: number }> {
+    const response = await fetch(`${LINKEDIN_FOLLOWERS_URL}?q=me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...this.versionHeaders(),
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail = (error as Record<string, string>).message ?? response.statusText;
+      throw new Error(`Follower stats failed: ${detail}`);
+    }
+
+    const json = (await response.json()) as {
+      elements: { memberFollowersCount: number }[];
+    };
+
+    return {
+      followerCount: json.elements?.[0]?.memberFollowersCount ?? 0,
+    };
+  }
+
+  async fetchFollowerStatsDaily(
+    accessToken: string,
+    start: Date,
+    end: Date,
+  ): Promise<{ newFollowers: number; date: string }[]> {
+    const dateRange = `(start:(year:${start.getUTCFullYear()},month:${start.getUTCMonth() + 1},day:${start.getUTCDate()}),end:(year:${end.getUTCFullYear()},month:${end.getUTCMonth() + 1},day:${end.getUTCDate()}))`;
+
+    const response = await fetch(
+      `${LINKEDIN_FOLLOWERS_URL}?q=dateRange&dateRange=${dateRange}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...this.versionHeaders(),
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail = (error as Record<string, string>).message ?? response.statusText;
+      throw new Error(`Follower stats daily failed: ${detail}`);
+    }
+
+    const json = (await response.json()) as {
+      elements: {
+        memberFollowersCount: number;
+        dateRange: {
+          start: { year: number; month: number; day: number };
+          end: { year: number; month: number; day: number };
+        };
+      }[];
+    };
+
+    return (json.elements ?? []).map((el) => ({
+      newFollowers: el.memberFollowersCount,
+      date: `${el.dateRange.start.year}-${String(el.dateRange.start.month).padStart(2, "0")}-${String(el.dateRange.start.day).padStart(2, "0")}`,
+    }));
   }
 
   private parseTokenResponse(json: {

@@ -47,6 +47,10 @@ type MetricsFetchRequested = {
   };
 };
 
+type MetricsRefreshRequested = {
+  data: { userId: string; platform: string };
+};
+
 type MetricsFetchCompleted = {
   data: { publicationId: string; userId: string; metricsId: string };
 };
@@ -104,6 +108,7 @@ export type Events = {
   "post/publish.failed": PostPublishFailed;
   "post/imported": PostImported;
   "metrics/fetch.requested": MetricsFetchRequested;
+  "metrics/refresh.requested": MetricsRefreshRequested;
   "metrics/fetch.completed": MetricsFetchCompleted;
   "metrics/fetch.failed": MetricsFetchFailed;
   "connection/created": ConnectionCreated;
@@ -124,6 +129,7 @@ export const EVENT_NAMES = {
   POST_PUBLISH_FAILED: "post/publish.failed",
   POST_IMPORTED: "post/imported",
   METRICS_FETCH_REQUESTED: "metrics/fetch.requested",
+  METRICS_REFRESH_REQUESTED: "metrics/refresh.requested",
   METRICS_FETCH_COMPLETED: "metrics/fetch.completed",
   METRICS_FETCH_FAILED: "metrics/fetch.failed",
   CONNECTION_CREATED: "connection/created",

@@ -8,6 +8,7 @@ export const appUrl = {
   contentEdit: (slug: PlatformSlug, id: string) =>
     `/${slug}/content/${id}/edit`,
   insights: (slug: PlatformSlug) => `/${slug}/insights`,
+  analytics: (slug: PlatformSlug) => `/${slug}/analytics`,
   experiments: (slug: PlatformSlug) => `/${slug}/experiments`,
   connections: () => "/connections",
   settings: () => "/settings",

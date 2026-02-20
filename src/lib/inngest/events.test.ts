@@ -137,6 +137,7 @@ describe("Inngest event types", () => {
       CONNECTION_CREATED: "connection/created",
       CONNECTION_EXPIRING: "connection/expiring",
       CONNECTION_REFRESHED: "connection/refreshed",
+      METRICS_REFRESH_REQUESTED: "metrics/refresh.requested",
       AI_CLASSIFY_REQUESTED: "ai/classify.requested",
       AI_CLASSIFY_COMPLETED: "ai/classify.completed",
       AI_INSIGHTS_REQUESTED: "ai/insights.requested",

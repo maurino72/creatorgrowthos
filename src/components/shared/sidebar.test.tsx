@@ -26,12 +26,14 @@ vi.mock("@/lib/queries/connections", () => ({
 
 const mockPrefetchDashboard = vi.fn();
 const mockPrefetchContent = vi.fn();
+const mockPrefetchAnalytics = vi.fn();
 const mockPrefetchInsights = vi.fn();
 const mockPrefetchExperiments = vi.fn();
 
 vi.mock("@/lib/queries/prefetch", () => ({
   prefetchDashboard: (...args: unknown[]) => mockPrefetchDashboard(...args),
   prefetchContent: (...args: unknown[]) => mockPrefetchContent(...args),
+  prefetchAnalytics: (...args: unknown[]) => mockPrefetchAnalytics(...args),
   prefetchInsights: (...args: unknown[]) => mockPrefetchInsights(...args),
   prefetchExperiments: (...args: unknown[]) => mockPrefetchExperiments(...args),
 }));
@@ -76,6 +78,14 @@ describe("Sidebar", () => {
     expect(insightsLinks.length).toBeGreaterThanOrEqual(1);
     const link = insightsLinks[0].closest("a");
     expect(link?.getAttribute("href")).toBe("/x/insights");
+  });
+
+  it("renders Analytics nav item with platform slug", () => {
+    renderWithProviders(<Sidebar />);
+    const analyticsLinks = screen.getAllByText("Analytics");
+    expect(analyticsLinks.length).toBeGreaterThanOrEqual(1);
+    const link = analyticsLinks[0].closest("a");
+    expect(link?.getAttribute("href")).toBe("/x/analytics");
   });
 
   it("renders Experiments nav item with platform slug", () => {
@@ -125,6 +135,13 @@ describe("Sidebar", () => {
     const contentLinks = screen.getAllByText("Content");
     fireEvent.mouseEnter(contentLinks[0].closest("a")!);
     expect(mockPrefetchContent).toHaveBeenCalled();
+  });
+
+  it("prefetches analytics data on hover", async () => {
+    renderWithProviders(<Sidebar />);
+    const analyticsLinks = screen.getAllByText("Analytics");
+    fireEvent.mouseEnter(analyticsLinks[0].closest("a")!);
+    expect(mockPrefetchAnalytics).toHaveBeenCalled();
   });
 
   it("prefetches insights data on hover", async () => {

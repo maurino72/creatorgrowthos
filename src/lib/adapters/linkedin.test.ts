@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { LinkedInAdapter } from "./linkedin";
+import { LinkedInAdapter, AnalyticsScopeError, hasAnalyticsScopes } from "./linkedin";
 
 const MOCK_CLIENT_ID = "li-client-id";
 const MOCK_CLIENT_SECRET = "li-client-secret";
@@ -34,7 +34,7 @@ describe("LinkedInAdapter", () => {
       expect(url.searchParams.get("state")).toBe("test-state");
     });
 
-    it("includes required scopes (openid profile email w_member_social)", () => {
+    it("includes all required scopes including analytics", () => {
       const result = adapter.getAuthUrl("state", "http://localhost/callback");
       const url = new URL(result.url);
       const scope = url.searchParams.get("scope")!;
@@ -42,6 +42,8 @@ describe("LinkedInAdapter", () => {
       expect(scope).toContain("profile");
       expect(scope).toContain("email");
       expect(scope).toContain("w_member_social");
+      expect(scope).toContain("r_member_postAnalytics");
+      expect(scope).toContain("r_member_profileAnalytics");
     });
 
     it("does NOT include PKCE params (no code_challenge)", () => {
@@ -557,6 +559,407 @@ describe("LinkedInAdapter", () => {
       await expect(
         adapter.fetchPostMetrics("token", "urn:li:share:nonexistent"),
       ).rejects.toThrow("Fetch metrics failed");
+    });
+  });
+
+  // ─── Analytics Scope Detection ────────────────────────────────────────
+
+  describe("hasAnalyticsScopes", () => {
+    it("returns true when all analytics scopes are present", () => {
+      expect(
+        hasAnalyticsScopes([
+          "openid",
+          "profile",
+          "email",
+          "w_member_social",
+          "r_member_postAnalytics",
+          "r_member_profileAnalytics",
+        ]),
+      ).toBe(true);
+    });
+
+    it("returns false when r_member_postAnalytics is missing", () => {
+      expect(
+        hasAnalyticsScopes(["openid", "profile", "email", "w_member_social"]),
+      ).toBe(false);
+    });
+
+    it("returns false when r_member_profileAnalytics is missing", () => {
+      expect(
+        hasAnalyticsScopes([
+          "openid",
+          "profile",
+          "email",
+          "w_member_social",
+          "r_member_postAnalytics",
+        ]),
+      ).toBe(false);
+    });
+
+    it("returns false for null/undefined scopes", () => {
+      expect(hasAnalyticsScopes(null)).toBe(false);
+      expect(hasAnalyticsScopes(undefined)).toBe(false);
+    });
+
+    it("returns false for empty array", () => {
+      expect(hasAnalyticsScopes([])).toBe(false);
+    });
+  });
+
+  // ─── Post Analytics (memberCreatorPostAnalytics) ────────────────────
+
+  describe("fetchPostAnalytics", () => {
+    it("calls memberCreatorPostAnalytics for each metric type", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // Mock 5 responses for 5 metric types
+      const metricTypes = ["IMPRESSION", "MEMBERS_REACHED", "REACTION", "COMMENT", "RESHARE"];
+      for (const metricType of metricTypes) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              elements: [
+                {
+                  count: metricType === "IMPRESSION" ? 5000 : metricType === "MEMBERS_REACHED" ? 3500 : metricType === "REACTION" ? 89 : metricType === "COMMENT" ? 12 : 7,
+                  metricType: {
+                    "com.linkedin.adsexternalapi.memberanalytics.v1.CreatorPostAnalyticsMetricTypeV1": metricType,
+                  },
+                  targetEntity: { share: "urn:li:share:123" },
+                },
+              ],
+              paging: { count: 10, start: 0, links: [] },
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      const result = await adapter.fetchPostAnalytics("token", "urn:li:share:123");
+
+      expect(fetchSpy).toHaveBeenCalledTimes(5);
+      expect(result.impressions).toBe(5000);
+      expect(result.uniqueReach).toBe(3500);
+      expect(result.reactions).toBe(89);
+      expect(result.comments).toBe(12);
+      expect(result.shares).toBe(7);
+    });
+
+    it("uses q=entity with URL-encoded share URN", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      for (let i = 0; i < 5; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ elements: [{ count: 0 }], paging: { count: 10, start: 0, links: [] } }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      await adapter.fetchPostAnalytics("token", "urn:li:share:123456");
+
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("memberCreatorPostAnalytics");
+      expect(url).toContain("q=entity");
+      expect(url).toContain("entity=(share:urn%3Ali%3Ashare%3A123456)");
+    });
+
+    it("includes correct headers (LinkedIn-Version 202506, X-Restli-Protocol-Version)", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      for (let i = 0; i < 5; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ elements: [{ count: 0 }], paging: { count: 10, start: 0, links: [] } }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      await adapter.fetchPostAnalytics("token", "urn:li:share:123");
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["LinkedIn-Version"]).toBe("202601");
+      expect(headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
+      expect(headers["Authorization"]).toBe("Bearer token");
+    });
+
+    it("returns zeros when elements array is empty", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      for (let i = 0; i < 5; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ elements: [], paging: { count: 10, start: 0, links: [] } }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      const result = await adapter.fetchPostAnalytics("token", "urn:li:share:123");
+      expect(result.impressions).toBe(0);
+      expect(result.uniqueReach).toBe(0);
+      expect(result.reactions).toBe(0);
+      expect(result.comments).toBe(0);
+      expect(result.shares).toBe(0);
+    });
+
+    it("throws AnalyticsScopeError on 403", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Not enough permissions" }), { status: 403 }),
+      );
+
+      await expect(
+        adapter.fetchPostAnalytics("token", "urn:li:share:123"),
+      ).rejects.toThrow(AnalyticsScopeError);
+    });
+
+    it("throws generic error on other non-OK status", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Server error" }), { status: 500 }),
+      );
+
+      await expect(
+        adapter.fetchPostAnalytics("token", "urn:li:share:123"),
+      ).rejects.toThrow("Post analytics failed");
+    });
+  });
+
+  describe("fetchAggregatedAnalytics", () => {
+    it("uses q=me for aggregated metrics", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      for (let i = 0; i < 5; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ elements: [{ count: 100 }], paging: { count: 10, start: 0, links: [] } }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      await adapter.fetchAggregatedAnalytics("token");
+
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("q=me");
+      expect(url).not.toContain("q=entity");
+    });
+
+    it("supports date range parameter", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      for (let i = 0; i < 5; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ elements: [{ count: 50 }], paging: { count: 10, start: 0, links: [] } }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      const start = new Date("2025-01-01");
+      const end = new Date("2025-01-08");
+      await adapter.fetchAggregatedAnalytics("token", { start, end });
+
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("dateRange=");
+      expect(url).toContain("year:2025");
+      expect(url).toContain("month:1");
+      expect(url).toContain("day:1");
+    });
+
+    it("returns aggregated totals across metric types", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      const counts = [10000, 7500, 500, 80, 30];
+      for (const count of counts) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ elements: [{ count }], paging: { count: 10, start: 0, links: [] } }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      const result = await adapter.fetchAggregatedAnalytics("token");
+      expect(result.impressions).toBe(10000);
+      expect(result.uniqueReach).toBe(7500);
+      expect(result.reactions).toBe(500);
+      expect(result.comments).toBe(80);
+      expect(result.shares).toBe(30);
+    });
+  });
+
+  // ─── Video Analytics (memberCreatorVideoAnalytics) ──────────────────
+
+  describe("fetchVideoAnalytics", () => {
+    it("calls memberCreatorVideoAnalytics for 3 video metric types", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // VIDEO_PLAY, VIDEO_WATCH_TIME, VIDEO_VIEWER
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ count: 7852 }], paging: { count: 10, start: 0, links: [] } }), { status: 200 }),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ count: 450000 }], paging: { count: 10, start: 0, links: [] } }), { status: 200 }),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ count: 3200 }], paging: { count: 10, start: 0, links: [] } }), { status: 200 }),
+      );
+
+      const result = await adapter.fetchVideoAnalytics("token", "urn:li:share:123");
+
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("memberCreatorVideoAnalytics");
+      expect(result.videoPlays).toBe(7852);
+      expect(result.videoWatchTimeMs).toBe(450000);
+      expect(result.videoUniqueViewers).toBe(3200);
+    });
+
+    it("returns zeros when elements are empty (non-video post)", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      for (let i = 0; i < 3; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          new Response(JSON.stringify({ elements: [], paging: { count: 10, start: 0, links: [] } }), { status: 200 }),
+        );
+      }
+
+      const result = await adapter.fetchVideoAnalytics("token", "urn:li:share:123");
+      expect(result.videoPlays).toBe(0);
+      expect(result.videoWatchTimeMs).toBe(0);
+      expect(result.videoUniqueViewers).toBe(0);
+    });
+
+    it("throws AnalyticsScopeError on 403", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Forbidden" }), { status: 403 }),
+      );
+
+      await expect(
+        adapter.fetchVideoAnalytics("token", "urn:li:share:123"),
+      ).rejects.toThrow(AnalyticsScopeError);
+    });
+  });
+
+  // ─── Follower Statistics (memberFollowersCount) ────────────────────
+
+  describe("fetchFollowerStats", () => {
+    it("fetches lifetime follower count via q=me", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            elements: [{ memberFollowersCount: 4500 }],
+            paging: { count: 10, start: 0, total: 1, links: [] },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchFollowerStats("token");
+
+      expect(result.followerCount).toBe(4500);
+    });
+
+    it("calls memberFollowersCount endpoint with correct headers", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            elements: [{ memberFollowersCount: 100 }],
+            paging: { count: 10, start: 0, total: 1, links: [] },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      await adapter.fetchFollowerStats("token");
+
+      const [url, options] = fetchSpy.mock.calls[0];
+      expect(url).toContain("memberFollowersCount");
+      expect(url).toContain("q=me");
+      const headers = options?.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer token");
+      expect(headers["LinkedIn-Version"]).toBe("202601");
+    });
+
+    it("returns 0 when elements are empty", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ elements: [], paging: { count: 10, start: 0, total: 0, links: [] } }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await adapter.fetchFollowerStats("token");
+      expect(result.followerCount).toBe(0);
+    });
+
+    it("throws on non-OK response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Server error" }), { status: 500 }),
+      );
+
+      await expect(adapter.fetchFollowerStats("token")).rejects.toThrow(
+        "Follower stats failed",
+      );
+    });
+  });
+
+  describe("fetchFollowerStatsDaily", () => {
+    it("fetches daily follower counts for a date range", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            elements: [
+              {
+                memberFollowersCount: 2,
+                dateRange: { start: { month: 5, year: 2024, day: 4 }, end: { month: 5, year: 2024, day: 5 } },
+              },
+              {
+                memberFollowersCount: 4,
+                dateRange: { start: { month: 5, year: 2024, day: 5 }, end: { month: 5, year: 2024, day: 6 } },
+              },
+            ],
+            paging: { start: 0, count: 10, links: [], total: 2 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const start = new Date("2024-05-04");
+      const end = new Date("2024-05-06");
+      const result = await adapter.fetchFollowerStatsDaily("token", start, end);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].newFollowers).toBe(2);
+      expect(result[1].newFollowers).toBe(4);
+    });
+
+    it("uses q=dateRange in the URL", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ elements: [], paging: { start: 0, count: 10, links: [], total: 0 } }),
+          { status: 200 },
+        ),
+      );
+
+      await adapter.fetchFollowerStatsDaily("token", new Date("2025-01-01"), new Date("2025-01-08"));
+
+      const [url] = fetchSpy.mock.calls[0];
+      expect(url).toContain("q=dateRange");
+      expect(url).toContain("dateRange=");
+      expect(url).toContain("year:2025");
+    });
+  });
+
+  describe("AnalyticsScopeError", () => {
+    it("is an instance of Error", () => {
+      const err = new AnalyticsScopeError("missing scopes");
+      expect(err).toBeInstanceOf(Error);
+    });
+
+    it("has the correct name", () => {
+      const err = new AnalyticsScopeError("missing scopes");
+      expect(err.name).toBe("AnalyticsScopeError");
+    });
+
+    it("preserves the message", () => {
+      const err = new AnalyticsScopeError("LinkedIn analytics scopes not granted");
+      expect(err.message).toBe("LinkedIn analytics scopes not granted");
     });
   });
 });
