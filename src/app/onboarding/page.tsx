@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
 import {
   useOnboardingState,
@@ -214,32 +215,18 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
       {/* Logo */}
-      <div className="mb-8 flex h-12 w-12 items-center justify-center">
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 20 20"
-          fill="none"
-          className="text-foreground/70"
-        >
-          <path
-            d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm11 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+      <div className="mb-8">
+        <Logo variant="icon" size="lg" className="text-foreground/70" />
       </div>
 
       <h1 className="mb-3 font-serif text-2xl font-normal tracking-tight text-foreground">
-        Welcome to Creator Growth OS
+        Welcome to AiGrow
       </h1>
       <p className="mb-2 text-sm leading-relaxed text-muted-foreground/60">
         Most creator tools help you post. We help you learn.
       </p>
       <p className="mb-8 max-w-sm text-sm leading-relaxed text-muted-foreground/40">
-        Creator Growth OS tracks what you publish, observes what works,
+        AiGrow tracks what you publish, observes what works,
         remembers patterns, and guides better decisions over time.
       </p>
 
@@ -766,22 +753,8 @@ function ActivateStep({
   if (didImport) {
     return (
       <div className="flex flex-col items-center text-center">
-        <div className="mb-6 flex h-12 w-12 items-center justify-center">
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 20 20"
-            fill="none"
-            className="text-foreground/70"
-          >
-            <path
-              d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm11 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+        <div className="mb-6">
+          <Logo variant="icon" size="lg" className="text-foreground/70" />
         </div>
         <h2 className="mb-1 font-serif text-xl font-normal tracking-tight text-foreground">
           You&apos;re all set!
@@ -810,7 +783,7 @@ function ActivateStep({
         {/* How it works */}
         <div className="mt-8 w-full border-t border-editorial-rule-subtle pt-6 text-left">
           <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-editorial-label">
-            How Creator Growth OS works
+            How AiGrow works
           </p>
           <div className="space-y-1.5 text-xs text-muted-foreground/40">
             <p>
@@ -902,7 +875,7 @@ function ActivateStep({
       {/* How it works */}
       <div className="mt-8 border-t border-editorial-rule-subtle pt-6">
         <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-editorial-label">
-          How Creator Growth OS works
+          How AiGrow works
         </p>
         <div className="space-y-1.5 text-xs text-muted-foreground/40">
           <p>

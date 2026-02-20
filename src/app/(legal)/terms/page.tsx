@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: "Terms and conditions governing the use of Growth OS.",
+  description: "Terms and conditions governing the use of AiGrow.",
 };
 
 export default function TermsOfUsePage() {
@@ -26,7 +26,7 @@ export default function TermsOfUsePage() {
       <Section>
         <p>
           These Terms of Use (&ldquo;Terms&rdquo;) govern your access to and use
-          of the Growth OS platform (&ldquo;Service&rdquo;), operated by Growth
+          of the AiGrow platform (&ldquo;Service&rdquo;), operated by Growth
           OS (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By
           creating an account or using the Service, you agree to be bound by
           these Terms. If you do not agree, you must not use the Service.
@@ -36,7 +36,7 @@ export default function TermsOfUsePage() {
       {/* 1. Eligibility */}
       <Section number="1" title="Eligibility">
         <p>
-          You must be at least 16 years old to use Growth OS. By using the
+          You must be at least 16 years old to use AiGrow. By using the
           Service, you represent and warrant that you meet this age requirement
           and have the legal capacity to enter into these Terms. If you are using
           the Service on behalf of an organization, you represent that you have
@@ -47,7 +47,7 @@ export default function TermsOfUsePage() {
       {/* 2. Account Registration */}
       <Section number="2" title="Account Registration">
         <p>
-          To use Growth OS, you must create an account using a valid email
+          To use AiGrow, you must create an account using a valid email
           address or through a supported third-party authentication provider. You
           are responsible for:
         </p>
@@ -69,7 +69,7 @@ export default function TermsOfUsePage() {
       {/* 3. Permitted Use */}
       <Section number="3" title="Permitted Use">
         <p>
-          Growth OS is provided for the purpose of managing, scheduling,
+          AiGrow is provided for the purpose of managing, scheduling,
           publishing, and analyzing social media content. You agree to use the
           Service only for its intended purpose and in compliance with all
           applicable laws and regulations.
@@ -111,7 +111,7 @@ export default function TermsOfUsePage() {
         <H3>4.1 Your Content</H3>
         <p>
           You retain full ownership of all content you create, upload, or publish
-          through Growth OS, including post text, images, and media files. By
+          through AiGrow, including post text, images, and media files. By
           using the Service, you grant us a limited, non-exclusive license to
           store, process, and transmit your content solely for the purpose of
           operating the Service on your behalf.
@@ -119,7 +119,7 @@ export default function TermsOfUsePage() {
 
         <H3>4.2 AI-Generated Content</H3>
         <p>
-          Growth OS provides AI-powered features including content suggestions,
+          AiGrow provides AI-powered features including content suggestions,
           improvement recommendations, insights, and experiment ideas. Any
           content generated or suggested by AI features is provided as a
           recommendation only. You are solely responsible for reviewing, editing,
@@ -129,7 +129,7 @@ export default function TermsOfUsePage() {
 
         <H3>4.3 Our Content</H3>
         <p>
-          The Growth OS platform, including its design, code, features,
+          The AiGrow platform, including its design, code, features,
           documentation, and branding, is our proprietary property. These Terms
           do not grant you any rights to our intellectual property except the
           limited right to use the Service as described herein.
@@ -139,13 +139,13 @@ export default function TermsOfUsePage() {
       {/* 5. Connected Platforms */}
       <Section number="5" title="Connected Platforms">
         <p>
-          Growth OS allows you to connect third-party social media accounts to
+          AiGrow allows you to connect third-party social media accounts to
           publish content and retrieve analytics. By connecting a platform
           account, you:
         </p>
         <ul>
           <li>
-            Authorize Growth OS to access that platform on your behalf using
+            Authorize AiGrow to access that platform on your behalf using
             OAuth 2.0
           </li>
           <li>
@@ -171,7 +171,7 @@ export default function TermsOfUsePage() {
       {/* 6. Scheduling and Publishing */}
       <Section number="6" title="Scheduling and Publishing">
         <p>
-          Growth OS provides content scheduling and automated publishing
+          AiGrow provides content scheduling and automated publishing
           features. While we make commercially reasonable efforts to publish your
           content at the scheduled times, we cannot guarantee exact delivery
           times due to factors including platform API availability, rate limits,
@@ -179,7 +179,7 @@ export default function TermsOfUsePage() {
         </p>
         <p>
           You are solely responsible for the content you publish through the
-          Service. Growth OS does not pre-screen, review, or moderate content
+          Service. AiGrow does not pre-screen, review, or moderate content
           before publication. You acknowledge that published content is subject
           to the content policies of the destination platform and applicable
           laws.
@@ -189,7 +189,7 @@ export default function TermsOfUsePage() {
       {/* 7. AI Features and Limitations */}
       <Section number="7" title="AI Features and Limitations">
         <p>
-          Growth OS incorporates AI-powered features to help you improve your
+          AiGrow incorporates AI-powered features to help you improve your
           content strategy. These features include content classification,
           performance insights, content improvement suggestions, content
           ideation, and growth experiments.
@@ -238,7 +238,7 @@ export default function TermsOfUsePage() {
       {/* 9. Fees and Payment */}
       <Section number="9" title="Fees and Payment">
         <p>
-          Growth OS may offer free and paid subscription tiers. If you subscribe
+          AiGrow may offer free and paid subscription tiers. If you subscribe
           to a paid plan, you agree to pay the applicable fees as described at
           the time of purchase. Fees are non-refundable except where required by
           law or as expressly stated in our refund policy.
@@ -253,7 +253,7 @@ export default function TermsOfUsePage() {
       {/* 10. Limitation of Liability */}
       <Section number="10" title="Limitation of Liability">
         <p>
-          To the maximum extent permitted by law, Growth OS and its officers,
+          To the maximum extent permitted by law, AiGrow and its officers,
           directors, employees, and agents shall not be liable for any indirect,
           incidental, special, consequential, or punitive damages arising out of
           or relating to your use of the Service, including but not limited to:
@@ -300,7 +300,7 @@ export default function TermsOfUsePage() {
       {/* 12. Indemnification */}
       <Section number="12" title="Indemnification">
         <p>
-          You agree to indemnify and hold harmless Growth OS and its affiliates,
+          You agree to indemnify and hold harmless AiGrow and its affiliates,
           officers, directors, employees, and agents from any claims, damages,
           losses, liabilities, and expenses (including reasonable legal fees)
           arising out of or relating to:
@@ -333,7 +333,7 @@ export default function TermsOfUsePage() {
       <Section number="14" title="Governing Law">
         <p>
           These Terms shall be governed by and construed in accordance with the
-          laws of the jurisdiction in which Growth OS is incorporated, without
+          laws of the jurisdiction in which AiGrow is incorporated, without
           regard to conflict of law principles. Any disputes arising from these
           Terms or the Service shall be resolved in the courts of that
           jurisdiction.
@@ -349,7 +349,7 @@ export default function TermsOfUsePage() {
           provide notice through the platform interface.
         </p>
         <p>
-          Your continued use of Growth OS after the revised Terms take effect
+          Your continued use of AiGrow after the revised Terms take effect
           constitutes your acceptance of the changes. If you do not agree with
           the revised Terms, you should discontinue use of the Service.
         </p>
@@ -371,7 +371,7 @@ export default function TermsOfUsePage() {
           If you have questions about these Terms, please contact us at:
         </p>
         <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm">
-          <p className="font-medium text-foreground">Growth OS</p>
+          <p className="font-medium text-foreground">AiGrow</p>
           <p>
             Email:{" "}
             <a

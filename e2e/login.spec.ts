@@ -1,30 +1,35 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Unauthenticated", () => {
-  test("redirects /dashboard to /login when not authenticated", async ({
+  test("redirects /x/dashboard to /login when not authenticated", async ({
     page,
   }) => {
+    await page.goto("/x/dashboard");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("redirects /x/content to /login", async ({ page }) => {
+    await page.goto("/x/content");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("redirects /x/insights to /login", async ({ page }) => {
+    await page.goto("/x/insights");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("redirects /x/experiments to /login", async ({ page }) => {
+    await page.goto("/x/experiments");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("redirects /connections to /login", async ({ page }) => {
+    await page.goto("/connections");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("redirects legacy /dashboard to /login", async ({ page }) => {
     await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test("redirects /dashboard/content to /login", async ({ page }) => {
-    await page.goto("/dashboard/content");
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test("redirects /dashboard/insights to /login", async ({ page }) => {
-    await page.goto("/dashboard/insights");
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test("redirects /dashboard/experiments to /login", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test("redirects /dashboard/connections to /login", async ({ page }) => {
-    await page.goto("/dashboard/connections");
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -32,7 +37,7 @@ test.describe("Unauthenticated", () => {
     await page.goto("/login");
 
     await expect(
-      page.getByRole("heading", { name: "Creator Growth OS" }),
+      page.getByRole("heading", { name: "AiGrow" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /continue with google/i }),

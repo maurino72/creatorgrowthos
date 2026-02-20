@@ -188,7 +188,7 @@ describe("GET /api/connections/linkedin/callback", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toContain(
-      "/dashboard/connections?connected=linkedin",
+      "/connections?connected=linkedin",
     );
 
     // Token exchange called WITHOUT codeVerifier (no PKCE)

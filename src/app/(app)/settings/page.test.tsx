@@ -417,7 +417,7 @@ describe("SettingsPage", () => {
     const link = screen.getByText(/Manage all connections/);
     expect(link.closest("a")).toHaveAttribute(
       "href",
-      "/dashboard/connections",
+      "/connections",
     );
   });
 

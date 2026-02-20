@@ -27,6 +27,7 @@ describe("PlatformSelector", () => {
   it("renders selected platform name and icon", () => {
     vi.mocked(usePlatform).mockReturnValue({
       platform: "twitter",
+      slug: "x",
       setPlatform: mockSetPlatform,
       activeConnections: [
         { id: "1", platform: "twitter", platform_username: "alice", status: "active", platform_user_id: null, connected_at: null, last_synced_at: null, token_expires_at: null, scopes: null },
@@ -44,6 +45,7 @@ describe("PlatformSelector", () => {
   it("shows dropdown with connections on click", async () => {
     vi.mocked(usePlatform).mockReturnValue({
       platform: "twitter",
+      slug: "x",
       setPlatform: mockSetPlatform,
       activeConnections: [
         { id: "1", platform: "twitter", platform_username: "alice", status: "active", platform_user_id: null, connected_at: null, last_synced_at: null, token_expires_at: null, scopes: null },
@@ -66,6 +68,7 @@ describe("PlatformSelector", () => {
   it("calls setPlatform when selecting a different platform", async () => {
     vi.mocked(usePlatform).mockReturnValue({
       platform: "twitter",
+      slug: "x",
       setPlatform: mockSetPlatform,
       activeConnections: [
         { id: "1", platform: "twitter", platform_username: "alice", status: "active", platform_user_id: null, connected_at: null, last_synced_at: null, token_expires_at: null, scopes: null },
@@ -89,9 +92,10 @@ describe("PlatformSelector", () => {
     expect(mockSetPlatform).toHaveBeenCalledWith("linkedin");
   });
 
-  it("shows empty state when no connections", () => {
+  it("shows empty state with link to /connections when no connections", () => {
     vi.mocked(usePlatform).mockReturnValue({
       platform: null,
+      slug: null,
       setPlatform: mockSetPlatform,
       activeConnections: [],
       isLoading: false,
@@ -100,12 +104,14 @@ describe("PlatformSelector", () => {
 
     render(<PlatformSelector />);
 
-    expect(screen.getByText("Connect a platform")).toBeInTheDocument();
+    const link = screen.getByText("Connect a platform").closest("a");
+    expect(link?.getAttribute("href")).toBe("/connections");
   });
 
-  it("shows manage connections link in dropdown", async () => {
+  it("shows manage connections link pointing to /connections", async () => {
     vi.mocked(usePlatform).mockReturnValue({
       platform: "twitter",
+      slug: "x",
       setPlatform: mockSetPlatform,
       activeConnections: [
         { id: "1", platform: "twitter", platform_username: "alice", status: "active", platform_user_id: null, connected_at: null, last_synced_at: null, token_expires_at: null, scopes: null },
@@ -119,7 +125,8 @@ describe("PlatformSelector", () => {
     await act(async () => openDropdown());
 
     await waitFor(() => {
-      expect(screen.getByText("Manage connections")).toBeInTheDocument();
+      const link = screen.getByText("Manage connections").closest("a");
+      expect(link?.getAttribute("href")).toBe("/connections");
     });
   });
 });

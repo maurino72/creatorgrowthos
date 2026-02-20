@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Insights", () => {
   test("displays insights heading and subtitle", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await expect(
       page.getByRole("heading", { name: "Insights" }),
@@ -13,7 +13,7 @@ test.describe("Insights", () => {
   });
 
   test("status tabs are visible", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await expect(page.getByRole("button", { name: "Active" })).toBeVisible();
     await expect(
@@ -25,7 +25,7 @@ test.describe("Insights", () => {
   });
 
   test("type filter tabs are visible", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(
@@ -41,7 +41,7 @@ test.describe("Insights", () => {
   });
 
   test("Generate Insights button is visible", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await expect(
       page.getByRole("button", { name: "Generate Insights" }),
@@ -49,7 +49,7 @@ test.describe("Insights", () => {
   });
 
   test("shows empty state when no insights exist", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await expect(page.getByText("No insights yet")).toBeVisible({
       timeout: 15000,
@@ -64,7 +64,7 @@ test.describe("Insights", () => {
   test("switching to Dismissed tab preserves type filter tabs", async ({
     page,
   }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await page.getByRole("button", { name: "Dismissed" }).click();
 
@@ -76,7 +76,7 @@ test.describe("Insights", () => {
   });
 
   test("switching to Acted On tab shows empty state", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     await page.getByRole("button", { name: "Acted On" }).click();
 
@@ -86,7 +86,7 @@ test.describe("Insights", () => {
   });
 
   test("clicking type filter tabs switches active state", async ({ page }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     const perfBtn = page.getByRole("button", { name: "Performance" });
     await perfBtn.click();
@@ -98,7 +98,7 @@ test.describe("Insights", () => {
   test("Generate Insights button shows loading state on click", async ({
     page,
   }) => {
-    await page.goto("/dashboard/insights");
+    await page.goto("/x/insights");
 
     const btn = page.getByRole("button", { name: "Generate Insights" });
     await btn.click();

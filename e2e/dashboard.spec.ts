@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Dashboard", () => {
   test("displays dashboard heading and subtitle", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(
       page.getByRole("heading", { name: "Dashboard" }),
@@ -13,7 +13,7 @@ test.describe("Dashboard", () => {
   });
 
   test("sidebar navigation links are visible", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Content" })).toBeVisible();
@@ -28,7 +28,7 @@ test.describe("Dashboard", () => {
   });
 
   test("period selector buttons are visible", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(page.getByRole("button", { name: "7 days" })).toBeVisible();
     await expect(page.getByRole("button", { name: "30 days" })).toBeVisible();
@@ -36,7 +36,7 @@ test.describe("Dashboard", () => {
   });
 
   test("period selector switches active state on click", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     // 7 days is default active
     const btn7 = page.getByRole("button", { name: "7 days" });
@@ -57,7 +57,7 @@ test.describe("Dashboard", () => {
   });
 
   test("shows empty metrics state for new user", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(
       page.getByText("Publish your first post to see metrics here."),
@@ -70,17 +70,17 @@ test.describe("Dashboard", () => {
   test("Create Post link in empty state navigates to new post", async ({
     page,
   }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(
       page.getByRole("link", { name: "Create Post" }),
     ).toBeVisible({ timeout: 15000 });
     await page.getByRole("link", { name: "Create Post" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/content\/new/);
+    await expect(page).toHaveURL(/\/x\/content\/new/);
   });
 
   test("shows insights section with empty state", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(
       page.getByRole("heading", { name: "Insights" }),
@@ -95,7 +95,7 @@ test.describe("Dashboard", () => {
   test("Generate Insights button is visible on dashboard", async ({
     page,
   }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(
       page.getByRole("button", { name: "Generate Insights" }),
@@ -103,54 +103,54 @@ test.describe("Dashboard", () => {
   });
 
   test("navigates to content page via sidebar", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await page.getByRole("link", { name: "Content" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/content/);
+    await expect(page).toHaveURL(/\/x\/content/);
     await expect(
       page.getByRole("heading", { name: "Content" }),
     ).toBeVisible();
   });
 
   test("navigates to insights page via sidebar", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await page.getByRole("link", { name: "Insights" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/insights/);
+    await expect(page).toHaveURL(/\/x\/insights/);
     await expect(
       page.getByRole("heading", { name: "Insights" }),
     ).toBeVisible();
   });
 
   test("navigates to experiments page via sidebar", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await page.getByRole("link", { name: "Experiments" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/experiments/);
+    await expect(page).toHaveURL(/\/x\/experiments/);
     await expect(
       page.getByRole("heading", { name: "Experiments" }),
     ).toBeVisible();
   });
 
   test("navigates to connections page via sidebar", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await page.getByRole("link", { name: "Connections" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/connections/);
+    await expect(page).toHaveURL(/\/connections/);
     await expect(
       page.getByRole("heading", { name: "Connections" }),
     ).toBeVisible();
   });
 
   test("navigates to settings page via sidebar", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await page.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/settings/);
+    await expect(page).toHaveURL(/\/settings/);
   });
 
   test("user name is displayed in header", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/x/dashboard");
 
     await expect(page.getByText("E2E Test User")).toBeVisible();
   });

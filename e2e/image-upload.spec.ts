@@ -5,7 +5,7 @@ const fixtures = path.resolve(__dirname, "fixtures");
 
 test.describe("Image Upload - New Post Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
   });
 
   test("uploads a single image and shows preview", async ({ page }) => {

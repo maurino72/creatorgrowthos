@@ -7,8 +7,8 @@ vi.mock("next/navigation", () => ({
     push: vi.fn(),
     replace: vi.fn(),
   })),
-  usePathname: vi.fn(() => "/dashboard/experiments"),
-  useSearchParams: vi.fn(() => ({ get: () => null, toString: () => "" })),
+  usePathname: vi.fn(() => "/x/experiments"),
+  useParams: vi.fn(() => ({ platform: "x" })),
 }));
 
 vi.mock("@/lib/queries/connections", () => ({

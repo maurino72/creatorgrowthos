@@ -21,8 +21,11 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Creator Growth OS",
+  title: "AiGrow",
   description: "Grow your audience with AI-powered content intelligence",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

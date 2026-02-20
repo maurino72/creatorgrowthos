@@ -8,7 +8,7 @@ import { sendConnectionCreated } from "@/lib/inngest/send";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
-  const connectionsUrl = `${appUrl}/dashboard/connections`;
+  const connectionsUrl = `${appUrl}/connections`;
 
   // Handle user denial
   const oauthError = searchParams.get("error");

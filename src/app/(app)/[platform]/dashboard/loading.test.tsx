@@ -2,13 +2,13 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import DashboardLoading from "./loading";
-import ContentLoading from "./content/loading";
-import InsightsLoading from "./insights/loading";
-import ExperimentsLoading from "./experiments/loading";
-import ConnectionsLoading from "./connections/loading";
-import SettingsLoading from "./settings/loading";
-import NewPostLoading from "./content/new/loading";
-import EditPostLoading from "./content/[id]/edit/loading";
+import ContentLoading from "../content/loading";
+import InsightsLoading from "../insights/loading";
+import ExperimentsLoading from "../experiments/loading";
+import ConnectionsLoading from "../../connections/loading";
+import SettingsLoading from "../../settings/loading";
+import NewPostLoading from "../content/new/loading";
+import EditPostLoading from "../content/[id]/edit/loading";
 
 describe("loading.tsx skeletons", () => {
   it("renders dashboard loading skeleton", () => {

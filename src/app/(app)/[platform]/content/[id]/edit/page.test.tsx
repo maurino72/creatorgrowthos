@@ -5,8 +5,8 @@ import React from "react";
 
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),
-  useParams: vi.fn(() => ({ id: "post-1" })),
-  usePathname: vi.fn(() => "/dashboard/content/post-1/edit"),
+  useParams: vi.fn(() => ({ id: "post-1", platform: "x" })),
+  usePathname: vi.fn(() => "/x/content/post-1/edit"),
 }));
 
 vi.mock("sonner", () => ({

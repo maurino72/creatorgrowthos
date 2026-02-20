@@ -175,7 +175,7 @@ describe("GET /api/connections/twitter/callback", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toContain(
-      "/dashboard/connections?connected=twitter",
+      "/connections?connected=twitter",
     );
 
     // Verify token exchange was called correctly

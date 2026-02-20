@@ -40,6 +40,7 @@ function mockSupabaseUser(
   user: { id: string } | null,
   profile?: { onboarded_at: string | null } | null,
   subscription?: { status: string; current_period_end: string | null } | null,
+  connections?: Array<{ platform: string }> | null,
 ) {
   const tableData: Record<string, unknown> = {};
 
@@ -59,6 +60,13 @@ function mockSupabaseUser(
     };
   }
 
+  if (connections !== undefined) {
+    tableData["connections"] = {
+      data: connections ?? [],
+      error: null,
+    };
+  }
+
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user } }),
@@ -68,6 +76,20 @@ function mockSupabaseUser(
         data: null,
         error: { code: "PGRST116", message: "Not found" },
       };
+
+      // connections uses select().eq().order().limit() chain
+      if (table === "connections") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(result),
+              }),
+            }),
+          }),
+        };
+      }
+
       return {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -89,120 +111,293 @@ describe("updateSession middleware", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-key");
   });
 
-  it("redirects unauthenticated users from /dashboard to /login", async () => {
-    mockSupabaseUser(null);
-    const request = mockRequest("/dashboard");
-    const response = await updateSession(request);
+  describe("unauthenticated access", () => {
+    it("redirects unauthenticated users from /x/dashboard to /login", async () => {
+      mockSupabaseUser(null);
+      const request = mockRequest("/x/dashboard");
+      const response = await updateSession(request);
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/login");
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/login");
+    });
+
+    it("redirects unauthenticated users from /linkedin/content to /login", async () => {
+      mockSupabaseUser(null);
+      const request = mockRequest("/linkedin/content");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/login");
+    });
+
+    it("redirects unauthenticated users from /settings to /login", async () => {
+      mockSupabaseUser(null);
+      const request = mockRequest("/settings");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/login");
+    });
+
+    it("redirects unauthenticated users from /connections to /login", async () => {
+      mockSupabaseUser(null);
+      const request = mockRequest("/connections");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/login");
+    });
+
+    it("redirects unauthenticated users from /onboarding to /login", async () => {
+      mockSupabaseUser(null);
+      const request = mockRequest("/onboarding");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/login");
+    });
+
+    it("allows unauthenticated access to public pages", async () => {
+      mockSupabaseUser(null);
+      const request = mockRequest("/");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
   });
 
-  it("redirects authenticated users from /login to /dashboard", async () => {
-    mockSupabaseUser({ id: "user-1" }, { onboarded_at: "2024-01-01" });
-    const request = mockRequest("/login");
-    const response = await updateSession(request);
+  describe("authenticated login redirect", () => {
+    it("redirects authenticated users from /login to /<slug>/dashboard using first connection", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        undefined,
+        [{ platform: "linkedin" }],
+      );
+      const request = mockRequest("/login");
+      const response = await updateSession(request);
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/dashboard");
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/linkedin/dashboard");
+    });
+
+    it("redirects to /x/dashboard when no connections exist", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        undefined,
+        [],
+      );
+      const request = mockRequest("/login");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/x/dashboard");
+    });
   });
 
-  it("redirects non-onboarded user from /dashboard to /onboarding", async () => {
-    mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
-    const request = mockRequest("/dashboard");
-    const response = await updateSession(request);
+  describe("legacy /dashboard/* redirects", () => {
+    it("redirects /dashboard to /<slug>/dashboard", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+        [{ platform: "twitter" }],
+      );
+      const request = mockRequest("/dashboard");
+      const response = await updateSession(request);
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/onboarding");
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/x/dashboard");
+    });
+
+    it("redirects /dashboard/content/new to /<slug>/content/new", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+        [{ platform: "linkedin" }],
+      );
+      const request = mockRequest("/dashboard/content/new");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/linkedin/content/new");
+    });
+
+    it("redirects /dashboard/connections to /connections", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+      const request = mockRequest("/dashboard/connections");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/connections");
+    });
+
+    it("redirects /dashboard/settings to /settings", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+      const request = mockRequest("/dashboard/settings");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/settings");
+    });
+
+    it("redirects /dashboard/settings/billing to /settings/billing", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+      );
+      const request = mockRequest("/dashboard/settings/billing");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/settings/billing");
+    });
+
+    it("redirects /dashboard/insights to /<slug>/insights", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+        [{ platform: "twitter" }],
+      );
+      const request = mockRequest("/dashboard/insights");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/x/insights");
+    });
+
+    it("redirects /dashboard/experiments to /<slug>/experiments", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+        [{ platform: "twitter" }],
+      );
+      const request = mockRequest("/dashboard/experiments");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/x/experiments");
+    });
   });
 
-  it("allows non-onboarded user to access /onboarding", async () => {
-    mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
-    const request = mockRequest("/onboarding");
-    const response = await updateSession(request);
+  describe("onboarding flow", () => {
+    it("redirects non-onboarded user from /x/dashboard to /onboarding", async () => {
+      mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
+      const request = mockRequest("/x/dashboard");
+      const response = await updateSession(request);
 
-    expect(response.status).toBe(200);
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/onboarding");
+    });
+
+    it("redirects non-onboarded user from /settings to /onboarding", async () => {
+      mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
+      const request = mockRequest("/settings");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/onboarding");
+    });
+
+    it("allows non-onboarded user to access /onboarding", async () => {
+      mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
+      const request = mockRequest("/onboarding");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("redirects onboarded user from /onboarding to /<slug>/dashboard", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
+        [{ platform: "twitter" }],
+      );
+      const request = mockRequest("/onboarding");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/x/dashboard");
+    });
   });
 
-  it("redirects onboarded user from /onboarding to /dashboard", async () => {
-    mockSupabaseUser(
-      { id: "user-1" },
-      { onboarded_at: "2024-01-01" },
-      { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
-    );
-    const request = mockRequest("/onboarding");
-    const response = await updateSession(request);
-
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/dashboard");
-  });
-
-  it("allows non-onboarded user to access API routes", async () => {
-    mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
-    const request = mockRequest("/api/onboarding");
-    const response = await updateSession(request);
-
-    expect(response.status).toBe(200);
-  });
-
-  it("allows unauthenticated access to public pages", async () => {
-    mockSupabaseUser(null);
-    const request = mockRequest("/");
-    const response = await updateSession(request);
-
-    expect(response.status).toBe(200);
-  });
-
-  // Subscription gate tests
   describe("subscription gate", () => {
-    it("redirects onboarded user without subscription from /dashboard to /pricing", async () => {
+    it("redirects onboarded user without subscription from /x/dashboard to /pricing", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
         null,
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/x/dashboard");
       const response = await updateSession(request);
 
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toContain("/pricing");
     });
 
-    it("allows onboarded user with active subscription to access /dashboard", async () => {
+    it("redirects from /settings without subscription to /pricing", async () => {
+      mockSupabaseUser(
+        { id: "user-1" },
+        { onboarded_at: "2024-01-01" },
+        null,
+      );
+
+      const request = mockRequest("/settings");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toContain("/pricing");
+    });
+
+    it("allows onboarded user with active subscription to access /x/dashboard", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
         { status: "active", current_period_end: new Date(Date.now() + 86400000).toISOString() },
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/x/dashboard");
       const response = await updateSession(request);
 
       expect(response.status).toBe(200);
     });
 
-    it("allows onboarded user with trialing subscription to access /dashboard", async () => {
+    it("allows onboarded user with trialing subscription to access /linkedin/content", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
         { status: "trialing", current_period_end: new Date(Date.now() + 86400000).toISOString() },
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/linkedin/content");
       const response = await updateSession(request);
 
       expect(response.status).toBe(200);
     });
 
-    it("allows canceled subscription within period to access /dashboard", async () => {
+    it("allows canceled subscription within period to access /x/dashboard", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
         { status: "canceled", current_period_end: new Date(Date.now() + 86400000).toISOString() },
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/x/dashboard");
       const response = await updateSession(request);
 
       expect(response.status).toBe(200);
@@ -215,7 +410,7 @@ describe("updateSession middleware", () => {
         { status: "canceled", current_period_end: new Date(Date.now() - 86400000).toISOString() },
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/x/dashboard");
       const response = await updateSession(request);
 
       expect(response.status).toBe(307);
@@ -229,7 +424,7 @@ describe("updateSession middleware", () => {
         { status: "unpaid", current_period_end: null },
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/x/dashboard");
       const response = await updateSession(request);
 
       expect(response.status).toBe(307);
@@ -271,27 +466,27 @@ describe("updateSession middleware", () => {
       expect(response.status).toBe(200);
     });
 
-    it("allows past_due subscription to access /dashboard (grace period)", async () => {
+    it("allows past_due subscription to access /connections", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
         { status: "past_due", current_period_end: new Date(Date.now() + 86400000).toISOString() },
       );
 
-      const request = mockRequest("/dashboard");
+      const request = mockRequest("/connections");
       const response = await updateSession(request);
 
       expect(response.status).toBe(200);
     });
 
-    it("allows checkout return to /dashboard without subscription (webhook pending)", async () => {
+    it("allows checkout return to /x/dashboard without subscription (webhook pending)", async () => {
       mockSupabaseUser(
         { id: "user-1" },
         { onboarded_at: "2024-01-01" },
         null,
       );
 
-      const request = mockRequest("/dashboard?checkout=success");
+      const request = mockRequest("/x/dashboard?checkout=success");
       const response = await updateSession(request);
 
       expect(response.status).toBe(200);
@@ -305,6 +500,16 @@ describe("updateSession middleware", () => {
       );
 
       const request = mockRequest("/pricing");
+      const response = await updateSession(request);
+
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe("API and non-protected routes", () => {
+    it("allows non-onboarded user to access API routes", async () => {
+      mockSupabaseUser({ id: "user-1" }, { onboarded_at: null });
+      const request = mockRequest("/api/onboarding");
       const response = await updateSession(request);
 
       expect(response.status).toBe(200);

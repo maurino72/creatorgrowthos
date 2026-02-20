@@ -24,7 +24,7 @@ export function PlatformSelector() {
   if (!hasConnections) {
     return (
       <Link
-        href="/dashboard/connections"
+        href="/connections"
         className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
       >
         <svg
@@ -112,7 +112,7 @@ export function PlatformSelector() {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/dashboard/connections">
+          <Link href="/connections">
             <svg
               width="16"
               height="16"

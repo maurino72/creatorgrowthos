@@ -45,7 +45,7 @@ export function Header() {
     <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-editorial-rule px-5">
       {/* Mobile brand */}
       <div className="flex items-center gap-2 lg:hidden">
-        <span className="text-sm font-serif tracking-tight">Growth OS</span>
+        <span className="text-sm font-serif tracking-tight">AiGrow</span>
       </div>
 
       {/* Page title area (empty for now) */}

@@ -1,5 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  isValidPlatformSlug,
+  platformToSlug,
+  type PlatformSlug,
+} from "@/lib/platform-slug";
+import type { PlatformType } from "@/lib/adapters/types";
 
 const SUBSCRIPTION_EXEMPT_PATHS = [
   "/pricing",
@@ -32,6 +38,61 @@ function isSubscriptionValid(
   return false;
 }
 
+/** Check if a path requires authentication */
+function isProtectedPath(pathname: string): boolean {
+  // Platform-scoped pages: /<valid-slug>/*
+  const firstSegment = pathname.split("/")[1];
+  if (firstSegment && isValidPlatformSlug(firstSegment)) return true;
+
+  // Account-level pages
+  if (pathname.startsWith("/settings")) return true;
+  if (pathname.startsWith("/connections")) return true;
+
+  return false;
+}
+
+/** Check if this is a legacy /dashboard/* path that needs redirect */
+function isLegacyDashboardPath(pathname: string): boolean {
+  return pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+}
+
+/** Map legacy /dashboard/* paths to new URL structure */
+function mapLegacyPath(pathname: string, slug: PlatformSlug): string {
+  // Account-level routes (no platform prefix)
+  if (pathname.startsWith("/dashboard/connections")) {
+    return pathname.replace("/dashboard/connections", "/connections");
+  }
+  if (pathname.startsWith("/dashboard/settings")) {
+    return pathname.replace("/dashboard/settings", "/settings");
+  }
+
+  // Platform-scoped routes
+  if (pathname === "/dashboard") {
+    return `/${slug}/dashboard`;
+  }
+  // /dashboard/content/... → /<slug>/content/...
+  return pathname.replace(/^\/dashboard/, `/${slug}`);
+}
+
+/** Get default platform slug from first active connection */
+async function getDefaultSlug(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+): Promise<PlatformSlug> {
+  const { data: connections } = await supabase
+    .from("connections")
+    .select("platform")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (connections && connections.length > 0) {
+    return platformToSlug(connections[0].platform as PlatformType);
+  }
+
+  return "x"; // default fallback
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -62,13 +123,14 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Redirect unauthenticated users away from dashboard, onboarding, and pricing
-  if (
-    !user &&
-    (pathname.startsWith("/dashboard") ||
-      pathname.startsWith("/onboarding") ||
-      pathname === "/pricing")
-  ) {
+  const needsAuth =
+    isProtectedPath(pathname) ||
+    isLegacyDashboardPath(pathname) ||
+    pathname.startsWith("/onboarding") ||
+    pathname === "/pricing";
+
+  // Redirect unauthenticated users from protected pages to /login
+  if (!user && needsAuth) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -76,15 +138,17 @@ export async function updateSession(request: NextRequest) {
 
   // Redirect authenticated users away from login
   if (user && pathname === "/login") {
+    const slug = await getDefaultSlug(supabase, user.id);
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = `/${slug}/dashboard`;
     return NextResponse.redirect(url);
   }
 
-  // Onboarding + subscription routing for authenticated users on protected pages
+  // Routing for authenticated users on protected + onboarding + pricing paths
   if (
     user &&
-    (pathname.startsWith("/dashboard") ||
+    (isProtectedPath(pathname) ||
+      isLegacyDashboardPath(pathname) ||
       pathname.startsWith("/onboarding") ||
       pathname === "/pricing")
   ) {
@@ -97,39 +161,61 @@ export async function updateSession(request: NextRequest) {
 
     const isOnboarded = profile?.onboarded_at != null;
 
-    // Not onboarded + trying to access dashboard or pricing → redirect to onboarding
-    if (!isOnboarded && (pathname.startsWith("/dashboard") || pathname === "/pricing")) {
+    // Not onboarded + trying to access protected/pricing pages → redirect to onboarding
+    if (
+      !isOnboarded &&
+      (isProtectedPath(pathname) ||
+        isLegacyDashboardPath(pathname) ||
+        pathname === "/pricing")
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
 
-    // Already onboarded + trying to access onboarding → redirect to dashboard
+    // Already onboarded + trying to access onboarding → redirect to /<slug>/dashboard
     if (isOnboarded && pathname.startsWith("/onboarding")) {
+      const slug = await getDefaultSlug(supabase, user.id);
       const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
+      url.pathname = `/${slug}/dashboard`;
       return NextResponse.redirect(url);
     }
 
-    // Subscription check for onboarded users accessing dashboard
-    if (isOnboarded && (pathname.startsWith("/dashboard") || pathname === "/pricing")) {
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("status, current_period_end")
-        .eq("user_id", user.id)
-        .single();
+    // Legacy /dashboard/* redirect (after onboarding check, before subscription check)
+    if (isOnboarded && isLegacyDashboardPath(pathname)) {
+      const slug = await getDefaultSlug(supabase, user.id);
+      const url = request.nextUrl.clone();
+      url.pathname = mapLegacyPath(pathname, slug);
+      return NextResponse.redirect(url);
+    }
 
-      const hasValidSub = isSubscriptionValid(subscription);
+    // Subscription check for onboarded users on protected pages
+    if (
+      isOnboarded &&
+      (isProtectedPath(pathname) || pathname === "/pricing")
+    ) {
+      if (!isSubscriptionExempt(pathname)) {
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("status, current_period_end")
+          .eq("user_id", user.id)
+          .single();
 
-      // On /dashboard without valid subscription → redirect to /pricing
-      // Skip redirect when returning from Stripe checkout (webhook may still be processing)
-      const isCheckoutReturn = request.nextUrl.searchParams.get("checkout") === "success";
-      if (!hasValidSub && pathname.startsWith("/dashboard") && !isCheckoutReturn) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/pricing";
-        return NextResponse.redirect(url);
+        const hasValidSub = isSubscriptionValid(subscription);
+
+        // On protected page without valid subscription → redirect to /pricing
+        const isCheckoutReturn =
+          request.nextUrl.searchParams.get("checkout") === "success";
+        if (
+          !hasValidSub &&
+          isProtectedPath(pathname) &&
+          !isCheckoutReturn
+        ) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/pricing";
+          return NextResponse.redirect(url);
+        }
       }
-
     }
   }
 

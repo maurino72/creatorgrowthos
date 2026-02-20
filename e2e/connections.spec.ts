@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Connections", () => {
   test("displays connections heading and subtitle", async ({ page }) => {
-    await page.goto("/dashboard/connections");
+    await page.goto("/connections");
 
     await expect(
       page.getByRole("heading", { name: "Connections" }),
@@ -15,7 +15,7 @@ test.describe("Connections", () => {
   });
 
   test("platform cards are visible", async ({ page }) => {
-    await page.goto("/dashboard/connections");
+    await page.goto("/connections");
 
     await expect(page.getByText("X")).toBeVisible();
     await expect(page.getByText("LinkedIn")).toBeVisible();
@@ -25,7 +25,7 @@ test.describe("Connections", () => {
   test("Coming Soon badges are shown for unsupported platforms", async ({
     page,
   }) => {
-    await page.goto("/dashboard/connections");
+    await page.goto("/connections");
 
     const comingSoonBadges = page.getByText("Coming Soon");
     // LinkedIn and Threads are both Coming Soon
@@ -36,7 +36,7 @@ test.describe("Connections", () => {
   test("Coming Soon platforms have disabled Connect buttons", async ({
     page,
   }) => {
-    await page.goto("/dashboard/connections");
+    await page.goto("/connections");
 
     // Wait for connections to load
     await expect(page.getByText("Coming Soon").first()).toBeVisible({
@@ -53,7 +53,7 @@ test.describe("Connections", () => {
   test("Twitter has a Connect link when not connected", async ({
     page,
   }) => {
-    await page.goto("/dashboard/connections");
+    await page.goto("/connections");
 
     // Wait for cards to load by checking Coming Soon appears (always present)
     await expect(page.getByText("Coming Soon").first()).toBeVisible({
@@ -68,7 +68,7 @@ test.describe("Connections", () => {
   });
 
   test("shows success toast on connected query param", async ({ page }) => {
-    await page.goto("/dashboard/connections?connected=twitter");
+    await page.goto("/connections?connected=twitter");
 
     // Toast should appear
     await expect(page.getByText("X connected successfully!")).toBeVisible({
@@ -77,7 +77,7 @@ test.describe("Connections", () => {
   });
 
   test("shows error toast on error query param", async ({ page }) => {
-    await page.goto("/dashboard/connections?error=access_denied");
+    await page.goto("/connections?error=access_denied");
 
     await expect(
       page.getByText("You denied access to your X account."),
@@ -85,7 +85,7 @@ test.describe("Connections", () => {
   });
 
   test("shows token exchange error toast", async ({ page }) => {
-    await page.goto("/dashboard/connections?error=token_exchange_failed");
+    await page.goto("/connections?error=token_exchange_failed");
 
     await expect(
       page.getByText("Failed to complete authentication. Please try again."),
@@ -93,7 +93,7 @@ test.describe("Connections", () => {
   });
 
   test("shows session expired error toast", async ({ page }) => {
-    await page.goto("/dashboard/connections?error=session_expired");
+    await page.goto("/connections?error=session_expired");
 
     await expect(
       page.getByText("Your session expired. Please log in and try again."),
@@ -103,7 +103,7 @@ test.describe("Connections", () => {
   test("shows unknown error toast for unrecognized error codes", async ({
     page,
   }) => {
-    await page.goto("/dashboard/connections?error=some_random_error");
+    await page.goto("/connections?error=some_random_error");
 
     await expect(
       page.getByText("An unknown error occurred. Please try again."),
@@ -111,7 +111,7 @@ test.describe("Connections", () => {
   });
 
   test("query params are cleared after toast is shown", async ({ page }) => {
-    await page.goto("/dashboard/connections?connected=twitter");
+    await page.goto("/connections?connected=twitter");
 
     // Wait for toast to appear
     await expect(
@@ -119,6 +119,6 @@ test.describe("Connections", () => {
     ).toBeVisible({ timeout: 5000 });
 
     // URL should be cleaned up (router.replace removes query params)
-    await expect(page).toHaveURL(/\/dashboard\/connections$/);
+    await expect(page).toHaveURL(/\/connections$/);
   });
 });

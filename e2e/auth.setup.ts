@@ -82,8 +82,8 @@ setup("authenticate", async ({ page }) => {
   await page.context().addCookies(cookies);
 
   // Verify authentication works by navigating to dashboard
-  await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+  await page.goto("/x/dashboard");
+  await expect(page).toHaveURL(/\/x\/dashboard/, { timeout: 10000 });
 
   // Save signed-in state
   await page.context().storageState({ path: "e2e/.auth/user.json" });

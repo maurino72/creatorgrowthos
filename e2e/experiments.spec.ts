@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Experiments", () => {
   test("displays experiments heading and subtitle", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await expect(
       page.getByRole("heading", { name: "Experiments" }),
@@ -15,7 +15,7 @@ test.describe("Experiments", () => {
   });
 
   test("status tabs are visible", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(
@@ -31,7 +31,7 @@ test.describe("Experiments", () => {
   });
 
   test("Suggest Experiments button is visible", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await expect(
       page.getByRole("button", { name: "Suggest Experiments" }),
@@ -39,7 +39,7 @@ test.describe("Experiments", () => {
   });
 
   test("shows empty state when no experiments exist", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await expect(page.getByText("No experiments yet")).toBeVisible({
       timeout: 15000,
@@ -52,7 +52,7 @@ test.describe("Experiments", () => {
   });
 
   test("switching to Suggested tab shows empty state", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await page.getByRole("button", { name: "Suggested" }).click();
 
@@ -62,7 +62,7 @@ test.describe("Experiments", () => {
   });
 
   test("switching to Accepted tab shows empty state", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await page.getByRole("button", { name: "Accepted" }).click();
 
@@ -72,7 +72,7 @@ test.describe("Experiments", () => {
   });
 
   test("switching to Running tab shows empty state", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await page.getByRole("button", { name: "Running" }).click();
 
@@ -82,7 +82,7 @@ test.describe("Experiments", () => {
   });
 
   test("switching to Complete tab shows empty state", async ({ page }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     await page.getByRole("button", { name: "Complete" }).click();
 
@@ -94,7 +94,7 @@ test.describe("Experiments", () => {
   test("Suggest Experiments button shows loading state on click", async ({
     page,
   }) => {
-    await page.goto("/dashboard/experiments");
+    await page.goto("/x/experiments");
 
     const btn = page.getByRole("button", { name: "Suggest Experiments" });
     await btn.click();

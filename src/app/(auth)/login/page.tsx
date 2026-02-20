@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/shared/logo";
 
 export default function LoginPage() {
   const handleGoogleSignIn = async () => {
@@ -16,28 +17,14 @@ export default function LoginPage() {
 
   return (
     <div className="flex w-full max-w-sm flex-col items-center px-6">
-      {/* Logo mark */}
-      <div className="mb-10 flex h-12 w-12 items-center justify-center">
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 20 20"
-          fill="none"
-          className="text-foreground/70"
-        >
-          <path
-            d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm11 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+      {/* Logo */}
+      <div className="mb-10">
+        <Logo variant="icon" size="lg" className="text-foreground/70" />
       </div>
 
       {/* Title */}
       <h1 className="mb-3 text-center font-serif text-3xl font-normal tracking-tight text-foreground">
-        Creator Growth OS
+        AiGrow
       </h1>
       <p className="mb-10 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground/40">
         AI-powered content strategy & analytics

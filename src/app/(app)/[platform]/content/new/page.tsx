@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { usePlatform } from "@/lib/hooks/use-platform";
+import { appUrl } from "@/lib/urls";
 import { useCreatePost } from "@/lib/queries/posts";
 import { useGenerateIdeas, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
@@ -33,7 +34,7 @@ function getBarColor(count: number, limit: number): string {
 function NewPostPageInner() {
   const router = useRouter();
   const createPost = useCreatePost();
-  const { platform } = usePlatform();
+  const { platform, slug } = usePlatform();
   const generateIdeas = useGenerateIdeas();
 
   const suggestHashtags = useSuggestHashtags();
@@ -81,7 +82,7 @@ function NewPostPageInner() {
       {
         onSuccess: () => {
           toast.success("Draft saved");
-          router.push("/dashboard/content");
+          router.push(slug ? appUrl.content(slug) : "/");
         },
         onError: () => toast.error("Failed to save draft"),
       },
@@ -108,11 +109,11 @@ function NewPostPageInner() {
               } else {
                 toast.error("Post created but publish failed");
               }
-              router.push("/dashboard/content");
+              router.push(slug ? appUrl.content(slug) : "/");
             })
             .catch(() => {
               toast.error("Post created but publish failed");
-              router.push("/dashboard/content");
+              router.push(slug ? appUrl.content(slug) : "/");
             });
         },
         onError: () => toast.error("Failed to create post"),
@@ -137,7 +138,7 @@ function NewPostPageInner() {
           toast.success(
             `Post scheduled for ${new Date(scheduledAt).toLocaleString()}`,
           );
-          router.push("/dashboard/content");
+          router.push(slug ? appUrl.content(slug) : "/");
         },
         onError: () => toast.error("Failed to schedule post"),
       },
@@ -152,7 +153,7 @@ function NewPostPageInner() {
           New Post
         </h1>
         <Link
-          href="/dashboard/content"
+          href={slug ? appUrl.content(slug) : "/"}
           className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 hover:text-foreground transition-colors pb-1"
         >
           Cancel

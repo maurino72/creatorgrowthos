@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         ...(TRIAL_PERIOD_DAYS > 0 && { trial_period_days: TRIAL_PERIOD_DAYS }),
         metadata: { user_id: user.id },
       },
-      success_url: `${appUrl}/dashboard?checkout=success`,
+      success_url: `${appUrl}/x/dashboard?checkout=success`,
       cancel_url: `${appUrl}/pricing?checkout=canceled`,
       metadata: { user_id: user.id },
     });

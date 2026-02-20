@@ -16,7 +16,7 @@ export async function GET(_request: Request) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
-  const connectionsUrl = `${appUrl}/dashboard/connections`;
+  const connectionsUrl = `${appUrl}/connections`;
 
   // Plan check
   const planCheck = await canConnectPlatform(user.id, "linkedin");

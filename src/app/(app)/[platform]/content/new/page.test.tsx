@@ -7,7 +7,8 @@ vi.mock("next/navigation", () => ({
     push: vi.fn(),
     back: vi.fn(),
   })),
-  usePathname: vi.fn(() => "/dashboard/content/new"),
+  usePathname: vi.fn(() => "/x/content/new"),
+  useParams: vi.fn(() => ({ platform: "x" })),
 }));
 
 vi.mock("sonner", () => ({
@@ -34,6 +35,7 @@ vi.mock("@/lib/queries/posts", () => ({
 vi.mock("@/lib/hooks/use-platform", () => ({
   usePlatform: vi.fn(() => ({
     platform: "twitter",
+    slug: "x",
     setPlatform: vi.fn(),
     activeConnections: [
       {

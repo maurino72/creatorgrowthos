@@ -258,13 +258,13 @@ function ConnectionsContent() {
         platformDef?.name ??
         connected.charAt(0).toUpperCase() + connected.slice(1);
       toast.success(`${name} connected successfully!`);
-      router.replace("/dashboard/connections");
+      router.replace("/connections");
     } else if (error) {
       toastShown.current = true;
       const message =
         ERROR_MESSAGES[error] ?? "An unknown error occurred. Please try again.";
       toast.error(message);
-      router.replace("/dashboard/connections");
+      router.replace("/connections");
     }
   }, [searchParams, router]);
 

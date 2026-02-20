@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How Growth OS collects, uses, and protects your data.",
+  description: "How AiGrow collects, uses, and protects your data.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -25,14 +25,14 @@ export default function PrivacyPolicyPage() {
       {/* Introduction */}
       <Section>
         <p>
-          Growth OS (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;)
-          operates the Growth OS platform, a social media management and
+          AiGrow (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;)
+          operates the AiGrow platform, a social media management and
           analytics tool designed to help content creators grow their audience.
           This Privacy Policy explains how we collect, use, disclose, and
           safeguard your information when you use our service.
         </p>
         <p>
-          By accessing or using Growth OS, you agree to this Privacy Policy. If
+          By accessing or using AiGrow, you agree to this Privacy Policy. If
           you do not agree with the terms of this policy, please do not access
           the platform.
         </p>
@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage() {
 
         <H3>1.3 Content You Create</H3>
         <p>
-          We store the content you compose within Growth OS, including post text,
+          We store the content you compose within AiGrow, including post text,
           uploaded images, scheduling preferences, and publishing history. Images
           are stored securely and deleted from our storage after successful
           publication to your connected platforms.
@@ -79,7 +79,7 @@ export default function PrivacyPolicyPage() {
 
         <H3>1.4 AI-Processed Data</H3>
         <p>
-          Growth OS uses artificial intelligence to provide content
+          AiGrow uses artificial intelligence to provide content
           classification, performance insights, content improvement suggestions,
           and experiment recommendations. To deliver these features, your post
           content and aggregated performance data are processed by third-party AI
@@ -100,7 +100,7 @@ export default function PrivacyPolicyPage() {
       <Section number="2" title="How We Use Your Information">
         <p>We use the information we collect to:</p>
         <ul>
-          <li>Provide, operate, and maintain the Growth OS platform</li>
+          <li>Provide, operate, and maintain the AiGrow platform</li>
           <li>
             Publish content to your connected social media accounts at your
             direction
@@ -152,7 +152,7 @@ export default function PrivacyPolicyPage() {
       {/* 4. Third-Party Services */}
       <Section number="4" title="Third-Party Services">
         <p>
-          Growth OS integrates with the following categories of third-party
+          AiGrow integrates with the following categories of third-party
           services:
         </p>
 
@@ -222,7 +222,7 @@ export default function PrivacyPolicyPage() {
       {/* 7. Cookies and Tracking */}
       <Section number="7" title="Cookies and Tracking">
         <p>
-          Growth OS uses essential cookies to maintain your authentication
+          AiGrow uses essential cookies to maintain your authentication
           session. We do not use advertising cookies, third-party tracking
           pixels, or behavioral analytics tools. Session data is stored securely
           and is not shared with any third party.
@@ -232,7 +232,7 @@ export default function PrivacyPolicyPage() {
       {/* 8. Children's Privacy */}
       <Section number="8" title="Children&rsquo;s Privacy">
         <p>
-          Growth OS is not directed to individuals under the age of 16. We do
+          AiGrow is not directed to individuals under the age of 16. We do
           not knowingly collect personal information from children. If we become
           aware that we have collected data from a child under 16, we will take
           steps to delete that information promptly.
@@ -244,7 +244,7 @@ export default function PrivacyPolicyPage() {
         <p>
           Your information may be transferred to and processed in countries other
           than your own. Our infrastructure providers operate data centers
-          globally. By using Growth OS, you consent to the transfer of your data
+          globally. By using AiGrow, you consent to the transfer of your data
           to these locations, where data protection laws may differ from those in
           your jurisdiction.
         </p>
@@ -255,7 +255,7 @@ export default function PrivacyPolicyPage() {
         <p>
           We may update this Privacy Policy from time to time. We will notify you
           of any material changes by posting the updated policy on this page with
-          a revised effective date. Your continued use of Growth OS after changes
+          a revised effective date. Your continued use of AiGrow after changes
           are posted constitutes acceptance of the updated policy.
         </p>
       </Section>
@@ -267,7 +267,7 @@ export default function PrivacyPolicyPage() {
           practices, please contact us at:
         </p>
         <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm">
-          <p className="font-medium text-foreground">Growth OS</p>
+          <p className="font-medium text-foreground">AiGrow</p>
           <p>
             Email:{" "}
             <a

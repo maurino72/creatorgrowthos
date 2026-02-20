@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { usePlatform } from "@/lib/hooks/use-platform";
+import { appUrl } from "@/lib/urls";
 import { usePost, useUpdatePost, useDeletePost, usePublishPost, useClassifyPost, useUpdateClassifications } from "@/lib/queries/posts";
 import { INTENTS, CONTENT_TYPES } from "@/lib/ai/taxonomy";
 import { useLatestMetrics, usePostMetrics, useRefreshMetrics } from "@/lib/queries/metrics";
@@ -269,6 +271,7 @@ export default function EditPostPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const postId = params.id;
+  const { slug } = usePlatform();
 
   const { data: post, isLoading: postLoading } = usePost(postId);
   const updatePost = useUpdatePost();
@@ -349,7 +352,7 @@ export default function EditPostPage() {
       {
         onSuccess: () => {
           toast.success("Post updated");
-          router.push("/dashboard/content");
+          router.push(slug ? appUrl.content(slug) : "/");
         },
         onError: () => toast.error("Failed to update post"),
       },
@@ -361,7 +364,7 @@ export default function EditPostPage() {
     deletePost.mutate(postId, {
       onSuccess: () => {
         toast.success("Post deleted");
-        router.push("/dashboard/content");
+        router.push(slug ? appUrl.content(slug) : "/");
       },
       onError: () => toast.error("Failed to delete post"),
     });
@@ -371,7 +374,7 @@ export default function EditPostPage() {
     publishPost.mutate(postId, {
       onSuccess: () => {
         toast.success("Post published!");
-        router.push("/dashboard/content");
+        router.push(slug ? appUrl.content(slug) : "/");
       },
       onError: () => toast.error("Retry failed"),
     });
@@ -396,7 +399,7 @@ export default function EditPostPage() {
       <div className="mx-auto w-full max-w-4xl py-16 text-center">
         <p className="text-sm text-muted-foreground">Post not found.</p>
         <Button asChild className="mt-4" size="sm" variant="outline">
-          <Link href="/dashboard/content">Back to Content</Link>
+          <Link href={slug ? appUrl.content(slug) : "/"}>Back to Content</Link>
         </Button>
       </div>
     );
@@ -410,7 +413,7 @@ export default function EditPostPage() {
           Edit Post
         </h1>
         <Link
-          href="/dashboard/content"
+          href={slug ? appUrl.content(slug) : "/"}
           className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 hover:text-foreground transition-colors pb-1"
         >
           Cancel

@@ -98,7 +98,7 @@ describe("Onboarding page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(
-      screen.getByText("Welcome to Creator Growth OS"),
+      screen.getByText("Welcome to AiGrow"),
     ).toBeInTheDocument();
     expect(screen.getByText("Get Started")).toBeInTheDocument();
   });

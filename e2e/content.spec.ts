@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Content List", () => {
   test("displays content heading and subtitle", async ({ page }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await expect(
       page.getByRole("heading", { name: "Content" }),
@@ -13,7 +13,7 @@ test.describe("Content List", () => {
   });
 
   test("status tabs are visible", async ({ page }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Drafts" })).toBeVisible();
@@ -27,16 +27,16 @@ test.describe("Content List", () => {
   });
 
   test("New Post button navigates to new post page", async ({ page }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await page.getByRole("link", { name: "New Post" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/content\/new/);
+    await expect(page).toHaveURL(/\/x\/content\/new/);
   });
 
   test("shows empty state with Create Post link when no posts", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await expect(page.getByText("Create your first post")).toBeVisible({
       timeout: 15000,
@@ -49,7 +49,7 @@ test.describe("Content List", () => {
   test("switching to Drafts tab shows drafts empty state", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await page.getByRole("button", { name: "Drafts" }).click();
 
@@ -61,7 +61,7 @@ test.describe("Content List", () => {
   test("switching to Scheduled tab shows scheduled empty state", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await page.getByRole("button", { name: "Scheduled" }).click();
 
@@ -73,7 +73,7 @@ test.describe("Content List", () => {
   test("switching to Published tab shows published empty state", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await page.getByRole("button", { name: "Published" }).click();
 
@@ -85,7 +85,7 @@ test.describe("Content List", () => {
   test("switching to Failed tab shows failed empty state", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content");
+    await page.goto("/x/content");
 
     await page.getByRole("button", { name: "Failed" }).click();
 
@@ -97,7 +97,7 @@ test.describe("Content List", () => {
 
 test.describe("New Post", () => {
   test("displays new post heading and editor", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(
       page.getByRole("heading", { name: "New Post" }),
@@ -108,7 +108,7 @@ test.describe("New Post", () => {
   });
 
   test("character counter updates as user types", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     const textarea = page.getByPlaceholder("What's on your mind?");
     await textarea.fill("Hello, world!");
@@ -117,7 +117,7 @@ test.describe("New Post", () => {
   });
 
   test("character counter turns red over 280 characters", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     const textarea = page.getByPlaceholder("What's on your mind?");
     const longText = "a".repeat(281);
@@ -127,14 +127,14 @@ test.describe("New Post", () => {
   });
 
   test("Cancel button navigates back to content list", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await page.getByRole("link", { name: "Cancel" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/content$/);
+    await expect(page).toHaveURL(/\/x\/content$/);
   });
 
   test("Save Draft and Publish Now buttons are present", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(
       page.getByRole("button", { name: "Save Draft" }),
@@ -147,7 +147,7 @@ test.describe("New Post", () => {
   test("Save Draft button is disabled when textarea is empty", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(
       page.getByRole("button", { name: "Save Draft" }),
@@ -157,7 +157,7 @@ test.describe("New Post", () => {
   test("Publish Now button is disabled when textarea is empty", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(
       page.getByRole("button", { name: "Publish Now" }),
@@ -165,7 +165,7 @@ test.describe("New Post", () => {
   });
 
   test("shows no platforms message when none connected", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(page.getByText("No platforms connected.")).toBeVisible({
       timeout: 15000,
@@ -178,20 +178,20 @@ test.describe("New Post", () => {
   test("Connect a platform link navigates to connections", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(
       page.getByRole("link", { name: "Connect a platform" }),
     ).toBeVisible({ timeout: 15000 });
 
     await page.getByRole("link", { name: "Connect a platform" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/connections/);
+    await expect(page).toHaveURL(/\/connections/);
   });
 
   test("schedule toggle shows datetime picker when enabled", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     // Initially no datetime input
     await expect(page.locator('input[type="datetime-local"]')).toBeHidden();
@@ -208,7 +208,7 @@ test.describe("New Post", () => {
   test("schedule toggle replaces Publish Now with Schedule button", async ({
     page,
   }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(
       page.getByRole("button", { name: "Publish Now" }),
@@ -225,7 +225,7 @@ test.describe("New Post", () => {
   });
 
   test("Content Ideas panel toggles open and closed", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     // Get Ideas button is always visible
     await expect(
@@ -237,7 +237,7 @@ test.describe("New Post", () => {
   });
 
   test("image upload zone is visible with drop area", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     await expect(page.getByText("Images", { exact: true })).toBeVisible();
     await expect(page.getByText("0/4")).toBeVisible();
@@ -248,7 +248,7 @@ test.describe("New Post", () => {
   });
 
   test("image upload zone has a hidden file input", async ({ page }) => {
-    await page.goto("/dashboard/content/new");
+    await page.goto("/x/content/new");
 
     const input = page.getByLabel("Upload images");
     await expect(input).toBeAttached();

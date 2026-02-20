@@ -585,7 +585,7 @@ function PlatformsSection() {
 
       <div className="pt-2">
         <Link
-          href="/dashboard/connections"
+          href="/connections"
           className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-foreground transition-colors"
         >
           Manage all connections &rarr;
@@ -1085,7 +1085,7 @@ function AboutSection() {
 
       <SettingRow
         label="Help & Support"
-        description="Get help with Creator Growth OS"
+        description="Get help with AiGrow"
       >
         <span className="text-xs text-muted-foreground/40">
           support@creatorgrowthos.com
@@ -1099,7 +1099,7 @@ function AboutSection() {
           Built for creators who want to grow intentionally.
         </p>
         <p className="mt-1 text-xs text-muted-foreground/25">
-          &copy; {new Date().getFullYear()} Creator Growth OS
+          &copy; {new Date().getFullYear()} AiGrow
         </p>
       </div>
     </SectionBlock>
