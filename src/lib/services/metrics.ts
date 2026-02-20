@@ -327,6 +327,94 @@ export async function getTopPosts(
   return data ?? [];
 }
 
+// Age-based fetch intervals: newer posts get more frequent fetches
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+export function getMetricsFetchInterval(publishedAt: Date): number | null {
+  const ageMs = Date.now() - publishedAt.getTime();
+
+  if (ageMs < 8 * HOUR) return 15 * 60 * 1000;  // < 8h: every 15 min
+  if (ageMs < DAY) return 2 * HOUR;              // 8h-24h: every 2h
+  if (ageMs < 3 * DAY) return 6 * HOUR;          // 1-3d: every 6h
+  if (ageMs < 7 * DAY) return 12 * HOUR;         // 3-7d: every 12h
+  if (ageMs < 30 * DAY) return DAY;              // 7-30d: every 24h
+  return null;                                    // > 30d: stop
+}
+
+export interface PublicationDueForMetrics {
+  id: string;
+  platform: string;
+  platformPostId: string;
+  publishedAt: string;
+  userId: string;
+  postId: string;
+}
+
+export async function getPublicationsDueForMetrics(): Promise<PublicationDueForMetrics[]> {
+  const supabase = createAdminClient();
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * DAY).toISOString();
+
+  // Get all published publications within 30 days
+  const { data: publications, error: pubError } = await supabase
+    .from("post_publications")
+    .select("id, platform, platform_post_id, published_at, posts!inner(id, user_id)")
+    .eq("status", "published")
+    .gte("published_at", thirtyDaysAgo)
+    .not("platform_post_id", "is", null);
+
+  if (pubError) throw new Error(pubError.message);
+  if (!publications || publications.length === 0) return [];
+
+  const pubIds = publications.map((p) => p.id);
+
+  // Get the latest metric_event observed_at per publication
+  const { data: metricEvents, error: meError } = await supabase
+    .from("metric_events")
+    .select("post_publication_id, observed_at")
+    .in("post_publication_id", pubIds)
+    .order("observed_at", { ascending: false });
+
+  if (meError) throw new Error(meError.message);
+
+  // Deduplicate: latest observed_at per publication
+  const lastObserved = new Map<string, string>();
+  for (const event of metricEvents ?? []) {
+    if (!lastObserved.has(event.post_publication_id)) {
+      lastObserved.set(event.post_publication_id, event.observed_at);
+    }
+  }
+
+  // Filter to publications that are due for a fetch
+  const now = Date.now();
+  const due: PublicationDueForMetrics[] = [];
+
+  for (const pub of publications) {
+    const publishedAt = new Date(pub.published_at!);
+    const interval = getMetricsFetchInterval(publishedAt);
+    if (interval === null) continue; // too old
+
+    const lastObs = lastObserved.get(pub.id);
+    if (lastObs) {
+      const elapsed = now - new Date(lastObs).getTime();
+      if (elapsed < interval) continue; // fetched recently
+    }
+
+    const post = pub.posts as unknown as { id: string; user_id: string };
+    due.push({
+      id: pub.id,
+      platform: pub.platform,
+      platformPostId: pub.platform_post_id!,
+      publishedAt: pub.published_at!,
+      userId: post.user_id,
+      postId: post.id,
+    });
+  }
+
+  return due;
+}
+
 export async function getPostsNeedingMetricUpdates() {
   const supabase = createAdminClient();
 

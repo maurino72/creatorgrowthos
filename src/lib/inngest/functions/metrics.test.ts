@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/services/metrics", () => ({
   insertMetricEvent: vi.fn(),
+  getPublicationsDueForMetrics: vi.fn(),
 }));
 
 vi.mock("@/lib/services/connections", () => ({
@@ -16,11 +17,14 @@ vi.mock("@/lib/utils/encryption", () => ({
   decrypt: vi.fn((val: string) => val.replace("encrypted:", "")),
 }));
 
-import { startMetricsCollection, fetchMetrics } from "./metrics";
-import { insertMetricEvent } from "@/lib/services/metrics";
+import {
+  startMetricsCollection,
+  fetchMetrics,
+  collectMetrics,
+} from "./metrics";
+import { insertMetricEvent, getPublicationsDueForMetrics } from "@/lib/services/metrics";
 import { getConnectionByPlatform } from "@/lib/services/connections";
 import { getAdapterForPlatform } from "@/lib/adapters";
-import { decrypt } from "@/lib/utils/encryption";
 
 function createMockStep() {
   return {
@@ -40,7 +44,7 @@ describe("start-metrics-collection", () => {
     expect(startMetricsCollection).toBeDefined();
   });
 
-  it("sends metrics fetch events for the full schedule after publish", async () => {
+  it("sends a single immediate metrics/fetch.requested event on publish", async () => {
     const step = createMockStep();
     const event = {
       name: "post/published" as const,
@@ -55,45 +59,102 @@ describe("start-metrics-collection", () => {
     const handler = startMetricsCollection["fn"];
     await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
 
-    // Should send batch of metrics/fetch.requested events for the full schedule
     expect(step.sendEvent).toHaveBeenCalledWith(
-      "schedule-metrics-fetches",
-      expect.arrayContaining([
-        expect.objectContaining({
+      "immediate-metrics-fetch",
+      {
+        name: "metrics/fetch.requested",
+        data: {
+          publicationId: "pub-1",
+          userId: "user-1",
+          platform: "twitter",
+          attempt: 1,
+        },
+      },
+    );
+
+    // Should send exactly 1 event, not 11
+    expect(step.sendEvent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("collect-metrics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("is defined as an Inngest function", () => {
+    expect(collectMetrics).toBeDefined();
+  });
+
+  it("queries publications due for metrics and sends fetch events", async () => {
+    const step = createMockStep();
+
+    const duePublications = [
+      {
+        id: "pub-1",
+        platform: "twitter",
+        platformPostId: "tw-123",
+        publishedAt: "2025-06-01T12:00:00Z",
+        userId: "user-1",
+        postId: "post-1",
+      },
+      {
+        id: "pub-2",
+        platform: "linkedin",
+        platformPostId: "li-456",
+        publishedAt: "2025-06-02T10:00:00Z",
+        userId: "user-1",
+        postId: "post-2",
+      },
+    ];
+
+    step.run.mockImplementation((id: string, fn: () => unknown) => {
+      if (id === "get-due-publications") return duePublications;
+      return fn();
+    });
+
+    const handler = collectMetrics["fn"];
+    await handler({ step } as unknown as Parameters<typeof handler>[0]);
+
+    expect(step.run).toHaveBeenCalledWith("get-due-publications", expect.any(Function));
+
+    expect(step.sendEvent).toHaveBeenCalledWith(
+      "dispatch-metrics-fetches",
+      [
+        {
           name: "metrics/fetch.requested",
-          data: expect.objectContaining({
+          data: {
             publicationId: "pub-1",
             userId: "user-1",
             platform: "twitter",
-          }),
-        }),
-      ]),
+            attempt: 0,
+          },
+        },
+        {
+          name: "metrics/fetch.requested",
+          data: {
+            publicationId: "pub-2",
+            userId: "user-1",
+            platform: "linkedin",
+            attempt: 0,
+          },
+        },
+      ],
     );
-
-    // Should include events for all scheduled times (11 total: T+0 through T+30d)
-    const sentEvents = step.sendEvent.mock.calls[0][1];
-    expect(sentEvents).toHaveLength(11);
   });
 
-  it("includes attempt number in each scheduled event", async () => {
+  it("does not send events when no publications are due", async () => {
     const step = createMockStep();
-    const event = {
-      name: "post/published" as const,
-      data: {
-        postId: "post-1",
-        userId: "user-1",
-        publicationId: "pub-1",
-        platform: "twitter",
-      },
-    };
 
-    const handler = startMetricsCollection["fn"];
-    await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
-
-    const sentEvents = step.sendEvent.mock.calls[0][1];
-    sentEvents.forEach((evt: { data: { attempt: number } }, i: number) => {
-      expect(evt.data.attempt).toBe(i + 1);
+    step.run.mockImplementation((id: string, fn: () => unknown) => {
+      if (id === "get-due-publications") return [];
+      return fn();
     });
+
+    const handler = collectMetrics["fn"];
+    await handler({ step } as unknown as Parameters<typeof handler>[0]);
+
+    expect(step.sendEvent).not.toHaveBeenCalled();
   });
 });
 
@@ -142,9 +203,7 @@ describe("fetch-metrics", () => {
     vi.mocked(getAdapterForPlatform).mockReturnValue(mockAdapter as unknown as ReturnType<typeof getAdapterForPlatform>);
 
     // Mock step.run to return publication data on first call
-    let callIndex = 0;
     step.run.mockImplementation((id: string, fn: () => unknown) => {
-      callIndex++;
       if (id === "get-publication") {
         return {
           platform_post_id: "tw-post-123",
@@ -158,16 +217,10 @@ describe("fetch-metrics", () => {
     const handler = fetchMetrics["fn"];
     await handler({ event, step } as unknown as Parameters<typeof handler>[0]);
 
-    // Should fetch publication data
     expect(step.run).toHaveBeenCalledWith("get-publication", expect.any(Function));
-
-    // Should fetch metrics
     expect(step.run).toHaveBeenCalledWith("fetch-platform-metrics", expect.any(Function));
-
-    // Should insert metric event
     expect(step.run).toHaveBeenCalledWith("insert-metric-event", expect.any(Function));
 
-    // Should send completion event
     expect(step.sendEvent).toHaveBeenCalledWith(
       "send-completion",
       expect.objectContaining({

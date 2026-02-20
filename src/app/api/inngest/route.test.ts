@@ -14,14 +14,15 @@ describe("/api/inngest route", () => {
     expect(typeof route.PUT).toBe("function");
   });
 
-  it("registers all 10 Inngest functions", async () => {
+  it("registers all 11 Inngest functions", async () => {
     const functions = await import("@/lib/inngest/functions");
     const exports = Object.keys(functions);
-    expect(exports).toHaveLength(10);
+    expect(exports).toHaveLength(11);
     expect(exports).toEqual(
       expect.arrayContaining([
         "publishScheduledPost",
         "startMetricsCollection",
+        "collectMetrics",
         "fetchMetrics",
         "classifyPostFn",
         "classifyImportedPosts",

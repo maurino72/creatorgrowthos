@@ -3,6 +3,7 @@ import { inngest } from "@/lib/inngest/client";
 import {
   publishScheduledPost,
   startMetricsCollection,
+  collectMetrics,
   fetchMetrics,
   classifyPostFn,
   classifyImportedPosts,
@@ -18,6 +19,7 @@ export const { GET, POST, PUT } = serve({
   functions: [
     publishScheduledPost,
     startMetricsCollection,
+    collectMetrics,
     fetchMetrics,
     classifyPostFn,
     classifyImportedPosts,

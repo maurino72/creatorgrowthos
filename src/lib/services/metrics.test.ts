@@ -14,6 +14,8 @@ import {
   getMetricsTimeSeries,
   getTopPosts,
   getPostsNeedingMetricUpdates,
+  getPublicationsDueForMetrics,
+  getMetricsFetchInterval,
 } from "./metrics";
 
 const TEST_USER_ID = "user-123";
@@ -497,6 +499,128 @@ describe("metrics service", () => {
       await expect(getTopPosts(TEST_USER_ID, 7, 5)).rejects.toThrow(
         "Query failed",
       );
+    });
+  });
+
+  describe("getMetricsFetchInterval", () => {
+    it("returns 15 min for posts < 8h old", () => {
+      const publishedAt = new Date(Date.now() - 4 * 60 * 60 * 1000); // 4h ago
+      expect(getMetricsFetchInterval(publishedAt)).toBe(15 * 60 * 1000);
+    });
+
+    it("returns 2h for posts 8-24h old", () => {
+      const publishedAt = new Date(Date.now() - 12 * 60 * 60 * 1000); // 12h ago
+      expect(getMetricsFetchInterval(publishedAt)).toBe(2 * 60 * 60 * 1000);
+    });
+
+    it("returns 6h for posts 1-3d old", () => {
+      const publishedAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2d ago
+      expect(getMetricsFetchInterval(publishedAt)).toBe(6 * 60 * 60 * 1000);
+    });
+
+    it("returns 12h for posts 3-7d old", () => {
+      const publishedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000); // 5d ago
+      expect(getMetricsFetchInterval(publishedAt)).toBe(12 * 60 * 60 * 1000);
+    });
+
+    it("returns 24h for posts 7-30d old", () => {
+      const publishedAt = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000); // 14d ago
+      expect(getMetricsFetchInterval(publishedAt)).toBe(24 * 60 * 60 * 1000);
+    });
+
+    it("returns null for posts > 30d old", () => {
+      const publishedAt = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000); // 35d ago
+      expect(getMetricsFetchInterval(publishedAt)).toBeNull();
+    });
+  });
+
+  describe("getPublicationsDueForMetrics", () => {
+    it("returns publications that have never been fetched", async () => {
+      const { from, chain } = mockSupabase();
+      const pubData = [
+        {
+          id: "pub-1",
+          platform: "twitter",
+          platform_post_id: "tw-123",
+          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          posts: { id: "post-1", user_id: "user-1" },
+        },
+      ];
+      // First query: publications
+      chain.not.mockResolvedValueOnce({ data: pubData, error: null });
+      // Second query: metric_events (empty — never fetched)
+      chain.order.mockResolvedValueOnce({ data: [], error: null });
+
+      const result = await getPublicationsDueForMetrics();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("pub-1");
+    });
+
+    it("skips publications fetched recently within their interval", async () => {
+      const { chain } = mockSupabase();
+      const pubData = [
+        {
+          id: "pub-1",
+          platform: "twitter",
+          platform_post_id: "tw-123",
+          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago → 15min interval
+          posts: { id: "post-1", user_id: "user-1" },
+        },
+      ];
+      const metricData = [
+        {
+          post_publication_id: "pub-1",
+          observed_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5min ago
+        },
+      ];
+      chain.not.mockResolvedValueOnce({ data: pubData, error: null });
+      chain.order.mockResolvedValueOnce({ data: metricData, error: null });
+
+      const result = await getPublicationsDueForMetrics();
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("includes publications where enough time has passed since last fetch", async () => {
+      const { chain } = mockSupabase();
+      const pubData = [
+        {
+          id: "pub-1",
+          platform: "twitter",
+          platform_post_id: "tw-123",
+          published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago → 15min interval
+          posts: { id: "post-1", user_id: "user-1" },
+        },
+      ];
+      const metricData = [
+        {
+          post_publication_id: "pub-1",
+          observed_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(), // 20min ago > 15min interval
+        },
+      ];
+      chain.not.mockResolvedValueOnce({ data: pubData, error: null });
+      chain.order.mockResolvedValueOnce({ data: metricData, error: null });
+
+      const result = await getPublicationsDueForMetrics();
+
+      expect(result).toHaveLength(1);
+    });
+
+    it("returns empty when no published publications exist", async () => {
+      const { chain } = mockSupabase();
+      chain.not.mockResolvedValueOnce({ data: [], error: null });
+
+      const result = await getPublicationsDueForMetrics();
+
+      expect(result).toEqual([]);
+    });
+
+    it("throws on query error", async () => {
+      const { chain } = mockSupabase();
+      chain.not.mockResolvedValueOnce({ data: null, error: { message: "DB error" } });
+
+      await expect(getPublicationsDueForMetrics()).rejects.toThrow("DB error");
     });
   });
 

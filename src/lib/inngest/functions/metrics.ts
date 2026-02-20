@@ -1,50 +1,62 @@
 import { inngest } from "../client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { insertMetricEvent } from "@/lib/services/metrics";
+import { insertMetricEvent, getPublicationsDueForMetrics } from "@/lib/services/metrics";
 import { getConnectionByPlatform } from "@/lib/services/connections";
 import { getAdapterForPlatform } from "@/lib/adapters";
 import { decrypt } from "@/lib/utils/encryption";
 import type { PlatformType } from "@/lib/adapters/types";
 
-// Metrics collection schedule (milliseconds after publish)
-const METRICS_SCHEDULE_MS = [
-  0,                        // T+0: immediate
-  1 * 60 * 60 * 1000,      // T+1h
-  2 * 60 * 60 * 1000,      // T+2h
-  4 * 60 * 60 * 1000,      // T+4h
-  8 * 60 * 60 * 1000,      // T+8h
-  24 * 60 * 60 * 1000,     // T+24h
-  48 * 60 * 60 * 1000,     // T+48h
-  72 * 60 * 60 * 1000,     // T+72h
-  7 * 24 * 60 * 60 * 1000, // T+7d
-  14 * 24 * 60 * 60 * 1000, // T+14d
-  30 * 24 * 60 * 60 * 1000, // T+30d
-];
-
+// On publish: send a single immediate fetch
 export const startMetricsCollection = inngest.createFunction(
   { id: "start-metrics-collection" },
   { event: "post/published" },
   async ({ event, step }) => {
     const { publicationId, userId, platform } = event.data;
-    const now = Date.now();
 
-    const events = METRICS_SCHEDULE_MS.map((delayMs, index) => ({
+    await step.sendEvent("immediate-metrics-fetch", {
       name: "metrics/fetch.requested" as const,
       data: {
         publicationId,
         userId,
         platform,
-        attempt: index + 1,
+        attempt: 1,
       },
-      ts: now + delayMs,
-    }));
+    });
 
-    await step.sendEvent("schedule-metrics-fetches", events);
-
-    return { scheduled: events.length };
+    return { scheduled: 1 };
   },
 );
 
+// Cron: every 15 min, find publications due for a fetch and dispatch events
+export const collectMetrics = inngest.createFunction(
+  { id: "collect-metrics" },
+  { cron: "*/15 * * * *" },
+  async ({ step }) => {
+    const due = await step.run("get-due-publications", async () => {
+      return getPublicationsDueForMetrics();
+    });
+
+    if (due.length === 0) {
+      return { fetched: 0 };
+    }
+
+    const events = due.map((pub) => ({
+      name: "metrics/fetch.requested" as const,
+      data: {
+        publicationId: pub.id,
+        userId: pub.userId,
+        platform: pub.platform,
+        attempt: 0,
+      },
+    }));
+
+    await step.sendEvent("dispatch-metrics-fetches", events);
+
+    return { fetched: due.length };
+  },
+);
+
+// Individual fetch: called per publication, with retries and concurrency control
 export const fetchMetrics = inngest.createFunction(
   {
     id: "fetch-metrics",
