@@ -357,14 +357,14 @@ describe("TwitterAdapter", () => {
   });
 
   describe("uploadMedia", () => {
-    it("uploads media via INIT, APPEND, FINALIZE and returns media_id", async () => {
+    it("uploads media via v2 INIT, APPEND, FINALIZE and returns media_id", async () => {
       const imageBuffer = Buffer.from("fake-image-data");
       const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-      // INIT response
+      // INIT response (v2 format)
       fetchSpy.mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ media_id_string: "media-123" }),
+          JSON.stringify({ id: "media-123" }),
           { status: 200 },
         ),
       );
@@ -374,10 +374,10 @@ describe("TwitterAdapter", () => {
         new Response(null, { status: 204 }),
       );
 
-      // FINALIZE response
+      // FINALIZE response (v2 format)
       fetchSpy.mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ media_id_string: "media-123" }),
+          JSON.stringify({ id: "media-123" }),
           { status: 200 },
         ),
       );
@@ -387,13 +387,13 @@ describe("TwitterAdapter", () => {
       expect(mediaId).toBe("media-123");
       expect(fetchSpy).toHaveBeenCalledTimes(3);
 
-      // INIT call
+      // INIT call uses v2 URL
       const initCall = fetchSpy.mock.calls[0];
-      expect(initCall[0]).toContain("upload.twitter.com");
-      const initBody = initCall[1]?.body as URLSearchParams;
-      expect(initBody.get("command")).toBe("INIT");
-      expect(initBody.get("media_type")).toBe("image/jpeg");
-      expect(initBody.get("total_bytes")).toBe(String(imageBuffer.length));
+      expect(initCall[0]).toContain("api.x.com/2/media/upload");
+      const initBody = JSON.parse(initCall[1]?.body as string);
+      expect(initBody.media_type).toBe("image/jpeg");
+      expect(initBody.total_bytes).toBe(imageBuffer.length);
+      expect(initBody.media_category).toBe("tweet_image");
     });
 
     it("throws on INIT failure", async () => {
@@ -410,7 +410,7 @@ describe("TwitterAdapter", () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch");
 
       fetchSpy.mockResolvedValueOnce(
-        new Response(JSON.stringify({ media_id_string: "media-123" }), { status: 200 }),
+        new Response(JSON.stringify({ id: "media-123" }), { status: 200 }),
       );
       fetchSpy.mockResolvedValueOnce(
         new Response(JSON.stringify({ error: "Upload error" }), { status: 400 }),
@@ -425,7 +425,7 @@ describe("TwitterAdapter", () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch");
 
       fetchSpy.mockResolvedValueOnce(
-        new Response(JSON.stringify({ media_id_string: "media-123" }), { status: 200 }),
+        new Response(JSON.stringify({ id: "media-123" }), { status: 200 }),
       );
       fetchSpy.mockResolvedValueOnce(
         new Response(null, { status: 204 }),
@@ -562,6 +562,145 @@ describe("TwitterAdapter", () => {
     });
   });
 
+  describe("getAuthUrl scopes", () => {
+    it("includes media.write scope", () => {
+      const result = adapter.getAuthUrl("state", "http://localhost/callback");
+      const url = new URL(result.url);
+      const scopes = url.searchParams.get("scope")!;
+      expect(scopes).toContain("media.write");
+    });
+  });
+
+  describe("uploadVideo", () => {
+    it("uploads video in 5MB chunks with async processing", async () => {
+      // Create a 6MB buffer (will need 2 chunks)
+      const videoBuffer = Buffer.alloc(6 * 1024 * 1024);
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // INIT
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "video-media-123" }), { status: 200 }),
+      );
+
+      // APPEND chunk 0
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      // APPEND chunk 1
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      // FINALIZE — returns processing_info
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "video-media-123",
+            processing_info: { state: "pending", check_after_secs: 1 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      // STATUS check — in_progress
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "video-media-123",
+            processing_info: { state: "in_progress", check_after_secs: 1, progress_percent: 50 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      // STATUS check — succeeded
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "video-media-123",
+            processing_info: { state: "succeeded" },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const mediaId = await adapter.uploadVideo("token", videoBuffer, "video/mp4");
+      expect(mediaId).toBe("video-media-123");
+
+      // INIT call uses v2 URL
+      const initUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(initUrl).toContain("api.x.com/2/media/upload");
+
+      // Verify 2 APPEND calls
+      expect(fetchSpy).toHaveBeenCalledTimes(6); // INIT + 2 APPEND + FINALIZE + 2 STATUS
+    });
+
+    it("throws when processing fails", async () => {
+      const videoBuffer = Buffer.alloc(1024);
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // INIT
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "video-fail-123" }), { status: 200 }),
+      );
+
+      // APPEND
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      // FINALIZE
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "video-fail-123",
+            processing_info: { state: "pending", check_after_secs: 1 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      // STATUS — failed
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "video-fail-123",
+            processing_info: { state: "failed", error: { message: "Invalid video" } },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      await expect(
+        adapter.uploadVideo("token", videoBuffer, "video/mp4"),
+      ).rejects.toThrow("Media processing failed");
+    });
+  });
+
+  describe("uploadGif", () => {
+    it("uploads GIF with tweet_gif category", async () => {
+      const gifBuffer = Buffer.alloc(1024);
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+      // INIT
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "gif-media-123" }), { status: 200 }),
+      );
+
+      // APPEND
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      // FINALIZE
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "gif-media-123" }), { status: 200 }),
+      );
+
+      const mediaId = await adapter.uploadGif("token", gifBuffer);
+      expect(mediaId).toBe("gif-media-123");
+
+      // INIT call should use tweet_gif category
+      const initUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(initUrl).toContain("api.x.com/2/media/upload");
+      const initBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(initBody.media_category).toBe("tweet_gif");
+    });
+  });
+
   describe("publishPost with media", () => {
     it("includes media.media_ids when mediaIds provided", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -592,6 +731,205 @@ describe("TwitterAdapter", () => {
 
       const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
       expect(body.media).toBeUndefined();
+    });
+
+    it("includes poll when provided", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-poll", text: "Vote!" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Vote!",
+        poll: { options: ["Yes", "No"], durationMinutes: 60 },
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.poll).toEqual({
+        options: ["Yes", "No"],
+        duration_minutes: 60,
+      });
+    });
+
+    it("includes reply_settings when provided", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-rs", text: "Limited" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Limited replies",
+        replySettings: "mentioned_users",
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.reply_settings).toBe("mentioned_users");
+    });
+
+    it("includes quote_tweet_id when provided", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-qt", text: "Quote" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Great take!",
+        quoteTweetId: "original-tweet-123",
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.quote_tweet_id).toBe("original-tweet-123");
+    });
+
+    it("includes geo.place_id when placeId provided", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-geo", text: "At place" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Tweeting from here",
+        placeId: "place-abc",
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.geo).toEqual({ place_id: "place-abc" });
+    });
+
+    it("includes community_id when communityId provided", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-comm", text: "Community" } }),
+          { status: 201 },
+        ),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Community post",
+        communityId: "comm-123",
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.community_id).toBe("comm-123");
+    });
+  });
+
+  describe("repost", () => {
+    it("sends POST to retweets endpoint", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: { retweeted: true } }), { status: 200 }),
+      );
+
+      await adapter.repost("token", "user-123", "tweet-456");
+
+      const [url, options] = fetchSpy.mock.calls[0];
+      expect(url).toBe("https://api.x.com/2/users/user-123/retweets");
+      expect(options?.method).toBe("POST");
+      const body = JSON.parse(options?.body as string);
+      expect(body.tweet_id).toBe("tweet-456");
+    });
+
+    it("throws on error response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Forbidden" }), { status: 403 }),
+      );
+
+      await expect(
+        adapter.repost("token", "user-123", "tweet-456"),
+      ).rejects.toThrow("Repost failed");
+    });
+  });
+
+  describe("unrepost", () => {
+    it("sends DELETE to retweets endpoint", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: { retweeted: false } }), { status: 200 }),
+      );
+
+      await adapter.unrepost("token", "user-123", "tweet-456");
+
+      const [url, options] = fetchSpy.mock.calls[0];
+      expect(url).toBe("https://api.x.com/2/users/user-123/retweets/tweet-456");
+      expect(options?.method).toBe("DELETE");
+    });
+
+    it("throws on error response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Not Found" }), { status: 404 }),
+      );
+
+      await expect(
+        adapter.unrepost("token", "user-123", "tweet-456"),
+      ).rejects.toThrow("Unrepost failed");
+    });
+  });
+
+  describe("editPost", () => {
+    it("sends PUT to tweets endpoint with previous_tweet_id", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { id: "tweet-edit", text: "Updated text" } }),
+          { status: 200 },
+        ),
+      );
+
+      await adapter.editPost("token", "tweet-original", {
+        text: "Updated text",
+      });
+
+      const [url, options] = fetchSpy.mock.calls[0];
+      expect(url).toBe("https://api.x.com/2/tweets");
+      expect(options?.method).toBe("POST");
+      const body = JSON.parse(options?.body as string);
+      expect(body.text).toBe("Updated text");
+      expect(body.edit_options).toEqual({
+        previous_tweet_id: "tweet-original",
+      });
+    });
+
+    it("throws on error response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Not editable" }), { status: 403 }),
+      );
+
+      await expect(
+        adapter.editPost("token", "tweet-123", { text: "Updated" }),
+      ).rejects.toThrow("Edit failed");
+    });
+  });
+
+  describe("setMediaAltText", () => {
+    it("sends POST to media metadata endpoint", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(null, { status: 200 }),
+      );
+
+      await adapter.setMediaAltText("token", "media-123", "A beautiful sunset");
+
+      const [url, options] = fetchSpy.mock.calls[0];
+      expect(url).toBe("https://api.x.com/2/media/metadata");
+      expect(options?.method).toBe("POST");
+      const body = JSON.parse(options?.body as string);
+      expect(body.media_id).toBe("media-123");
+      expect(body.alt_text).toBe("A beautiful sunset");
+    });
+
+    it("throws on error response", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Bad request" }), { status: 400 }),
+      );
+
+      await expect(
+        adapter.setMediaAltText("token", "media-123", "Alt text"),
+      ).rejects.toThrow("Set alt text failed");
     });
   });
 });

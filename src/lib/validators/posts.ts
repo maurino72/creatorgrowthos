@@ -4,6 +4,8 @@ import { getCharLimitForPlatforms } from "@/lib/adapters/platform-config";
 import { mediaUrlsSchema } from "./media";
 import { mentionsArraySchema } from "./mentions";
 import { tagsArraySchema } from "./tags";
+import { pollSchema } from "./polls";
+import { replySettingsSchema } from "./reply-settings";
 
 const platformTypes: [PlatformType, ...PlatformType[]] = [
   "twitter",
@@ -27,6 +29,11 @@ export const createPostSchema = z.object({
   media_urls: mediaUrlsSchema.optional(),
   tags: tagsArraySchema.optional(),
   mentions: mentionsArraySchema.optional(),
+  poll: pollSchema.optional(),
+  quote_tweet_id: z.string().min(1).optional(),
+  reply_settings: replySettingsSchema.optional(),
+  place_id: z.string().min(1).optional(),
+  community_id: z.string().min(1).optional(),
 });
 
 export const updatePostSchema = z.object({
@@ -36,6 +43,11 @@ export const updatePostSchema = z.object({
   media_urls: mediaUrlsSchema.nullable().optional(),
   tags: tagsArraySchema.nullable().optional(),
   mentions: mentionsArraySchema.nullable().optional(),
+  poll: pollSchema.nullable().optional(),
+  quote_tweet_id: z.string().min(1).nullable().optional(),
+  reply_settings: replySettingsSchema.nullable().optional(),
+  place_id: z.string().min(1).nullable().optional(),
+  community_id: z.string().min(1).nullable().optional(),
 });
 
 export function validateBodyForPlatforms(

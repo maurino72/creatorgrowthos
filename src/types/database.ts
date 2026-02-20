@@ -280,6 +280,16 @@ export type Database = {
           topics: string[] | null
           updated_at: string | null
           user_id: string
+          quote_tweet_id: string | null
+          reply_settings: string | null
+          place_id: string | null
+          community_id: string | null
+          is_thread: boolean
+          thread_id: string | null
+          thread_position: number | null
+          edit_count: number
+          first_published_at: string | null
+          editable_until: string | null
         }
         Insert: {
           ai_assisted?: boolean | null
@@ -299,6 +309,16 @@ export type Database = {
           topics?: string[] | null
           updated_at?: string | null
           user_id: string
+          quote_tweet_id?: string | null
+          reply_settings?: string | null
+          place_id?: string | null
+          community_id?: string | null
+          is_thread?: boolean
+          thread_id?: string | null
+          thread_position?: number | null
+          edit_count?: number
+          first_published_at?: string | null
+          editable_until?: string | null
         }
         Update: {
           ai_assisted?: boolean | null
@@ -318,6 +338,16 @@ export type Database = {
           topics?: string[] | null
           updated_at?: string | null
           user_id?: string
+          quote_tweet_id?: string | null
+          reply_settings?: string | null
+          place_id?: string | null
+          community_id?: string | null
+          is_thread?: boolean
+          thread_id?: string | null
+          thread_position?: number | null
+          edit_count?: number
+          first_published_at?: string | null
+          editable_until?: string | null
         }
         Relationships: [
           {
@@ -325,6 +355,112 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      threads: {
+        Row: {
+          id: string
+          user_id: string
+          title: string | null
+          status: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title?: string | null
+          status?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string | null
+          status?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          id: string
+          post_id: string
+          options: Json
+          duration_minutes: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          options: Json
+          duration_minutes: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          options?: Json
+          duration_minutes?: number
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_alt_texts: {
+        Row: {
+          id: string
+          post_id: string
+          media_url: string
+          alt_text: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          media_url: string
+          alt_text: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          media_url?: string
+          alt_text?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_alt_texts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]

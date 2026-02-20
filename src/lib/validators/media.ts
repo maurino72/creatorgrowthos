@@ -1,16 +1,28 @@
 import { z } from "zod";
 
-export const ALLOWED_MIME_TYPES = [
+export const IMAGE_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
 ] as const;
 
+export const VIDEO_MIME_TYPES = ["video/mp4"] as const;
+
+export const GIF_MIME_TYPES = ["image/gif"] as const;
+
+export const ALLOWED_MIME_TYPES = [
+  ...IMAGE_MIME_TYPES,
+  ...VIDEO_MIME_TYPES,
+] as const;
+
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB (images)
+export const MAX_VIDEO_SIZE = 512 * 1024 * 1024; // 512MB
+export const MAX_GIF_SIZE = 15 * 1024 * 1024; // 15MB
 export const MAX_IMAGES_PER_POST = 4;
+export const MAX_ALT_TEXT_LENGTH = 1000;
 export const MIN_IMAGE_DIMENSION = 100;
 export const MAX_IMAGE_DIMENSION = 8192;
 
@@ -119,3 +131,39 @@ export function validateFileHeader(bytes: Uint8Array): HeaderValidationResult {
 }
 
 export const mediaUrlsSchema = z.array(z.string().min(1)).max(MAX_IMAGES_PER_POST);
+
+export const altTextSchema = z.string().min(1).max(MAX_ALT_TEXT_LENGTH);
+
+export type MediaCategory = "tweet_image" | "tweet_video" | "tweet_gif";
+
+export function getMediaCategory(mimeType: string): MediaCategory {
+  if ((VIDEO_MIME_TYPES as readonly string[]).includes(mimeType)) {
+    return "tweet_video";
+  }
+  // Animated GIF detection: GIF mime type can be either static or animated,
+  // but for Twitter API purposes we categorize all GIFs as tweet_gif
+  if (mimeType === "image/gif") {
+    return "tweet_gif";
+  }
+  return "tweet_image";
+}
+
+export function validateVideoSize(size: number): ValidationResult {
+  if (size === 0) {
+    return { valid: false, error: "File is empty" };
+  }
+  if (size > MAX_VIDEO_SIZE) {
+    return { valid: false, error: "Video must be under 512MB" };
+  }
+  return { valid: true };
+}
+
+export function validateGifSize(size: number): ValidationResult {
+  if (size === 0) {
+    return { valid: false, error: "File is empty" };
+  }
+  if (size > MAX_GIF_SIZE) {
+    return { valid: false, error: "GIF must be under 15MB" };
+  }
+  return { valid: true };
+}

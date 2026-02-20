@@ -4,6 +4,7 @@ export const appUrl = {
   dashboard: (slug: PlatformSlug) => `/${slug}/dashboard`,
   content: (slug: PlatformSlug) => `/${slug}/content`,
   contentNew: (slug: PlatformSlug) => `/${slug}/content/new`,
+  contentNewThread: (slug: PlatformSlug) => `/${slug}/content/new/thread`,
   contentEdit: (slug: PlatformSlug, id: string) =>
     `/${slug}/content/${id}/edit`,
   insights: (slug: PlatformSlug) => `/${slug}/insights`,

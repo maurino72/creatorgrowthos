@@ -14,12 +14,23 @@ export interface PlatformUserInfo {
   avatarUrl?: string;
 }
 
+export interface PollPayload {
+  options: string[];
+  durationMinutes: number;
+}
+
 export interface PostPayload {
   text: string;
   mediaUrls?: string[];
   mediaIds?: string[];
   replyToId?: string;
   authorId?: string;
+  poll?: PollPayload;
+  quoteTweetId?: string;
+  replySettings?: "everyone" | "mentioned_users" | "following" | "subscribers" | "verified_users";
+  placeId?: string;
+  communityId?: string;
+  mediaAltTexts?: Record<string, string>;
 }
 
 export interface UploadMediaOptions {
@@ -62,6 +73,18 @@ export interface PlatformAdapter {
     payload: PostPayload,
   ): Promise<PlatformPostResult>;
   uploadMedia(
+    accessToken: string,
+    buffer: Buffer,
+    mimeType: string,
+    options?: UploadMediaOptions,
+  ): Promise<string>;
+  uploadVideo?(
+    accessToken: string,
+    buffer: Buffer,
+    mimeType: string,
+    options?: UploadMediaOptions,
+  ): Promise<string>;
+  uploadGif?(
     accessToken: string,
     buffer: Buffer,
     mimeType: string,

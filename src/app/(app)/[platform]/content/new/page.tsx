@@ -11,13 +11,20 @@ import { useGenerateIdeas, useSuggestHashtags, useSuggestMentions } from "@/lib/
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
 import { getCharLimitForPlatforms } from "@/lib/adapters/platform-config";
+import { PLATFORM_CAPABILITIES } from "@/lib/adapters/capabilities";
+import { countTweetLength, T_CO_LENGTH } from "@/lib/utils/twitter-char-count";
 import {
   ImageUploadZone,
   type ImageItem,
 } from "@/components/image-upload-zone";
 import { MentionInput } from "@/components/mention-input";
 import { TagInput } from "@/components/tag-input";
+import { PollBuilder } from "@/components/poll-builder";
+import { ReplySettingsSelect } from "@/components/reply-settings-select";
+import { QuoteTweetInput } from "@/components/quote-tweet-input";
+import { AltTextDialog } from "@/components/alt-text-dialog";
 import { Button } from "@/components/ui/button";
+import type { ReplySettings } from "@/lib/validators/reply-settings";
 
 function getCharColor(count: number, limit: number): string {
   if (count > limit) return "text-red-500";
@@ -49,36 +56,69 @@ function NewPostPageInner() {
   const [ideasOpen, setIdeasOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
 
+  // New feature state
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [pollDuration, setPollDuration] = useState(1440);
+  const [replySettings, setReplySettings] = useState<ReplySettings>("everyone");
+  const [quoteTweetId, setQuoteTweetId] = useState("");
+  const [altTexts, setAltTexts] = useState<Record<string, string>>({});
+  const [altTextImageUrl, setAltTextImageUrl] = useState("");
+  const [altTextMediaPath, setAltTextMediaPath] = useState("");
+
   const uploadedPaths = images.filter((i) => !i.uploading).map((i) => i.path);
   const hasUploading = images.some((i) => i.uploading);
   const platforms = platform
     ? [platform as "twitter" | "linkedin" | "threads"]
     : [];
   const charLimit = getCharLimitForPlatforms(platforms);
-  const charCount = body.length + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
+  const bodyCharCount = platform === "twitter" ? countTweetLength(body) : body.length;
+  const charCount = bodyCharCount + computeMentionsCharLength(mentions) + computeTagsCharLength(tags);
+
+  // Platform capabilities
+  const caps = platform ? PLATFORM_CAPABILITIES[platform as keyof typeof PLATFORM_CAPABILITIES] : null;
+  const showPollOption = caps?.poll ?? false;
+  const showReplySettings = caps?.replySettings ?? false;
+  const showQuoteTweet = caps?.quoteTweet ?? false;
   const isOverLimit = charCount > charLimit;
+  // Polls are mutually exclusive with media
+  const hasPollConflict = pollEnabled && images.length > 0;
   const canSubmit =
     body.trim().length > 0 &&
     !isOverLimit &&
     platforms.length > 0 &&
     !createPost.isPending &&
-    !hasUploading;
+    !hasUploading &&
+    !hasPollConflict;
 
   const showMedia = mediaOpen || images.length > 0;
   const showIdeas =
     (ideasOpen || generateIdeas.isSuccess) && generateIdeas.data;
 
+  function buildMutationPayload() {
+    const payload: Record<string, unknown> = {
+      body,
+      platforms,
+    };
+    if (uploadedPaths.length > 0) payload.media_urls = uploadedPaths;
+    if (mentions.length > 0) payload.mentions = mentions;
+    if (tags.length > 0) payload.tags = tags;
+    if (pollEnabled && pollOptions.some((o) => o.trim())) {
+      payload.poll = {
+        options: pollOptions.filter((o) => o.trim()),
+        duration_minutes: pollDuration,
+      };
+    }
+    if (quoteTweetId) payload.quote_tweet_id = quoteTweetId;
+    if (replySettings !== "everyone") payload.reply_settings = replySettings;
+    return payload;
+  }
+
   async function handleSaveDraft() {
     if (!body.trim() || platforms.length === 0) return;
 
     createPost.mutate(
-      {
-        body,
-        platforms,
-        ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
-        ...(mentions.length > 0 ? { mentions } : {}),
-        ...(tags.length > 0 ? { tags } : {}),
-      },
+      buildMutationPayload() as Parameters<typeof createPost.mutate>[0],
       {
         onSuccess: () => {
           toast.success("Draft saved");
@@ -93,13 +133,7 @@ function NewPostPageInner() {
     if (!canSubmit) return;
 
     createPost.mutate(
-      {
-        body,
-        platforms,
-        ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
-        ...(mentions.length > 0 ? { mentions } : {}),
-        ...(tags.length > 0 ? { tags } : {}),
-      },
+      buildMutationPayload() as Parameters<typeof createPost.mutate>[0],
       {
         onSuccess: (post) => {
           fetch(`/api/posts/${post.id}/publish`, { method: "POST" })
@@ -124,15 +158,11 @@ function NewPostPageInner() {
   async function handleSchedule() {
     if (!canSubmit || !scheduledAt) return;
 
+    const payload = buildMutationPayload();
+    payload.scheduled_at = new Date(scheduledAt).toISOString();
+
     createPost.mutate(
-      {
-        body,
-        platforms,
-        scheduled_at: new Date(scheduledAt).toISOString(),
-        ...(uploadedPaths.length > 0 ? { media_urls: uploadedPaths } : {}),
-        ...(mentions.length > 0 ? { mentions } : {}),
-        ...(tags.length > 0 ? { tags } : {}),
-      },
+      payload as Parameters<typeof createPost.mutate>[0],
       {
         onSuccess: () => {
           toast.success(
@@ -257,14 +287,23 @@ function NewPostPageInner() {
       </div>
 
       {/* ── Toolbar ── */}
-      <div className="flex items-center gap-8 mb-8">
+      <div className="flex items-center gap-8 mb-8 flex-wrap">
         <button
           type="button"
-          onClick={() => setMediaOpen(!mediaOpen)}
+          onClick={() => {
+            setMediaOpen(!mediaOpen);
+            if (!mediaOpen && pollEnabled) {
+              setPollEnabled(false);
+              toast("Media and polls can't be used together");
+            }
+          }}
+          disabled={pollEnabled}
           className={`flex items-center gap-2 transition-colors ${
             showMedia
               ? "text-foreground"
-              : "text-muted-foreground/50 hover:text-foreground"
+              : pollEnabled
+                ? "text-muted-foreground/20 cursor-not-allowed"
+                : "text-muted-foreground/50 hover:text-foreground"
           }`}
           aria-label="Toggle images"
         >
@@ -284,6 +323,47 @@ function NewPostPageInner() {
           </svg>
           <span className="text-[10px] uppercase tracking-[0.2em]">Media</span>
         </button>
+
+        {showPollOption && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!pollEnabled && images.length > 0) {
+                toast("Polls can't be used with media");
+                return;
+              }
+              setPollEnabled(!pollEnabled);
+              if (!pollEnabled) {
+                setMediaOpen(false);
+              }
+            }}
+            disabled={images.length > 0}
+            className={`flex items-center gap-2 transition-colors ${
+              pollEnabled
+                ? "text-foreground"
+                : images.length > 0
+                  ? "text-muted-foreground/20 cursor-not-allowed"
+                  : "text-muted-foreground/50 hover:text-foreground"
+            }`}
+            aria-label="Toggle poll"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="2" y="3" width="8" height="2.5" rx="1" />
+              <rect x="2" y="7.75" width="14" height="2.5" rx="1" />
+              <rect x="2" y="12.5" width="5" height="2.5" rx="1" />
+            </svg>
+            <span className="text-[10px] uppercase tracking-[0.2em]">Poll</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -310,7 +390,15 @@ function NewPostPageInner() {
           <span className="text-[10px] uppercase tracking-[0.2em]">Ideas</span>
         </button>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {caps?.thread && slug && (
+            <Link
+              href={appUrl.contentNewThread(slug)}
+              className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-foreground transition-colors"
+            >
+              Create Thread
+            </Link>
+          )}
           <Button
             variant="coral"
             size="xs"
@@ -396,6 +484,56 @@ function NewPostPageInner() {
           <div className="h-px bg-foreground/8" />
         </div>
       )}
+
+      {/* ── Expandable: Poll ── */}
+      {pollEnabled && (
+        <div className="mb-8">
+          <PollBuilder
+            options={pollOptions}
+            durationMinutes={pollDuration}
+            onOptionsChange={setPollOptions}
+            onDurationChange={setPollDuration}
+            onRemove={() => setPollEnabled(false)}
+            disabled={createPost.isPending}
+          />
+          <div className="h-px bg-foreground/8 mt-6" />
+        </div>
+      )}
+
+      {/* ── Reply Settings + Quote Tweet ── */}
+      {(showReplySettings || showQuoteTweet) && (
+        <div className="mb-8 space-y-4">
+          {showReplySettings && (
+            <ReplySettingsSelect
+              value={replySettings}
+              onChange={setReplySettings}
+              disabled={createPost.isPending}
+            />
+          )}
+          {showQuoteTweet && (
+            <QuoteTweetInput
+              value={quoteTweetId}
+              onChange={setQuoteTweetId}
+              disabled={createPost.isPending}
+            />
+          )}
+          <div className="h-px bg-foreground/8" />
+        </div>
+      )}
+
+      {/* ── Alt Text Dialog ── */}
+      <AltTextDialog
+        open={!!altTextImageUrl}
+        imageUrl={altTextImageUrl}
+        altText={altTexts[altTextMediaPath] ?? ""}
+        onAltTextChange={(text) =>
+          setAltTexts((prev) => ({ ...prev, [altTextMediaPath]: text }))
+        }
+        onClose={() => {
+          setAltTextImageUrl("");
+          setAltTextMediaPath("");
+        }}
+      />
 
       {/* ── Schedule ── */}
       <div className="mb-10">

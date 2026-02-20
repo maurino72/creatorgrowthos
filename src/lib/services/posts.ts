@@ -9,6 +9,11 @@ export interface CreatePostData {
   media_urls?: string[];
   tags?: string[];
   mentions?: string[];
+  poll?: { options: string[]; duration_minutes: number };
+  quote_tweet_id?: string;
+  reply_settings?: string;
+  place_id?: string;
+  community_id?: string;
 }
 
 export interface UpdatePostData {
@@ -18,6 +23,10 @@ export interface UpdatePostData {
   media_urls?: string[] | null;
   tags?: string[] | null;
   mentions?: string[] | null;
+  quote_tweet_id?: string | null;
+  reply_settings?: string | null;
+  place_id?: string | null;
+  community_id?: string | null;
 }
 
 export interface GetPostsOptions {
@@ -36,7 +45,7 @@ export async function createPost(userId: string, data: CreatePostData) {
   const supabase = createAdminClient();
   const status = data.scheduled_at ? ("scheduled" as const) : ("draft" as const);
 
-  const insertPayload = {
+  const insertPayload: Database["public"]["Tables"]["posts"]["Insert"] = {
     user_id: userId,
     body: data.body,
     status,
@@ -44,6 +53,10 @@ export async function createPost(userId: string, data: CreatePostData) {
     media_urls: data.media_urls ?? [],
     tags: data.tags ?? [],
     mentions: data.mentions ?? [],
+    quote_tweet_id: data.quote_tweet_id ?? null,
+    reply_settings: data.reply_settings ?? null,
+    place_id: data.place_id ?? null,
+    community_id: data.community_id ?? null,
   };
 
   console.log("[createPost] inserting post", {

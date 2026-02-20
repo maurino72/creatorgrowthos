@@ -710,6 +710,142 @@ describe("publishing service", () => {
       );
     });
 
+    it("uses uploadVideo for .mp4 files when adapter supports it", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "tw-post-123",
+          platformUrl: "https://twitter.com/i/status/tw-post-123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn().mockResolvedValue("media-id-image"),
+        uploadVideo: vi.fn().mockResolvedValue("media-id-video"),
+      });
+      mockConnection();
+      vi.mocked(downloadImage).mockResolvedValue(Buffer.from("video-data"));
+      vi.mocked(deleteImage).mockResolvedValue(undefined);
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Post with video!",
+          status: "draft",
+          media_urls: ["user-123/vid1.mp4"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(results[0].success).toBe(true);
+      expect(adapter.uploadVideo).toHaveBeenCalledWith(
+        "access-token",
+        expect.any(Buffer),
+        "video/mp4",
+        undefined,
+      );
+      expect(adapter.uploadMedia).not.toHaveBeenCalled();
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Post with video!",
+        mediaIds: ["media-id-video"],
+      });
+    });
+
+    it("uses uploadGif for .gif files when adapter supports it", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "tw-post-123",
+          platformUrl: "https://twitter.com/i/status/tw-post-123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn().mockResolvedValue("media-id-image"),
+        uploadGif: vi.fn().mockResolvedValue("media-id-gif"),
+      });
+      mockConnection();
+      vi.mocked(downloadImage).mockResolvedValue(Buffer.from("gif-data"));
+      vi.mocked(deleteImage).mockResolvedValue(undefined);
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Post with GIF!",
+          status: "draft",
+          media_urls: ["user-123/anim.gif"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(results[0].success).toBe(true);
+      expect(adapter.uploadGif).toHaveBeenCalledWith(
+        "access-token",
+        expect.any(Buffer),
+        "image/gif",
+        undefined,
+      );
+      expect(adapter.uploadMedia).not.toHaveBeenCalled();
+      expect(adapter.publishPost).toHaveBeenCalledWith("access-token", {
+        text: "Post with GIF!",
+        mediaIds: ["media-id-gif"],
+      });
+    });
+
+    it("falls back to uploadMedia when adapter lacks uploadVideo", async () => {
+      const { chain } = mockSupabase();
+      const adapter = mockAdapter({
+        publishPost: vi.fn().mockResolvedValue({
+          platformPostId: "tw-post-123",
+          platformUrl: "https://twitter.com/i/status/tw-post-123",
+          publishedAt: new Date(),
+        }),
+        uploadMedia: vi.fn().mockResolvedValue("media-id-fallback"),
+        // No uploadVideo method
+      });
+      mockConnection();
+      vi.mocked(downloadImage).mockResolvedValue(Buffer.from("video-data"));
+      vi.mocked(deleteImage).mockResolvedValue(undefined);
+
+      chain.single.mockResolvedValueOnce({
+        data: {
+          id: TEST_POST_ID,
+          user_id: TEST_USER_ID,
+          body: "Post with video!",
+          status: "draft",
+          media_urls: ["user-123/vid1.mp4"],
+          post_publications: [
+            { id: "pub-1", platform: "twitter", status: "pending" },
+          ],
+        },
+        error: null,
+      });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+      chain.single.mockResolvedValueOnce({ data: {}, error: null });
+
+      const results = await publishPost(TEST_USER_ID, TEST_POST_ID);
+
+      expect(results[0].success).toBe(true);
+      expect(adapter.uploadMedia).toHaveBeenCalledWith(
+        "access-token",
+        expect.any(Buffer),
+        "video/mp4",
+        undefined,
+      );
+    });
+
     it("does not upload media when post has no media_urls", async () => {
       const { chain } = mockSupabase();
       const adapter = mockAdapter({

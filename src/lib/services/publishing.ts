@@ -9,7 +9,8 @@ import { downloadImage, deleteImage } from "@/lib/services/media";
 import { formatMentionsForPublish } from "@/lib/validators/mentions";
 import { formatTagsForPublish } from "@/lib/validators/tags";
 import { getCharLimitForPlatform } from "@/lib/adapters/platform-config";
-import type { PlatformType } from "@/lib/adapters/types";
+import { getMediaCategory } from "@/lib/validators/media";
+import type { PlatformType, PostPayload } from "@/lib/adapters/types";
 
 export function buildPublishText(
   body: string,
@@ -91,9 +92,12 @@ export async function publishPost(
   const allFailed = results.every((r) => !r.success);
   const newStatus = allFailed ? "failed" : "published";
 
+  const now = new Date();
   const postUpdate: Record<string, unknown> = { status: newStatus };
   if (!allFailed) {
-    postUpdate.published_at = new Date().toISOString();
+    postUpdate.published_at = now.toISOString();
+    postUpdate.first_published_at = now.toISOString();
+    postUpdate.editable_until = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
   }
 
   await supabase
@@ -109,7 +113,16 @@ export async function publishPost(
 
 async function publishToPlatform(
   userId: string,
-  post: { body: string; mentions?: string[] | null; tags?: string[] | null; media_urls?: string[] | null },
+  post: {
+    body: string;
+    mentions?: string[] | null;
+    tags?: string[] | null;
+    media_urls?: string[] | null;
+    quote_tweet_id?: string | null;
+    reply_settings?: string | null;
+    place_id?: string | null;
+    community_id?: string | null;
+  },
   publication: { id: string; platform: string },
   platform: PlatformType,
   supabase: ReturnType<typeof createAdminClient>,
@@ -159,23 +172,34 @@ async function publishToPlatform(
         png: "image/png",
         gif: "image/gif",
         webp: "image/webp",
+        mp4: "video/mp4",
       };
       const mimeType = mimeMap[ext] ?? "image/jpeg";
-      const mediaId = await adapter.uploadMedia(accessToken, buffer, mimeType, authorId ? { authorId } : undefined);
+      const category = getMediaCategory(mimeType);
+      const uploadOpts = authorId ? { authorId } : undefined;
+
+      let mediaId: string;
+      if (category === "tweet_video" && adapter.uploadVideo) {
+        mediaId = await adapter.uploadVideo(accessToken, buffer, mimeType, uploadOpts);
+      } else if (category === "tweet_gif" && adapter.uploadGif) {
+        mediaId = await adapter.uploadGif(accessToken, buffer, mimeType, uploadOpts);
+      } else {
+        mediaId = await adapter.uploadMedia(accessToken, buffer, mimeType, uploadOpts);
+      }
       mediaIds.push(mediaId);
     }
 
     const charLimit = getCharLimitForPlatform(platform);
     const publishText = buildPublishText(post.body, post.mentions ?? [], post.tags ?? [], charLimit);
-    const payload: { text: string; mediaIds?: string[]; authorId?: string } = {
+    const payload: PostPayload = {
       text: publishText,
+      mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
+      authorId: authorId || undefined,
+      quoteTweetId: post.quote_tweet_id || undefined,
+      replySettings: (post.reply_settings as PostPayload["replySettings"]) || undefined,
+      placeId: post.place_id || undefined,
+      communityId: post.community_id || undefined,
     };
-    if (mediaIds.length > 0) {
-      payload.mediaIds = mediaIds;
-    }
-    if (authorId) {
-      payload.authorId = authorId;
-    }
 
     const result = await adapter.publishPost(accessToken, payload);
 
