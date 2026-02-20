@@ -61,11 +61,12 @@ describe("event sending utilities", () => {
     });
   });
 
-  it("sendPostPublishResults sends events for each platform result", async () => {
+  it("sendPostPublishResults sends events with publication row ID (not platform post ID)", async () => {
     await sendPostPublishResults("post-1", "user-1", [
       {
         platform: "twitter",
         success: true,
+        publicationId: "pub-uuid-1",
         platformPostId: "tw-123",
         platformUrl: "https://twitter.com/i/status/tw-123",
       },
@@ -76,7 +77,7 @@ describe("event sending utilities", () => {
         data: {
           postId: "post-1",
           userId: "user-1",
-          publicationId: "tw-123",
+          publicationId: "pub-uuid-1",
           platform: "twitter",
         },
       },

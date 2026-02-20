@@ -199,6 +199,7 @@ describe("publishing service", () => {
       expect(results).toHaveLength(1);
       expect(results[0].platform).toBe("twitter");
       expect(results[0].success).toBe(true);
+      expect(results[0].publicationId).toBe("pub-1");
     });
 
     it("publishes a scheduled post successfully", async () => {
@@ -427,6 +428,7 @@ describe("publishing service", () => {
 
       expect(results[0].success).toBe(false);
       expect(results[0].error).toContain("No active connection");
+      expect(results[0].publicationId).toBe("pub-1");
     });
 
     it("uploads media to Twitter and passes media_ids when post has media_urls", async () => {

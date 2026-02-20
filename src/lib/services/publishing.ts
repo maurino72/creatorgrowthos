@@ -43,6 +43,7 @@ export function buildPublishText(
 export interface PublishResult {
   platform: PlatformType;
   success: boolean;
+  publicationId: string;
   platformPostId?: string;
   platformUrl?: string;
   error?: string;
@@ -123,6 +124,7 @@ async function publishToPlatform(
     return {
       platform,
       success: false,
+      publicationId: publication.id,
       error: `No active connection for ${platform}`,
     };
   }
@@ -137,7 +139,7 @@ async function publishToPlatform(
       status: "failed",
       error_message: message,
     });
-    return { platform, success: false, error: message };
+    return { platform, success: false, publicationId: publication.id, error: message };
   }
 
   // Publish via adapter
@@ -192,6 +194,7 @@ async function publishToPlatform(
     return {
       platform,
       success: true,
+      publicationId: publication.id,
       platformPostId: result.platformPostId,
       platformUrl: result.platformUrl,
     };
@@ -201,7 +204,7 @@ async function publishToPlatform(
       status: "failed",
       error_message: message,
     });
-    return { platform, success: false, error: message };
+    return { platform, success: false, publicationId: publication.id, error: message };
   }
 }
 

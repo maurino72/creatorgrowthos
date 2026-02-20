@@ -52,7 +52,7 @@ export async function sendPostPublishResults(
         data: {
           postId,
           userId,
-          publicationId: result.platformPostId ?? "",
+          publicationId: result.publicationId,
           platform: result.platform,
         },
       };
