@@ -266,6 +266,23 @@ describe("LinkedInAdapter", () => {
       expect(body.distribution.feedDistribution).toBe("MAIN_FEED");
     });
 
+    it("prefixes raw platform_user_id with urn:li:person:", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(null, {
+          status: 201,
+          headers: { "x-restli-id": "urn:li:share:123456" },
+        }),
+      );
+
+      await adapter.publishPost("token", {
+        text: "Hello LinkedIn!",
+        authorId: "VtqiECy_jt",
+      });
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.author).toBe("urn:li:person:VtqiECy_jt");
+    });
+
     it("returns platformPostId from x-restli-id header", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response(null, {
@@ -373,6 +390,29 @@ describe("LinkedInAdapter", () => {
       const [putUrl, putOpts] = fetchSpy.mock.calls[1];
       expect(putUrl).toBe("https://api.linkedin.com/mediaUpload/abc");
       expect(putOpts?.method).toBe("PUT");
+    });
+
+    it("prefixes raw authorId with urn:li:person: in owner field", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            value: {
+              uploadUrl: "https://api.linkedin.com/mediaUpload/abc",
+              image: "urn:li:image:img-123",
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 201 }));
+
+      await adapter.uploadMedia("token", Buffer.from("fake"), "image/jpeg", {
+        authorId: "VtqiECy_jt",
+      });
+
+      const initBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(initBody.initializeUploadRequest.owner).toBe("urn:li:person:VtqiECy_jt");
     });
 
     it("throws on init failure", async () => {

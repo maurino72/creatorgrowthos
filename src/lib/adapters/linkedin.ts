@@ -138,8 +138,12 @@ export class LinkedInAdapter implements PlatformAdapter {
     accessToken: string,
     payload: PostPayload,
   ): Promise<PlatformPostResult> {
+    const author = payload.authorId?.startsWith("urn:")
+      ? payload.authorId
+      : `urn:li:person:${payload.authorId}`;
+
     const body: Record<string, unknown> = {
-      author: payload.authorId,
+      author,
       commentary: payload.text,
       visibility: "PUBLIC",
       distribution: {
@@ -207,7 +211,9 @@ export class LinkedInAdapter implements PlatformAdapter {
         },
         body: JSON.stringify({
           initializeUploadRequest: {
-            owner: options?.authorId,
+            owner: options?.authorId?.startsWith("urn:")
+              ? options.authorId
+              : `urn:li:person:${options?.authorId}`,
           },
         }),
       },
