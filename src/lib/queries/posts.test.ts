@@ -173,6 +173,27 @@ describe("useCreatePost", () => {
       body: JSON.stringify({ body: "Hello", platforms: ["twitter"] }),
     });
   });
+
+  it("seeds detail cache on success", async () => {
+    const mockPost = { id: "post-new", body: "Hello", status: "draft" };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ post: mockPost }), { status: 201 }),
+    );
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useCreatePost(), { wrapper: Wrapper });
+    result.current.mutate({ body: "Hello", platforms: ["twitter"] });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData(postKeys.detail("post-new"));
+    expect(cached).toEqual(mockPost);
+  });
 });
 
 describe("useUpdatePost", () => {
@@ -200,6 +221,27 @@ describe("useUpdatePost", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: "Updated" }),
     });
+  });
+
+  it("seeds detail cache on success", async () => {
+    const mockPost = { id: "post-1", body: "Updated", status: "draft" };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ post: mockPost }), { status: 200 }),
+    );
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    const { result } = renderHook(() => useUpdatePost(), { wrapper: Wrapper });
+    result.current.mutate({ id: "post-1", data: { body: "Updated" } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData(postKeys.detail("post-1"));
+    expect(cached).toEqual(mockPost);
   });
 });
 

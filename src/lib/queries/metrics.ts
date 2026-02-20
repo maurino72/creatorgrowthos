@@ -10,6 +10,8 @@ export const metricKeys = {
   all: ["metrics"] as const,
   post: (postId: string) => ["metrics", "post", postId] as const,
   latest: (postId: string) => ["metrics", "latest", postId] as const,
+  latestBatch: (postIds: string[]) =>
+    ["metrics", "latestBatch", ...postIds.slice().sort()] as const,
   dashboard: (days: number, platform?: string) =>
     ["metrics", "dashboard", days, ...(platform ? [platform] : [])] as const,
   topPosts: (days: number, limit: number, platform?: string) =>
@@ -34,6 +36,26 @@ async function fetchLatestMetrics(postId: string) {
   }
   const data = await response.json();
   return data.metrics;
+}
+
+async function fetchLatestMetricsBatch(postIds: string[]) {
+  const sorted = postIds.slice().sort();
+  const params = new URLSearchParams({ post_ids: sorted.join(",") });
+  const response = await fetch(`/api/posts/metrics/latest-batch?${params}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch batch metrics");
+  }
+  const data = await response.json();
+  return data.metrics as Record<string, Array<{ id: string; impressions?: number; likes?: number; replies?: number; reposts?: number; engagement_rate?: number | null; observed_at?: string }>>;
+}
+
+export function useLatestMetricsBatch(postIds: string[]) {
+  return useQuery({
+    queryKey: metricKeys.latestBatch(postIds),
+    queryFn: () => fetchLatestMetricsBatch(postIds),
+    staleTime: 5 * 60 * 1000,
+    enabled: postIds.length > 0,
+  });
 }
 
 async function fetchDashboardMetrics(days: number, platform?: string) {

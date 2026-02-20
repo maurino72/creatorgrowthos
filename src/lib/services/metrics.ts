@@ -124,6 +124,42 @@ export async function getLatestMetricsForPost(
   return latest;
 }
 
+export async function getLatestMetricsBatch(
+  userId: string,
+  postIds: string[],
+) {
+  if (postIds.length === 0) return {};
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("metric_events")
+    .select("*, post_publications!inner(post_id, platform)")
+    .eq("user_id", userId)
+    .in("post_publications.post_id", postIds)
+    .order("observed_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  // Deduplicate: keep only the latest per post_publication_id
+  const seen = new Set<string>();
+  const latest = (data ?? []).filter((event) => {
+    if (seen.has(event.post_publication_id)) return false;
+    seen.add(event.post_publication_id);
+    return true;
+  });
+
+  // Group by post_id
+  const result: Record<string, typeof latest> = {};
+  for (const event of latest) {
+    const postId = (event.post_publications as unknown as { post_id: string }).post_id;
+    if (!result[postId]) result[postId] = [];
+    result[postId].push(event);
+  }
+
+  return result;
+}
+
 export async function getDashboardMetrics(
   userId: string,
   days: number,

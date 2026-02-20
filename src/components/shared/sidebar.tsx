@@ -2,11 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/lib/queries/user";
+import { usePlatform } from "@/lib/hooks/use-platform";
+import { appUrl } from "@/lib/urls";
+import {
+  prefetchDashboard,
+  prefetchContent,
+  prefetchInsights,
+  prefetchExperiments,
+} from "@/lib/queries/prefetch";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlatformSelector } from "@/components/shared/platform-selector";
+import { Logo } from "@/components/shared/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,55 +25,50 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="6" height="6" rx="1" />
-        <rect x="10" y="2" width="6" height="6" rx="1" />
-        <rect x="2" y="10" width="6" height="6" rx="1" />
-        <rect x="10" y="10" width="6" height="6" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    label: "Content",
-    href: "/dashboard/content",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 5h12M3 9h8M3 13h10" />
-      </svg>
-    ),
-  },
-  {
-    label: "Insights",
-    href: "/dashboard/insights",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 2v4M9 12v4M2 9h4M12 9h4" />
-        <circle cx="9" cy="9" r="2" />
-      </svg>
-    ),
-  },
-  {
-    label: "Experiments",
-    href: "/dashboard/experiments",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 2h4l2 5H5L7 2Z" />
-        <path d="M5 7v6a1.5 1.5 0 0 0 1.5 1.5h5A1.5 1.5 0 0 0 13 13V7" />
-        <path d="M9 10v3" />
-      </svg>
-    ),
-  },
-];
+const icons = {
+  dashboard: (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="6" height="6" rx="1" />
+      <rect x="10" y="2" width="6" height="6" rx="1" />
+      <rect x="2" y="10" width="6" height="6" rx="1" />
+      <rect x="10" y="10" width="6" height="6" rx="1" />
+    </svg>
+  ),
+  content: (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 5h12M3 9h8M3 13h10" />
+    </svg>
+  ),
+  insights: (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2v4M9 12v4M2 9h4M12 9h4" />
+      <circle cx="9" cy="9" r="2" />
+    </svg>
+  ),
+  experiments: (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 2h4l2 5H5L7 2Z" />
+      <path d="M5 7v6a1.5 1.5 0 0 0 1.5 1.5h5A1.5 1.5 0 0 0 13 13V7" />
+      <path d="M9 10v3" />
+    </svg>
+  ),
+};
+
+type PrefetchFn = (qc: ReturnType<typeof useQueryClient>, platform?: string) => void;
+
+function buildNavItems(slug: string) {
+  return [
+    { label: "Dashboard", href: appUrl.dashboard(slug as "x"), icon: icons.dashboard, prefetch: prefetchDashboard as PrefetchFn },
+    { label: "Content", href: appUrl.content(slug as "x"), icon: icons.content, prefetch: prefetchContent as PrefetchFn },
+    { label: "Insights", href: appUrl.insights(slug as "x"), icon: icons.insights, prefetch: prefetchInsights as PrefetchFn },
+    { label: "Experiments", href: appUrl.experiments(slug as "x"), icon: icons.experiments, prefetch: prefetchExperiments as PrefetchFn },
+  ];
+}
 
 const menuItems = (
   <>
     <DropdownMenuItem asChild className="cursor-pointer">
-      <Link href="/dashboard/settings">
+      <Link href="/settings">
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="9" cy="9" r="2.5" />
           <path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.22 4.22l1.42 1.42M12.36 12.36l1.42 1.42M4.22 13.78l1.42-1.42M12.36 5.64l1.42-1.42" />
@@ -72,7 +77,7 @@ const menuItems = (
       </Link>
     </DropdownMenuItem>
     <DropdownMenuItem asChild className="cursor-pointer">
-      <Link href="/dashboard/settings/billing">
+      <Link href="/settings/billing">
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="4" width="14" height="10" rx="2" />
           <path d="M2 8h14" />
@@ -124,12 +129,24 @@ function useUser() {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { slug, platform } = usePlatform();
   const { displayName, avatarUrl, initials } = useUser();
+  const queryClient = useQueryClient();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handlePrefetch = useCallback(
+    (prefetchFn: PrefetchFn) => {
+      prefetchFn(queryClient, platform ?? undefined);
+    },
+    [queryClient, platform],
+  );
+
+  const navItems = slug ? buildNavItems(slug) : [];
+  const logoHref = slug ? appUrl.dashboard(slug as "x") : "/";
 
   return (
     <>
@@ -137,10 +154,8 @@ export function Sidebar() {
       <aside className="relative z-20 hidden w-56 flex-shrink-0 flex-col border-r border-editorial-rule-subtle lg:flex bg-sidebar/60 backdrop-blur-sm">
         {/* Masthead */}
         <div className="px-5 pt-6 pb-4">
-          <Link href="/dashboard" className="block">
-            <span className="text-lg font-light tracking-tight text-sidebar-foreground font-serif">
-              Growth OS
-            </span>
+          <Link href={logoHref} className="block">
+            <Logo size="md" className="text-sidebar-foreground" />
           </Link>
         </div>
 
@@ -160,11 +175,16 @@ export function Sidebar() {
           </p>
           <ul className="space-y-0.5">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== logoHref &&
+                  pathname.startsWith(item.href + "/"));
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    onMouseEnter={() => handlePrefetch(item.prefetch)}
+                    onFocus={() => handlePrefetch(item.prefetch)}
                     className={cn(
                       "flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] transition-colors",
                       isActive
@@ -216,11 +236,16 @@ export function Sidebar() {
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-editorial-rule bg-background/90 backdrop-blur-lg lg:hidden">
         <ul className="flex items-center justify-around py-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive =
+              pathname === item.href ||
+              (item.href !== logoHref &&
+                pathname.startsWith(item.href + "/"));
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onMouseEnter={() => handlePrefetch(item.prefetch)}
+                  onFocus={() => handlePrefetch(item.prefetch)}
                   className={cn(
                     "flex flex-col items-center gap-1 px-3 py-1 text-[9px] uppercase tracking-[0.15em] transition-colors",
                     isActive

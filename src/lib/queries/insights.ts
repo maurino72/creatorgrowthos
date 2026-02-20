@@ -41,6 +41,7 @@ export function useInsights(filters?: InsightFilters) {
   return useQuery({
     queryKey: hasFilters ? insightKeys.list(filters) : insightKeys.all,
     queryFn: () => fetchInsights(filters),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

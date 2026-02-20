@@ -9,6 +9,7 @@ import {
   insertMetricEvent,
   getMetricsForPost,
   getLatestMetricsForPost,
+  getLatestMetricsBatch,
   getDashboardMetrics,
   getMetricsTimeSeries,
   getTopPosts,
@@ -248,6 +249,56 @@ describe("metrics service", () => {
 
       await expect(
         getLatestMetricsForPost(TEST_USER_ID, "post-1"),
+      ).rejects.toThrow("Query failed");
+    });
+  });
+
+  describe("getLatestMetricsBatch", () => {
+    it("fetches latest metrics for multiple post IDs in a single query", async () => {
+      const { from, chain } = mockSupabase();
+      const mockData = [
+        { id: "event-1", impressions: 1000, post_publication_id: "pub-1", observed_at: "2024-01-02T00:00:00Z", post_publications: { post_id: "post-1", platform: "twitter" } },
+        { id: "event-2", impressions: 500, post_publication_id: "pub-2", observed_at: "2024-01-02T00:00:00Z", post_publications: { post_id: "post-2", platform: "twitter" } },
+      ];
+      chain.order.mockResolvedValue({ data: mockData, error: null });
+
+      const result = await getLatestMetricsBatch(TEST_USER_ID, ["post-1", "post-2"]);
+
+      expect(from).toHaveBeenCalledWith("metric_events");
+      expect(chain.in).toHaveBeenCalledWith("post_publications.post_id", ["post-1", "post-2"]);
+      expect(result["post-1"]).toHaveLength(1);
+      expect(result["post-2"]).toHaveLength(1);
+    });
+
+    it("returns empty object when no post IDs provided", async () => {
+      const result = await getLatestMetricsBatch(TEST_USER_ID, []);
+      expect(result).toEqual({});
+    });
+
+    it("deduplicates keeping only the latest per publication per post", async () => {
+      const { chain } = mockSupabase();
+      const mockData = [
+        { id: "event-1", impressions: 1500, post_publication_id: "pub-1", observed_at: "2024-01-03T00:00:00Z", post_publications: { post_id: "post-1", platform: "twitter" } },
+        { id: "event-2", impressions: 1000, post_publication_id: "pub-1", observed_at: "2024-01-02T00:00:00Z", post_publications: { post_id: "post-1", platform: "twitter" } },
+      ];
+      chain.order.mockResolvedValue({ data: mockData, error: null });
+
+      const result = await getLatestMetricsBatch(TEST_USER_ID, ["post-1"]);
+
+      // Only the latest (event-1) should be kept
+      expect(result["post-1"]).toHaveLength(1);
+      expect(result["post-1"][0].id).toBe("event-1");
+    });
+
+    it("throws on query error", async () => {
+      const { chain } = mockSupabase();
+      chain.order.mockResolvedValue({
+        data: null,
+        error: { message: "Query failed" },
+      });
+
+      await expect(
+        getLatestMetricsBatch(TEST_USER_ID, ["post-1"]),
       ).rejects.toThrow("Query failed");
     });
   });

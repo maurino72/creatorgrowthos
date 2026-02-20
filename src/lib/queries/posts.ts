@@ -54,6 +54,7 @@ export function usePosts(filters?: PostFilters) {
   return useQuery({
     queryKey: hasFilters ? postKeys.list(filters) : postKeys.all,
     queryFn: () => fetchPosts(filters),
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -79,7 +80,8 @@ export function useCreatePost() {
       }
       return (await response.json()).post;
     },
-    onSuccess: () => {
+    onSuccess: (newPost) => {
+      queryClient.setQueryData(postKeys.detail(newPost.id), newPost);
       queryClient.invalidateQueries({ queryKey: postKeys.all });
     },
   });
@@ -100,7 +102,8 @@ export function useUpdatePost() {
       }
       return (await response.json()).post;
     },
-    onSuccess: () => {
+    onSuccess: (updatedPost, { id }) => {
+      queryClient.setQueryData(postKeys.detail(id), updatedPost);
       queryClient.invalidateQueries({ queryKey: postKeys.all });
     },
   });

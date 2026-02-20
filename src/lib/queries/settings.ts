@@ -27,6 +27,7 @@ export function useSettings() {
   return useQuery({
     queryKey: settingsKeys.all,
     queryFn: fetchSettings,
+    staleTime: 10 * 60 * 1000,
   });
 }
 
@@ -107,6 +108,7 @@ export function useCreatorProfile() {
   return useQuery({
     queryKey: creatorProfileKeys.all,
     queryFn: fetchCreatorProfile,
+    staleTime: 10 * 60 * 1000,
   });
 }
 

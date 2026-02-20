@@ -37,6 +37,7 @@ export function useExperiments(filters?: ExperimentFilters) {
   return useQuery({
     queryKey: hasFilters ? experimentKeys.list(filters) : experimentKeys.all,
     queryFn: () => fetchExperiments(filters),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

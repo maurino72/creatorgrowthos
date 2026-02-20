@@ -5,6 +5,7 @@ import React from "react";
 import {
   usePostMetrics,
   useLatestMetrics,
+  useLatestMetricsBatch,
   useDashboardMetrics,
   useTopPosts,
   useRefreshMetrics,
@@ -139,6 +140,54 @@ describe("useLatestMetrics", () => {
 
     const queryState = queryClient.getQueryCache().find({ queryKey: metricKeys.latest("post-1") });
     expect((queryState?.options as Record<string, unknown>)?.staleTime).toBe(5 * 60 * 1000);
+  });
+});
+
+describe("useLatestMetricsBatch", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fetches batch metrics from API with sorted post IDs", async () => {
+    const mockMetrics = {
+      "post-1": [{ id: "e1", impressions: 100 }],
+      "post-2": [{ id: "e2", impressions: 200 }],
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ metrics: mockMetrics }), { status: 200 }),
+    );
+
+    const { result } = renderHook(
+      () => useLatestMetricsBatch(["post-2", "post-1"]),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(mockMetrics);
+    // IDs should be sorted in the URL for consistent cache keys
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/posts/metrics/latest-batch?post_ids=post-1%2Cpost-2",
+    );
+  });
+
+  it("is disabled when postIds is empty", () => {
+    vi.spyOn(globalThis, "fetch");
+
+    const { result } = renderHook(() => useLatestMetricsBatch([]), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses latestBatch key with sorted IDs", () => {
+    expect(metricKeys.latestBatch(["b", "a"])).toEqual([
+      "metrics",
+      "latestBatch",
+      "a",
+      "b",
+    ]);
   });
 });
 

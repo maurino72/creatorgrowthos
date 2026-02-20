@@ -16,4 +16,9 @@ describe("makeQueryClient", () => {
     const client = makeQueryClient();
     expect(client.getDefaultOptions().queries?.gcTime).toBe(5 * 60 * 1000);
   });
+
+  it("sets default staleTime to 5 minutes", () => {
+    const client = makeQueryClient();
+    expect(client.getDefaultOptions().queries?.staleTime).toBe(5 * 60 * 1000);
+  });
 });

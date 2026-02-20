@@ -38,6 +38,7 @@ export function useConnections() {
   return useQuery({
     queryKey: connectionKeys.all,
     queryFn: fetchConnections,
+    staleTime: 10 * 60 * 1000,
   });
 }
 
