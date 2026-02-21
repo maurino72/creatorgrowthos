@@ -326,16 +326,18 @@ function TopPostRow({
 function AnalyticsContent() {
   const [period, setPeriod] = useState<string>("30d");
   const [isPending, startTransition] = useTransition();
-  const { slug } = usePlatform();
+  const { platform, slug } = usePlatform();
+  const platformFilter = platform ?? undefined;
 
   const { data: overview, isLoading: overviewLoading } =
-    useAnalyticsOverview(period);
+    useAnalyticsOverview(period, platformFilter);
   const { data: postsData, isLoading: postsLoading } = useAnalyticsPosts({
     period,
+    platform: platformFilter,
     sort: "impressions",
     per_page: 5,
   });
-  const { data: followerData } = useFollowerGrowth(period);
+  const { data: followerData } = useFollowerGrowth(period, platformFilter);
   const refreshAnalytics = useRefreshAnalytics();
 
   const platforms = overview?.platforms ?? {};
@@ -378,15 +380,14 @@ function AnalyticsContent() {
             size="icon-xs"
             aria-label="Refresh analytics"
             onClick={() => {
-              const platformToRefresh = Object.keys(platforms)[0];
-              if (platformToRefresh) {
-                refreshAnalytics.mutate(platformToRefresh, {
+              if (platformFilter) {
+                refreshAnalytics.mutate(platformFilter, {
                   onSuccess: () => toast.success("Analytics refresh triggered"),
                   onError: (err: Error) => toast.error(err.message),
                 });
               }
             }}
-            disabled={refreshAnalytics.isPending}
+            disabled={refreshAnalytics.isPending || !platformFilter}
           >
             <ArrowPathIcon
               className={`size-3.5 text-muted-foreground/60 ${

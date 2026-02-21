@@ -53,11 +53,20 @@ describe("analyticsKeys", () => {
     ]);
   });
 
-  it("generates correct key for overview", () => {
+  it("generates correct key for overview without platform", () => {
     expect(analyticsKeys.overview("30d")).toEqual([
       "analytics",
       "overview",
       "30d",
+    ]);
+  });
+
+  it("generates correct key for overview with platform", () => {
+    expect(analyticsKeys.overview("30d", "twitter")).toEqual([
+      "analytics",
+      "overview",
+      "30d",
+      "twitter",
     ]);
   });
 
@@ -203,6 +212,23 @@ describe("useAnalyticsOverview", () => {
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/analytics/overview?period=30d"),
     );
+  });
+
+  it("passes platform filter", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ period: "30d", platforms: {}, combined: {} }),
+    });
+
+    renderHook(
+      () => useAnalyticsOverview("30d", "twitter"),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain("platform=twitter");
   });
 });
 

@@ -72,11 +72,16 @@ export async function GET(request: Request) {
     const pubs = publications ?? [];
     const total = count ?? 0;
 
-    // Batch fetch latest snapshots
+    // Batch fetch latest snapshots (non-fatal — table may not exist yet)
     const platformPostIds = pubs
       .map((p) => p.platform_post_id)
       .filter((id): id is string => Boolean(id));
-    const snapshotsMap = await getLatestSnapshotsBatch(user.id, platformPostIds);
+    let snapshotsMap: Record<string, Awaited<ReturnType<typeof getLatestSnapshotsBatch>>[string]> = {};
+    try {
+      snapshotsMap = await getLatestSnapshotsBatch(user.id, platformPostIds);
+    } catch {
+      // metric_snapshots table may not exist yet
+    }
 
     // Build response
     const posts = pubs.map((pub) => {

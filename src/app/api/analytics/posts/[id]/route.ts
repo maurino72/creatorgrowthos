@@ -45,13 +45,20 @@ export async function GET(request: Request, context: RouteContext) {
     const platformPostId = publication.platform_post_id!;
     const platform = publication.platform;
 
-    const [snapshots, latest] = await Promise.all([
-      getSnapshotsForPost(user.id, platformPostId, platform, {
-        limit,
-        since,
-      }),
-      getLatestSnapshotForPost(user.id, platformPostId, platform),
-    ]);
+    // Non-fatal — metric_snapshots table may not exist yet
+    let snapshots: Awaited<ReturnType<typeof getSnapshotsForPost>> = [];
+    let latest: Awaited<ReturnType<typeof getLatestSnapshotForPost>> = null;
+    try {
+      [snapshots, latest] = await Promise.all([
+        getSnapshotsForPost(user.id, platformPostId, platform, {
+          limit,
+          since,
+        }),
+        getLatestSnapshotForPost(user.id, platformPostId, platform),
+      ]);
+    } catch {
+      // metric_snapshots table may not exist yet
+    }
 
     return NextResponse.json({
       publication,

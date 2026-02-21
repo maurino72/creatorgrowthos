@@ -27,8 +27,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Check daily API limit
-    const apiCallsToday = await getApiCallsUsedToday(user.id, platform);
+    // Check daily API limit (non-fatal if table doesn't exist yet)
+    let apiCallsToday = 0;
+    try {
+      apiCallsToday = await getApiCallsUsedToday(user.id, platform);
+    } catch {
+      // metric_fetch_log table may not exist yet — allow refresh
+    }
 
     if (apiCallsToday >= DAILY_API_LIMIT) {
       return NextResponse.json(

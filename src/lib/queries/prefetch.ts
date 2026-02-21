@@ -77,17 +77,20 @@ export function prefetchAnalytics(
   queryClient: QueryClient,
   platform?: string,
 ) {
+  const overviewParams = new URLSearchParams({ period: "30d" });
+  if (platform) overviewParams.set("platform", platform);
+
   queryClient.prefetchQuery({
-    queryKey: analyticsKeys.overview("30d"),
-    queryFn: () => fetchJson("/api/analytics/overview?period=30d"),
+    queryKey: analyticsKeys.overview("30d", platform),
+    queryFn: () => fetchJson(`/api/analytics/overview?${overviewParams}`),
   });
 
-  const params = new URLSearchParams({ period: "30d" });
-  if (platform) params.set("platform", platform);
+  const followerParams = new URLSearchParams({ period: "30d" });
+  if (platform) followerParams.set("platform", platform);
 
   queryClient.prefetchQuery({
     queryKey: analyticsKeys.followers("30d", platform),
-    queryFn: () => fetchJson(`/api/analytics/followers?${params}`),
+    queryFn: () => fetchJson(`/api/analytics/followers?${followerParams}`),
   });
 }
 

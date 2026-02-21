@@ -130,6 +130,15 @@ describe("AnalyticsPage", () => {
           json: () => Promise.resolve(mockFollowers),
         });
       }
+      if (url.includes("/api/connections")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              { id: "1", platform: "twitter", platform_username: "alice", status: "active" },
+            ]),
+        });
+      }
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({}),

@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getLatestSnapshotsBatch } from "@/lib/services/metric-snapshots";
 import { getFollowerGrowth } from "@/lib/services/follower-snapshots";
+import type { Database } from "@/types/database";
+
+type PlatformEnum = Database["public"]["Enums"]["platform_type"];
 
 function parsePeriodDays(period: string): number {
   const match = period.match(/^(\d+)d$/);
@@ -36,32 +39,44 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const period = url.searchParams.get("period") || "30d";
+  const platformFilter = url.searchParams.get("platform") || undefined;
   const days = parsePeriodDays(period);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
   try {
     const admin = createAdminClient();
 
-    // Fetch all published posts in period
-    const { data: publications, error } = await admin
+    // Fetch published posts in period, optionally filtered by platform
+    let pubQuery = admin
       .from("post_publications")
       .select(
         "id, platform, platform_post_id, published_at, posts!inner(id, content_type)",
       )
       .eq("status", "published")
       .not("platform_post_id", "is", null)
-      .gte("published_at", since)
+      .gte("published_at", since);
+
+    if (platformFilter && platformFilter !== "all") {
+      pubQuery = pubQuery.eq("platform", platformFilter as PlatformEnum);
+    }
+
+    const { data: publications, error } = await pubQuery
       .order("published_at", { ascending: false });
 
     if (error) throw new Error(error.message);
 
     const pubs = publications ?? [];
 
-    // Batch fetch latest snapshots
+    // Batch fetch latest snapshots (non-fatal — tables may not exist yet)
     const platformPostIds = pubs
       .map((p) => p.platform_post_id)
       .filter((id): id is string => Boolean(id));
-    const snapshotsMap = await getLatestSnapshotsBatch(user.id, platformPostIds);
+    let snapshotsMap: Record<string, Awaited<ReturnType<typeof getLatestSnapshotsBatch>>[string]> = {};
+    try {
+      snapshotsMap = await getLatestSnapshotsBatch(user.id, platformPostIds);
+    } catch {
+      // metric_snapshots table may not exist yet
+    }
 
     // Group by platform
     const platformMap: Record<string, PlatformStats> = {};
@@ -112,12 +127,16 @@ export async function GET(request: Request) {
           ? Math.round((totalEngagement / platformPubs.length) * 10000) / 100
           : 0;
 
-      // Fetch follower growth
-      const growth = await getFollowerGrowth(user.id, platform, days);
-      stats.follower_count = growth.currentCount;
-      stats.follower_growth = growth.netGrowth;
-      stats.follower_growth_rate =
-        Math.round(growth.growthRate * 100) / 100;
+      // Fetch follower growth (non-fatal — table may not exist yet)
+      try {
+        const growth = await getFollowerGrowth(user.id, platform, days);
+        stats.follower_count = growth.currentCount;
+        stats.follower_growth = growth.netGrowth;
+        stats.follower_growth_rate =
+          Math.round(growth.growthRate * 100) / 100;
+      } catch {
+        // follower_snapshots table may not exist yet
+      }
 
       platformMap[platform] = stats;
     }

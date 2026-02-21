@@ -171,6 +171,12 @@ describe("GET /api/analytics/overview", () => {
     expect(json.platforms.linkedin.follower_growth).toBe(200);
   });
 
+  it("filters by platform when param provided", async () => {
+    await GET(makeRequest({ platform: "twitter" }));
+    // Should call .eq("platform", "twitter") on the query chain
+    expect(mockChain.eq).toHaveBeenCalledWith("platform", "twitter");
+  });
+
   it("handles no publications gracefully", async () => {
     mockChain.order.mockResolvedValueOnce({ data: [], error: null });
     vi.mocked(getLatestSnapshotsBatch).mockResolvedValue({});

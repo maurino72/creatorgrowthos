@@ -22,7 +22,13 @@ export const analyticsKeys = {
     ["analytics", "posts", filters] as const,
   post: (publicationId: string) =>
     ["analytics", "post", publicationId] as const,
-  overview: (period: string) => ["analytics", "overview", period] as const,
+  overview: (period: string, platform?: string) =>
+    [
+      "analytics",
+      "overview",
+      period,
+      ...(platform ? [platform] : []),
+    ] as const,
   followers: (period: string, platform?: string) =>
     [
       "analytics",
@@ -57,10 +63,11 @@ async function fetchPostAnalytics(publicationId: string) {
   return response.json();
 }
 
-async function fetchAnalyticsOverview(period: string) {
-  const response = await fetch(
-    `/api/analytics/overview?period=${encodeURIComponent(period)}`,
-  );
+async function fetchAnalyticsOverview(period: string, platform?: string) {
+  const params = new URLSearchParams({ period });
+  if (platform) params.set("platform", platform);
+
+  const response = await fetch(`/api/analytics/overview?${params}`);
   if (!response.ok) {
     throw new Error("Failed to fetch analytics overview");
   }
@@ -97,10 +104,10 @@ export function usePostAnalytics(publicationId: string) {
   });
 }
 
-export function useAnalyticsOverview(period: string) {
+export function useAnalyticsOverview(period: string, platform?: string) {
   return useQuery({
-    queryKey: analyticsKeys.overview(period),
-    queryFn: () => fetchAnalyticsOverview(period),
+    queryKey: analyticsKeys.overview(period, platform),
+    queryFn: () => fetchAnalyticsOverview(period, platform),
     staleTime: 10 * 60 * 1000,
   });
 }

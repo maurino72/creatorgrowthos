@@ -63,19 +63,23 @@ export async function GET(request: Request) {
     > = {};
 
     for (const platform of uniquePlatforms) {
-      const growth = await getFollowerGrowth(user.id, platform, days);
+      try {
+        const growth = await getFollowerGrowth(user.id, platform, days);
 
-      platforms[platform] = {
-        current_count: growth.currentCount,
-        start_count: growth.startCount,
-        net_growth: growth.netGrowth,
-        growth_rate: Math.round(growth.growthRate * 100) / 100,
-        daily: growth.daily.map((d) => ({
-          date: d.snapshot_date,
-          count: d.follower_count,
-          new: d.new_followers,
-        })),
-      };
+        platforms[platform] = {
+          current_count: growth.currentCount,
+          start_count: growth.startCount,
+          net_growth: growth.netGrowth,
+          growth_rate: Math.round(growth.growthRate * 100) / 100,
+          daily: growth.daily.map((d) => ({
+            date: d.snapshot_date,
+            count: d.follower_count,
+            new: d.new_followers,
+          })),
+        };
+      } catch {
+        // follower_snapshots table may not exist yet — skip platform
+      }
     }
 
     return NextResponse.json({
