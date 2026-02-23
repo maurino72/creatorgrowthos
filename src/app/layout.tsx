@@ -21,10 +21,18 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "AiGrow",
+  metadataBase: new URL("https://app.postiq.so"),
+  title: {
+    template: "%s | PostIQ",
+    default: "PostIQ",
+  },
   description: "Grow your audience with AI-powered content intelligence",
   icons: {
     icon: "/favicon.svg",
+  },
+  openGraph: {
+    siteName: "PostIQ",
+    url: "https://app.postiq.so",
   },
 };
 

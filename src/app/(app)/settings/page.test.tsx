@@ -781,7 +781,7 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "About" }));
     expect(screen.getByText("1.0.0")).toBeInTheDocument();
     expect(
-      screen.getByText("support@creatorgrowthos.com"),
+      screen.getByText("support@postiq.so"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(

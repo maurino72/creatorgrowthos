@@ -24,7 +24,7 @@ export default function LoginPage() {
 
       {/* Title */}
       <h1 className="mb-3 text-center font-serif text-3xl font-normal tracking-tight text-foreground">
-        AiGrow
+        PostIQ
       </h1>
       <p className="mb-10 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground/40">
         AI-powered content strategy & analytics

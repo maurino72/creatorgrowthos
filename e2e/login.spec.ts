@@ -37,7 +37,7 @@ test.describe("Unauthenticated", () => {
     await page.goto("/login");
 
     await expect(
-      page.getByRole("heading", { name: "AiGrow" }),
+      page.getByRole("heading", { name: "PostIQ" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /continue with google/i }),

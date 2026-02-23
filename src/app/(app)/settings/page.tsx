@@ -1085,10 +1085,10 @@ function AboutSection() {
 
       <SettingRow
         label="Help & Support"
-        description="Get help with AiGrow"
+        description="Get help with PostIQ"
       >
         <span className="text-xs text-muted-foreground/40">
-          support@creatorgrowthos.com
+          support@postiq.so
         </span>
       </SettingRow>
 
@@ -1099,7 +1099,7 @@ function AboutSection() {
           Built for creators who want to grow intentionally.
         </p>
         <p className="mt-1 text-xs text-muted-foreground/25">
-          &copy; {new Date().getFullYear()} AiGrow
+          &copy; {new Date().getFullYear()} PostIQ
         </p>
       </div>
     </SectionBlock>
@@ -1427,7 +1427,7 @@ export default function SettingsPage() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `creatorgrowthos-${type}-export.json`;
+          a.download = `postiq-${type}-export.json`;
           a.click();
           URL.revokeObjectURL(url);
           toast.success("Export downloaded");

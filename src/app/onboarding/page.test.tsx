@@ -98,7 +98,7 @@ describe("Onboarding page", () => {
     render(<Page />, { wrapper: createWrapper() });
 
     expect(
-      screen.getByText("Welcome to AiGrow"),
+      screen.getByText("Welcome to PostIQ"),
     ).toBeInTheDocument();
     expect(screen.getByText("Get Started")).toBeInTheDocument();
   });

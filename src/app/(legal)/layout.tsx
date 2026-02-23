@@ -5,8 +5,8 @@ import { Logo } from "@/components/shared/logo";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | AiGrow",
-    default: "Legal | AiGrow",
+    template: "%s | PostIQ",
+    default: "Legal | PostIQ",
   },
 };
 

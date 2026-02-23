@@ -2,7 +2,7 @@ import { test as setup, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 const E2E_TEST_EMAIL =
-  process.env.E2E_TEST_EMAIL || "e2e-test@creatorgrowthos.test";
+  process.env.E2E_TEST_EMAIL || "e2e-test@postiq.test";
 const E2E_TEST_PASSWORD =
   process.env.E2E_TEST_PASSWORD || "e2e-test-password-2024!";
 

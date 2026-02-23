@@ -22,7 +22,7 @@ describe("TwitterAdapter", () => {
       const mockResponse = {
         data: {
           id: "1234567890",
-          text: "Hello from Creator Growth OS!",
+          text: "Hello from PostIQ!",
         },
       };
 
@@ -30,7 +30,7 @@ describe("TwitterAdapter", () => {
         new Response(JSON.stringify(mockResponse), { status: 201 }),
       );
 
-      await adapter.publishPost("access-token-123", { text: "Hello from Creator Growth OS!" });
+      await adapter.publishPost("access-token-123", { text: "Hello from PostIQ!" });
 
       expect(fetchSpy).toHaveBeenCalledOnce();
       const [url, options] = fetchSpy.mock.calls[0];

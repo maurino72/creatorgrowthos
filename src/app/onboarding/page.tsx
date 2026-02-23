@@ -220,13 +220,13 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
       </div>
 
       <h1 className="mb-3 font-serif text-2xl font-normal tracking-tight text-foreground">
-        Welcome to AiGrow
+        Welcome to PostIQ
       </h1>
       <p className="mb-2 text-sm leading-relaxed text-muted-foreground/60">
         Most creator tools help you post. We help you learn.
       </p>
       <p className="mb-8 max-w-sm text-sm leading-relaxed text-muted-foreground/40">
-        AiGrow tracks what you publish, observes what works,
+        PostIQ tracks what you publish, observes what works,
         remembers patterns, and guides better decisions over time.
       </p>
 
@@ -783,7 +783,7 @@ function ActivateStep({
         {/* How it works */}
         <div className="mt-8 w-full border-t border-editorial-rule-subtle pt-6 text-left">
           <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-editorial-label">
-            How AiGrow works
+            How PostIQ works
           </p>
           <div className="space-y-1.5 text-xs text-muted-foreground/40">
             <p>
@@ -875,7 +875,7 @@ function ActivateStep({
       {/* How it works */}
       <div className="mt-8 border-t border-editorial-rule-subtle pt-6">
         <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-editorial-label">
-          How AiGrow works
+          How PostIQ works
         </p>
         <div className="space-y-1.5 text-xs text-muted-foreground/40">
           <p>

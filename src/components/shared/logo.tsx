@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────────────────────
- *  # Evolved — The AiGrow mark
+ *  # Evolved — The PostIQ mark
  *
  *  A hashtag where the vertical lines fan outward
  *  above the horizontal grid bars, like branches
@@ -109,7 +109,7 @@ export function Logo({
           className,
         )}
       >
-        AiGrow
+        PostIQ
       </span>
     );
   }
@@ -119,7 +119,7 @@ export function Logo({
     <span className={cn("inline-flex items-center gap-2", className)}>
       <LogoIcon size={s.icon} className="flex-shrink-0" />
       <span className={cn(s.text, "font-serif font-light tracking-tight")}>
-        AiGrow
+        PostIQ
       </span>
     </span>
   );
