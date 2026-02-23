@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
   })),
   usePathname: vi.fn(() => "/x/content/new"),
   useParams: vi.fn(() => ({ platform: "x" })),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock("sonner", () => ({

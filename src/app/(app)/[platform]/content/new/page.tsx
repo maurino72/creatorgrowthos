@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { appUrl } from "@/lib/urls";
-import { useCreatePost } from "@/lib/queries/posts";
+import { useCreatePost, postKeys } from "@/lib/queries/posts";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGenerateIdeas, useSuggestHashtags, useSuggestMentions } from "@/lib/queries/ai";
 import { computeMentionsCharLength } from "@/lib/validators/mentions";
 import { computeTagsCharLength } from "@/lib/validators/tags";
@@ -40,6 +41,8 @@ function getBarColor(count: number, limit: number): string {
 
 function NewPostPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const createPost = useCreatePost();
   const { platform, slug } = usePlatform();
   const generateIdeas = useGenerateIdeas();
@@ -47,7 +50,7 @@ function NewPostPageInner() {
   const suggestHashtags = useSuggestHashtags();
   const suggestMentions = useSuggestMentions();
 
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(searchParams.get("body") ?? "");
   const [mentions, setMentions] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -137,16 +140,18 @@ function NewPostPageInner() {
       {
         onSuccess: (post) => {
           fetch(`/api/posts/${post.id}/publish`, { method: "POST" })
-            .then((res) => {
+            .then(async (res) => {
               if (res.ok) {
                 toast.success("Post published!");
               } else {
                 toast.error("Post created but publish failed");
               }
+              await queryClient.invalidateQueries({ queryKey: postKeys.all });
               router.push(slug ? appUrl.content(slug) : "/");
             })
-            .catch(() => {
+            .catch(async () => {
               toast.error("Post created but publish failed");
+              await queryClient.invalidateQueries({ queryKey: postKeys.all });
               router.push(slug ? appUrl.content(slug) : "/");
             });
         },
